@@ -1,0 +1,77 @@
+9
+
+dir
+1
+svn+ssh://saku@loki/home/saku/svn/vim/vim
+svn+ssh://saku@loki/home/saku/svn/vim
+
+
+
+2008-12-07T16:13:56.178338Z
+1
+saku
+
+
+svn:special svn:externals svn:needs-lock
+
+
+
+
+
+
+
+
+
+
+
+9a1bb85b-303b-4b41-81a8-621b9dba0ee6
+
+after
+dir
+
+colors
+dir
+
+ruby
+dir
+
+.VimballRecord
+file
+
+
+
+
+2008-12-07T21:22:08.242942Z
+24a9ae7c6137da86f86f62d6fad35766
+2008-12-07T16:13:56.178338Z
+1
+saku
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2300
+
+doc
+dir
+
+plugin
+dir
+
