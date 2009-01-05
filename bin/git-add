@@ -1,0 +1,23 @@
+#!/usr/bin/ruby
+# Author: Sakumatti Luukkonen
+# Adds the file to the local github repo
+
+GITDIR = "#{ENV["HOME"]}/src/configs"
+
+def gitadd(files)
+	files.each do |file|
+		puts "Copying #{file} to #{GITDIR} and adding it to git"
+		IO.popen("cp -r #{file} #{GITDIR} && cd #{GITDIR} && git add #{file}")
+	end
+end
+
+begin
+  if not ARGV.empty?
+    gitadd(ARGV)
+  else
+    puts "Usage: add-git <file1> [<file2>] ... "
+  end
+rescue Exception => exp
+  $stderr.puts "Exception! Message: \"%s\"." % exp.message
+  $stdout.flush
+end
