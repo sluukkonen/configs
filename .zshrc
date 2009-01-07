@@ -22,7 +22,7 @@ setopt hist_save_no_dups
 autoload -U colors zsh/terminfo # Used in the colour alias below
 colors
 setopt prompt_subst
-PROMPT="%{$fg_bold[blue]%}[%{$reset_color%}%{$fg_bold[white]%}%n%{$reset_color%}%{$fg[blue]%}@%{$fg_bold[white]%}%~%{$reset_color%}%{$fg_bold[blue]%}]%{$reset_color%} "
+PROMPT="%{$fg_bold[white]%}%n%{$reset_color%}%{$fg[blue]%}@%{$fg_bold[white]%}%m%{$reset_color%}%{$fg_bold[blue]%}:%{$reset_color%}%{$fg_bold[white]%}%~ > "
 
 # Aliases
 alias loki='ssh saku@loki.endoftheinternet.org'
