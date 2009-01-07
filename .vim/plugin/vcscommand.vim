@@ -360,7 +360,7 @@ endfunction
 " exists for the specified function, do nothing.
 
 function! s:CreateMapping(shortcut, expansion, display)
-	let lhs = VCSCommandGetOption('VCSCommandMapPrefix', '<Leader>c') . a:shortcut
+	let lhs = VCSCommandGetOption('VCSCommandMapPrefix', '<Leader>v') . a:shortcut
 	if !hasmapto(a:expansion)
 		try
 			execute 'nmap <silent> <unique>' lhs a:expansion
