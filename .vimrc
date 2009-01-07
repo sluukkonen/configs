@@ -23,8 +23,10 @@ set hidden
 set bs=2
 " smarter file prompt
 set wildmenu
-"set wildmode=list:longest
-
+" highlight the current line
+set cursorline
+" no annoying files~
+set nobackup
 " better end and start of line
 map H ^
 map L $
