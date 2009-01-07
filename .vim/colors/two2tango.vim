@@ -60,7 +60,7 @@ execute "hi Underlined   gui=underline guifg=" . s:SkyBlue[0]
 " }}}
 
 " {{{ groups
-execute "hi Cursor       guibg=" . s:ScarletRed[0] . " guifg=" . s:Aluminium[5]
+execute "hi Cursor       guibg=" . s:Aluminium[3] . " guifg=" . s:Aluminium[5]
 execute "hi CursorLine   guibg=" . s:Background
 execute "hi CursorColumn guibg=" . s:Background
 "hi CursorIM TODO
