@@ -20,7 +20,7 @@ set cpo-=C
 if exists("eruby_compiler") && eruby_compiler == "eruby"
   CompilerSet makeprg=eruby
 else
-  CompilerSet makeprg=erb1.9
+  CompilerSet makeprg=erb
 endif
 
 CompilerSet errorformat=
