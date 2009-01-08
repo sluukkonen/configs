@@ -158,7 +158,7 @@ function gputemp()
 end
 
 function cmusinfo()
-	local np = io.popen("tail -n1 /tmp/cmus-status")
+	local np = io.popen("tail -n1 ~/.cmus-status")
 	local npstring = np:read()
 	np:close()
 	if (npsrint == "[]") then
@@ -173,21 +173,5 @@ function sysInfo(widget, args)
     local core2 = spacer..setFg(beautiful.fg_focus, "C2:")..args[3].."%"..spacer..cputemp(1).."°"
     local sysinfo = core1..core2 
 	return sysinfo
-end
--- }}}
-
--- {{{ Volume
-function getVol()
-    local status = io.popen("amixer -c " .. cardid .. " -- sget " .. channel):read("*all")	
-	local volume = string.match(status, "(%d?%d?%d)%%")
-	volume = string.format("% 3d", volume)
-	status = string.match(status, "%[(o[^%]]*)%]")
-    
-	if string.find(status, "on", 1, true) then
-		volume = volume.."%"
-	else
-		volume = volume.."M"
-	end
-    return spacer..setFg(beautiful.fg_focus, "Vol:")..volume..spacer
 end
 -- }}}

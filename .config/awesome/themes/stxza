@@ -30,5 +30,5 @@ menu_submenu_icon         = /home/saku/.config/awesome/icons/submenu.png
 menu_height               = 12
 menu_width                = 100
 
-wallpaper_cmd = awsetbg -c /home/saku/pictures/wallpapers/diagonal-blue.png
+wallpaper_cmd = awsetbg -f /home/saku/pictures/wallpapers/diagonal-blue.png
 # vim: ft=conf

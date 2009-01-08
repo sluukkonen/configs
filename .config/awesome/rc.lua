@@ -17,12 +17,12 @@ require("wicked")
 -------------------------------------------------------------------------------------
 --{{{ Initialize some stuff
 
-tags                = {}
-statusbar           = {}
-promptbox           = {}
-layouticon          = {}
-taglist             = {}
-tasklist            = {}
+tags       = {}
+statusbar  = {}
+promptbox  = {}
+layouticon = {}
+taglist    = {}
+tasklist   = {}
 
 --}}}
 -------------------------------------------------------------------------------------
@@ -31,61 +31,58 @@ tasklist            = {}
 modMask             = "Mod4"
 
 -- Default apps
-term                = "urxvt"
-browser             = "/usr/bin/firefox"
-fileManager         = "thunar"
+term        = "urxvtc"
+browser     = "/usr/bin/firefox"
+fileManager = "thunar"
 
 -- Theme
-theme_path          = os.getenv("HOME").."/.config/awesome/themes/stxza"
+theme_path = os.getenv("HOME").."/.config/awesome/themes/stxza"
 -- Load Theme
 beautiful.init(theme_path)
 -- Titlebar
-use_titlebar        = false
-
--- Volume
-cardid = 0
-channel = "Master"
+use_titlebar = false
 
 -- The layouts we will use
-layouts             = { "tile"
-                      , "tileleft"
-                      , "tilebottom"
-                      , "tiletop"
-                      , "fairh"
-                      , "fairv"
-                      , "magnifier"
-                      , "max"
-                      , "floating"
-                      }
+layouts = { 
+	"tile",
+	"tileleft",
+	"tilebottom",
+	"tiletop",
+	"fairh",
+	"fairv",
+	"magnifier",
+	"max",
+	"floating"
+}
 
 -- Text for the current layout
-layoutText          = { ["tile"]        = "Tiled"
-                      , ["tileleft"]    = "TileLeft"
-                      , ["tilebottom"]  = "TileBottom"
-                      , ["tiletop"]     = "TileTop"
-                      , ["fairh"]       = "FairH"
-                      , ["fairv"]       = "FairV"
-                      , ["magnifier"]   = "Magnifier"
-                      , ["max"]         = "Max"
-                      , ["floating"]    = "Floating"
-                      }
+layoutText = { 
+	["tile"]       = "Tiled",
+	["tileleft"]   = "TileLeft",
+	["tilebottom"] = "TileBottom",
+	["tiletop"]    = "TileTop",
+	["fairh"]      = "FairH",
+	["fairv"]      = "FairV",
+	["magnifier"]  = "Magnifier",
+	["max"]        = "Max",
+	["floating"]   = "Floating"
+}
 
 -- Apps that should be forced floating
-floatApps           = { ["gimp"]         = true
-                      , ["emesene"]      = true
-                      , ["transmission"] = true
-					  , ["mplayer"]		 = true
-                      }
+floatApps = { 
+	["gimp"]         = true,
+	["emesene"]      = true,
+	["transmission"] = true,
+	["mplayer"]      = true
+}
 
-apptags             = { ["firefox"] = { screen = 1, tag = 2 }
-                      , ["emesene"] = { screen = 1, tag = 2 }
-                      , ["transmission"] = { screen = 1, tag = 2 }
-                      , ["thunar"] = { screen = 1, tag = 4 }
-                      , ["geeqie"] = { screen = 1, tag = 6 }
-                      , ["gvim"] = { screen = 1, tag = 3 }
-                      , ["geany"] = { screen = 1, tag = 3 }
-                      , ["Gimp"] = { screen = 1, tag = 5 }
-                      }
+apptags = { 
+	["firefox"] = { screen = 1, tag = 2 },
+	["layer"] = { screen = 1, tag = 6 },
+	["thunar"]  = { screen = 1, tag = 4 },
+	["gvim"]    = { screen = 1, tag = 3 },
+	["Gimp"]    = { screen = 1, tag = 5 }
+}
 
 --}}}
 -------------------------------------------------------------------------------------
@@ -95,47 +92,19 @@ loadfile(awful.util.getdir("config").."/functions.lua")()
 
 --}}}
 -------------------------------------------------------------------------------------
---{{{ Menu
--- Popup menu when we rightclick the desktop
-
--- Submenu
-awesomemenu         = { { "Manual", term .. " -e man awesome" }
-                      , { "Edit config" , term.." -e vim "..awful.util.getdir("config").."/rc.lua" }
-                      , { "Restart"     , awesome.restart }
-                      , { "Quit"        , awesome.quit }
-                      }
--- Main menu
-mainmenu            = awful.menu.new({ items = { { "Terminal"    , term }
-                                               , { "Firefox" , browser }
-                                               , { "Thunar"     , fileManager }
-                                               , { "Gvim"        , "gvim" }
-                                               , { "Gimp"        , "gimp" }
-                                               , { "Screen"      , term.." -e screen -RR" }
-                                               , { "Awesome"     , awesomemenu, beautiful.awesome_icon }
-                                               }
-                                     })
-
-launcher            = awful.widget.launcher({ image = beautiful.awesome_icon
-                                            , menu = mainmenu 
-                                           })
-
---}}}
--------------------------------------------------------------------------------------
 --{{{ Tags
 
 for s = 1, screen.count() do
     tags[s] = {}
     -- Give the first 3 tag special names
-    tags[s][1] = tag({ name = "term", layout = layouts[1], mwfact = 0.618033988769 })
+    tags[s][1] = tag({ name = "term", layout = layouts[1] })
     tags[s][2] = tag({ name = "www", layout = layouts[1] })
     tags[s][3] = tag({ name = "devel", layout = layouts[4], mwfact = 0.15 })
+    tags[s][4] = tag({ name = "files", layout = layouts[1] })
+    tags[s][5] = tag({ name = "misc", layout = layouts[1] })
+    tags[s][6] = tag({ name = "video", layout = layouts[9] })
     -- Put them on the screen
-    for tagnumber = 1, 3 do
-        tags[s][tagnumber].screen = s
-    end
-    -- Automatically name the next 6 tags after their tag number and put them on the screen
-    for tagnumber = 4, 6 do
-        tags[s][tagnumber] = tag({ name = tagnumber, layout = layouts[1] })
+    for tagnumber = 1, 6 do
         tags[s][tagnumber].screen = s
     end
     -- Select at least one tag
@@ -185,8 +154,8 @@ memInfo()
 -- wicked.register(syswidget, 'cpu', sysInfo, 15, nil, 2)
 
 -- Create the volume widget
-volumewidget = widget({ type = 'textbox', name = 'volumewidget', align = 'right' })
-wicked.register(volumewidget, getVol, "$1", 15)
+-- volumewidget = widget({ type = 'textbox', name = 'volumewidget', align = 'right' })
+-- wicked.register(volumewidget, getVol, "$1", 15)
 
 npwidget = widget({ type = 'textbox', name = 'npwidget', align = 'right'})
 -- Run it once so we don't have to wait for the hooks to see our now playing song
@@ -248,8 +217,8 @@ for s = 1, screen.count() do
                            , tasklist[s]
                            , promptbox[s]
                            , separator
-						   , npwidget
-						   , separator
+													 , npwidget
+													 , separator
                            , memwidget
                            , separator
                            , clockwidget
@@ -262,13 +231,6 @@ end
 --}}}
 -------------------------------------------------------------------------------------
 --{{{ Bindings
-
--- What happens when we click the desktop
-awesome.buttons({
-    button({ }                      , 3         , function () mainmenu:toggle() end),
-    button({ }                      , 4         , awful.tag.viewnext),
-    button({ }                      , 5         , awful.tag.viewprev)
-})
 
 keynumber = 6
 for i = 1, keynumber do
@@ -309,11 +271,9 @@ end):add()
 -- These should be straightforward...
 keybinding({ modMask }              , "Left"    , awful.tag.viewprev):add()
 keybinding({ modMask }              , "Right"   , awful.tag.viewnext):add()
-keybinding({ modMask }              , "x"       , function () awful.util.spawn(term) end):add()
+keybinding({ modMask }              , "Return"       , function () awful.util.spawn(term) end):add()
 keybinding({ modMask }              , "f"       , function () awful.util.spawn(browser) end):add()
 keybinding({ modMask }              , "p"       , function () awful.util.spawn(fileManager) end):add()
-keybinding({ modMask }              , "e"       , function () awful.util.spawn("emesene") end):add()
-keybinding({ modMask }              , "g"       , function () awful.util.spawn("geany") end):add()
 keybinding({ modMask }              , "n"       , function () awful.util.spawn("tail -n1 /tmp/cmus-status | xclip") end):add()
 keybinding({         }              , "F7"      , function () awful.util.spawn("cmus-remote -r") end):add()
 keybinding({         }              , "F8"      , function () awful.util.spawn("cmus-remote -u") end):add()
