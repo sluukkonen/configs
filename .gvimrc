@@ -1,5 +1,5 @@
 set lines=50
-set columns=80
+set columns=83
 set go-=T
 " Only rightscrollbars
 set guioptions-=L
