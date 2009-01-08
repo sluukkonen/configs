@@ -27,6 +27,8 @@ set wildmenu
 set cursorline
 " no annoying files~
 set nobackup
+" folding
+set foldmethod=syntax
 " better end and start of line
 map H ^
 map L $
@@ -35,8 +37,6 @@ map <C-]> <C-s>
 filetype on
 filetype plugin on
 filetype indent on
-" smarter ruby compiler?
-"compiler ruby
 
 " easier switching to tag under cursor
 nnoremap <C-p> <C-]>
