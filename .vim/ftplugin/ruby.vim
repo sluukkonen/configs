@@ -14,6 +14,7 @@
 
 " Added Ri-browser stuff @ Ti 30 Jou 2008 15:32:13 EET
 source ~/.vim/ftplugin/ri.vim 
+compiler ruby
 
 if (exists("b:did_ftplugin"))
   finish

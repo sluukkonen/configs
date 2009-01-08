@@ -78,7 +78,7 @@ floatApps = {
 
 apptags = { 
 	["firefox"] = { screen = 1, tag = 2 },
-	["layer"] = { screen = 1, tag = 6 },
+	["player"] = { screen = 1, tag = 6 },
 	["thunar"]  = { screen = 1, tag = 4 },
 	["gvim"]    = { screen = 1, tag = 3 },
 	["Gimp"]    = { screen = 1, tag = 5 }
@@ -274,10 +274,12 @@ keybinding({ modMask }              , "Right"   , awful.tag.viewnext):add()
 keybinding({ modMask }              , "Return"       , function () awful.util.spawn(term) end):add()
 keybinding({ modMask }              , "f"       , function () awful.util.spawn(browser) end):add()
 keybinding({ modMask }              , "p"       , function () awful.util.spawn(fileManager) end):add()
-keybinding({ modMask }              , "n"       , function () awful.util.spawn("tail -n1 /tmp/cmus-status | xclip") end):add()
+keybinding({ modMask }              , "n"       , function () awful.util.spawn("tail -n1 ~/.cmus-status | xclip") end):add()
 keybinding({         }              , "F7"      , function () awful.util.spawn("cmus-remote -r") end):add()
 keybinding({         }              , "F8"      , function () awful.util.spawn("cmus-remote -u") end):add()
 keybinding({         }              , "F9"      , function () awful.util.spawn("cmus-remote -n") end):add()
+keybinding({         }              , "F11"      , function () awful.util.spawn("amixer set DAC,0 3%- && amixer set DAC,1 3%-") end):add()
+keybinding({         }              , "F12"      , function () awful.util.spawn("amixer set DAC,0 3%+ && amixer set DAC,1 3%+") end):add()
 keybinding({ modMask, "Control" }   , "r"       , function () promptbox[mouse.screen].text = awful.util.escape(awful.util.restart()) end):add()
 keybinding({ modMask, "Shift" }     , "q"       , awesome.quit):add()
 keybinding({ modMask }              , "m"       , awful.client.maximize):add()
