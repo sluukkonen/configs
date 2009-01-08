@@ -284,7 +284,7 @@ call <SID>X("Todo",			"857b6f",	"",			"italic")
 			"Ignore
 
 hi! link VisualNOS	Visual
-hi! link NonText	LineNr
+hi! link NonText	Normal
 hi! link FoldColumn	Folded
 
 " delete functions {{{

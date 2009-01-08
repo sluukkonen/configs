@@ -27,8 +27,6 @@ set wildmenu
 set cursorline
 " no annoying files~
 set nobackup
-" folding
-set foldmethod=syntax
 " better end and start of line
 map H ^
 map L $
@@ -53,3 +51,9 @@ map <leader>f :FuzzyFinderTextMate<CR>
 
 " standard library ctags for C-like languages
 set tags=/.vim/tags/stdtags,tags,.tags,../tags
+
+" fix common typos
+command WQ wq
+command Wq wq
+command W w
+command Q q
