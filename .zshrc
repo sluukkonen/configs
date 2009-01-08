@@ -16,6 +16,8 @@ setopt hist_no_store
 setopt hist_no_functions
 setopt no_hist_beep
 setopt hist_save_no_dups
+# Emacs style bindings
+bindkey -e
 
 
 # Prompt Theme
@@ -29,3 +31,40 @@ alias loki='ssh saku@loki.endoftheinternet.org'
 alias ls='ls --color=auto -F'
 alias v='vim'
 alias sv='sudo vim'
+
+# Functions
+
+extract () {
+    local old_dirs current_dirs lower
+    lower=${(L)1}
+    old_dirs=( *(N/) )
+    if [[ $lower == *.tar.gz || $lower == *.tgz ]]; then
+        tar xvzf $1
+    elif [[ $lower == *.gz ]]; then
+        gunzip $1
+    elif [[ $lower == *.tar.bz2 || $lower == *.tbz ]]; then
+        tar xvjf $1
+    elif [[ $lower == *.bz2 ]]; then
+        bunzip2 $1
+    elif [[ $lower == *.zip ]]; then
+        unzip $1
+    elif [[ $lower == *.rar ]]; then
+        unrar e $1
+    elif [[ $lower == *.tar ]]; then
+        tar xvf $1
+    elif [[ $lower == *.lha ]]; then
+        lha e $1
+    else
+        print "Unknown archive type: $1"
+        return 1
+    fi
+    # Change in to the newly created directory, and
+    # list the directory contents, if there is one.
+    current_dirs=( *(N/) )
+    for i in {1..${#current_dirs}}; do
+        if [[ $current_dirs[$i] != $old_dirs[$i] ]]; then
+            cd $current_dirs[$i]
+            break
+        fi
+    done
+}
