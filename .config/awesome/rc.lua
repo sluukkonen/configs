@@ -78,7 +78,7 @@ floatApps = {
 
 apptags = { 
 	["firefox"] = { screen = 1, tag = 2 },
-	["player"] = { screen = 1, tag = 6 },
+	["MPlayer"] = { screen = 1, tag = 6 },
 	["thunar"]  = { screen = 1, tag = 4 },
 	["gvim"]    = { screen = 1, tag = 3 },
 	["Gimp"]    = { screen = 1, tag = 5 }
