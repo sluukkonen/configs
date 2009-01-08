@@ -1,14 +1,10 @@
-!URxvt*font:                     xft:Consolas:pixelsize=12
-!URxvt*boldFont:                 xft:Consolas:bold
-URxvt*font:                    -*-dina-medium-r-normal-*-*-*-*-*-*-*-*-*
-URxvt*boldFont:                -*-dina-bold-r-normal-*-*-*-*-*-*-*-*-*
+URxvt*font:                     xft:Consolas:pixelsize=13
+!URxvt*font:                    -*-dina-medium-r-normal-*-*-*-*-*-*-*-*-*
+!URxvt*boldFont:                -*-dina-bold-r-normal-*-*-*-*-*-*-*-*-*
 
 URxvt*saveLines:                32767
 URxvt*scrollBar:	            false
-URxvt*tintColor:                #000000
-URxvt*shading:                  30
-URxvt*termName:		            rxvt
-URxvt*inheritPixmap:	        true
+URxvt*termName:		            xterm-256color
 URxvt*cutchars:		            "()*,<>[]{}|"
 URxvt*secondaryScroll:	        true
 urxvt*perl-lib:		            /usr/lib/urxvt/perl/
@@ -17,10 +13,8 @@ URxvt*urlLauncher:	            /usr/bin/firefox
 URxvt*matcher.button:	        1
 URxvt*matcher.pattern.1:        \\bwww\\.[\\w-]+\\.[\\w./?&@#-]*[\\w/-]
 URxvt*visualBell:	            true
-URxvt.depth: 					24
+URxvt*background: #1c1c1c
 xterm*utf8:                     2
-
-
 xterm*background:                    #1c1c1c
 *foreground:                    #B4B4B4
 

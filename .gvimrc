@@ -1,7 +1,6 @@
 set lines=50
 set columns=80
 set go-=T
-colorscheme two2tango
 " Only rightscrollbars
 set guioptions-=L
 set guioptions-=l

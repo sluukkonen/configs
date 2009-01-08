@@ -12,7 +12,7 @@ set tabstop=2
 " indent by 2 spaces
 set shiftwidth=2
 " slate, desert?
-colorscheme default
+colorscheme wombat256
 " syntax highlighting 
 syntax on
 " show caret position in the status bar
