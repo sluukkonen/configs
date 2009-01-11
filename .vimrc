@@ -8,10 +8,9 @@ set smartcase
 " we're using vim, not vi
 set nocompatible
 " dunno?
-set tabstop=2
-" indent by 2 spaces
-set shiftwidth=2
+set tabstop=4
 " slate, desert?
+set shiftwidth=4
 colorscheme wombat256
 " syntax highlighting 
 syntax on
@@ -57,3 +56,9 @@ command WQ wq
 command Wq wq
 command W w
 command Q q
+
+inoremap {      {}<Left>
+inoremap {<CR>  {<CR>}<Esc>O
+inoremap {{     {
+inoremap {}     {}
+

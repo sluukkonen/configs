@@ -1,4 +1,5 @@
 URxvt*font:              xft:Consolas:pixelsize=13
+
 URxvt*saveLines:         32767
 URxvt*scrollBar:         false
 URxvt*termName:          xterm-256color

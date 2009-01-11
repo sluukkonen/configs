@@ -68,7 +68,7 @@ call s:InitVariable("g:NERDRemoveAltComs", 1)
 call s:InitVariable("g:NERDRemoveExtraSpaces", 1)
 call s:InitVariable("g:NERDRPlace", "<]")
 call s:InitVariable("g:NERDShutUp", '1')
-call s:InitVariable("g:NERDSpaceDelims", 0)
+call s:InitVariable("g:NERDSpaceDelims", 1)
 call s:InitVariable("g:NERDDelimiterRequests", 1)
 
 
