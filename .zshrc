@@ -28,6 +28,7 @@ PROMPT="%{$fg_bold[white]%}%n%{$reset_color%}%{$fg[blue]%}@%{$fg_bold[white]%}%m
 
 # Aliases
 alias loki='ssh saku@loki.endoftheinternet.org'
+alias melk='ssh soluukko@melkki.cs.helsinki.fi'
 alias ls='ls --color=auto -F'
 alias v='vim'
 alias sv='sudo vim'
