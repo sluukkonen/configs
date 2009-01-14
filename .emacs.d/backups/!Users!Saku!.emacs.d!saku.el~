@@ -54,3 +54,5 @@
 
 ;; Whole line marking
 
+;; Disable scrollbars
+(toggle-scroll-bar -1)

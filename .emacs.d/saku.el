@@ -18,6 +18,7 @@
 ;; Color themes
 (require 'color-theme)
 (color-theme-initialize)
+(color-theme-charcoal-black)
 
 ;; A full  screen command
 (defun toggle-fullscreen ()
