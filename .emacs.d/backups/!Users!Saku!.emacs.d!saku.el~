@@ -18,6 +18,7 @@
 ;; Color themes
 (require 'color-theme)
 (color-theme-initialize)
+(color-theme-charcoal-black)
 
 ;; A full  screen command
 (defun toggle-fullscreen ()
@@ -50,7 +51,10 @@
 (global-set-key (kbd "M-RET") 'textmate-next-line)
 
 ;; Line width
-(setq-default full-column 80 )
+(setq-default fill-column 80 )
+
+;; Display column/line numbers in the status line.
+(setq column-number-mode t)
 
 ;; Whole line marking
 

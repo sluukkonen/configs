@@ -1,5 +1,6 @@
 ;; Saku's Emacs settings
 
+;; For describe-unbound-keys
 (require 'unbound)
 
 ;; Snippets
@@ -7,7 +8,7 @@
 (yas/initialize)
 (yas/load-directory "~/.emacs.d/saku/snippets")
 
-;; Install mode-compile to give friendlier compiling support!
+;; Per-filetype compiler settings.
 (autoload 'mode-compile "mode-compile"
    "Command to compile current buffer file based on the major mode" t)
 (global-set-key "\C-cc" 'mode-compile)
@@ -20,7 +21,7 @@
 (color-theme-initialize)
 (color-theme-charcoal-black)
 
-;; A full  screen command
+;; A full screen command
 (defun toggle-fullscreen ()
   (interactive)
   (set-frame-parameter nil 'fullscreen (if (frame-parameter nil 'fullscreen)
@@ -37,10 +38,10 @@
 (global-set-key (kbd "\"") 'skeleton-pair-insert-maybe)
 (global-set-key (kbd "\'") 'skeleton-pair-insert-maybe)
 
-;; Indent comments
+;; Indent comments.
 (setq comment-style 'indent)
 
-;; Default tab width
+;; Default tab width.
 (setq default-tab-width 4)
 
 ;; Textmate-like newline
@@ -51,9 +52,10 @@
 (global-set-key (kbd "M-RET") 'textmate-next-line)
 
 ;; Line width
-(setq-default full-column 80 )
+(setq-default fill-column 80 )
 
-;; Whole line marking
+;; Display column/line numbers in the status line.
+(setq column-number-mode t)
 
 ;; Disable scrollbars
 (toggle-scroll-bar -1)

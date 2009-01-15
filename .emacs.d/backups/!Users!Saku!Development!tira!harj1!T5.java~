@@ -1,3 +1,4 @@
+
 public class T5 {
 
 	/**
@@ -27,10 +28,10 @@ public class T5 {
 		}
 
 		/*
-		 * Lasketaan binomikerroin käytten Pascalin kolmiota.
-		 * Vastaus on kolmion n:n rivin k:s solu. (k ja n alkavat nollasta)
-		 * Esim. 5C4 on viidennen rivin 1 5 10 10 5 1 neljäs solu, eli 5.
-		 * Rivi on symmetrinen, joten lasketaan korkeintaan puoliväliin asti.
+		 * Lasketaan binomikerroin käytten Pascalin kolmiota.  Vastaus on
+		 * kolmion n:n rivin k:s solu. (k ja n alkavat nollasta) Esim. 5C4 on
+		 * viidennen rivin 1 5 10 10 5 1 neljäs solu, eli 5.  Rivi on
+		 * symmetrinen, joten lasketaan korkeintaan puoliväliin asti.
 		 */
 
 		if (k > n / 2) {
@@ -46,14 +47,14 @@ public class T5 {
 		int r = n + 1;
 
 		for (int c = 1; c <= k; c++) {
-			cell *= (r - c) / c;
+            cell *= (r - c) / c;
 		}
 
 		return cell;
 	}
 
 	public static void main(String[] args) 
-	{
+{
 		System.out.println(bincoeff2(104,50));
 	}
 }
