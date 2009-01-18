@@ -8,4 +8,6 @@ set guioptions-=R
 set guioptions-=r 
 set guioptions-=m 
 set guifont=Consolas
-colorscheme wombat256
+colorscheme fruity
+" highlight the current line
+set cursorline

@@ -22,8 +22,6 @@ set hidden
 set bs=2
 " smarter file prompt
 set wildmenu
-" highlight the current line
-set cursorline
 " no annoying files~
 set nobackup
 " better end and start of line
