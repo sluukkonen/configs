@@ -1,0 +1,2 @@
+#!/bin/bash
+amixer set DAC,0 3%+ && amixer set DAC,1 3%+

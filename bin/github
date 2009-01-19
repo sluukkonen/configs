@@ -2,7 +2,7 @@
 # Author: Sakumatti Luukkonen
 # Adds the file to the local github repo
 
-GITDIR = "#{ENV["HOME"]}/src/configs"
+GITDIR = "#{ENV["HOME"]}/Downloads/configs"
 
 def gitadd(files)
 	files.each do |file|
