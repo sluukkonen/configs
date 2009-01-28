@@ -2,7 +2,7 @@ URxvt*font:              xft:Consolas:pixelsize=13
 
 URxvt*saveLines:         32767
 URxvt*scrollBar:         false
-URxvt*termName:          xterm-256color
+URxvt*termName:          rxvt
 URxvt*cutchars:          "()*,<>[]{}|"
 URxvt*secondaryScroll:   true
 urxvt*perl-lib:          /usr/lib/urxvt/perl/
@@ -11,7 +11,7 @@ URxvt*urlLauncher:       /usr/bin/firefox
 URxvt*matcher.button:    1
 URxvt*matcher.pattern.1: \\bwww\\.[\\w-]+\\.[\\w./?&@#-]*[\\w/-]
 URxvt*visualBell:        true
-URxvt*background:        #1c1c1c
+URxvt*background:        #111111
 URxvt*foreground:        #B4B4B4
 URxvt*cursorColor:       #FFAF00
 

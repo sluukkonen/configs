@@ -1,6 +1,4 @@
 --[[    awesome 3 configuration file by STxza <seynthan.tx@gmail.com>
-        based on Gigamo's config <gigamo@archlinux.us>
-        only works with awesome-git newer than 20/10/08
         last update: 27/11/2008                                         ]]
         
 io.stderr:write("\n\n\r::: Awesome Loaded :::\r\n\n")
@@ -33,7 +31,7 @@ modMask             = "Mod4"
 -- Default apps
 term        = "urxvtc"
 browser     = "/usr/bin/firefox"
-fileManager = "thunar"
+fileManager = "nautilus"
 
 -- Theme
 theme_path = os.getenv("HOME").."/.config/awesome/themes/stxza"
@@ -70,16 +68,16 @@ layoutText = {
 
 -- Apps that should be forced floating
 floatApps = { 
-	["gimp"]         = true,
-	["emesene"]      = true,
+	["Gimp"]         = true,
+	["eog"]      = true,
 	["transmission"] = true,
 	["mplayer"]      = true
 }
 
 apptags = { 
-	["Gran Paradiso"] = { screen = 1, tag = 2 },
+	["Firefox"] = { screen = 1, tag = 2 },
 	["MPlayer"] = { screen = 1, tag = 6 },
-	["thunar"]  = { screen = 1, tag = 4 },
+	["Nautilus"]  = { screen = 1, tag = 4 },
 	["gvim"]    = { screen = 1, tag = 3 },
 	["Gimp"]    = { screen = 1, tag = 5 }
 }
@@ -157,10 +155,7 @@ memInfo()
 -- volumewidget = widget({ type = 'textbox', name = 'volumewidget', align = 'right' })
 -- wicked.register(volumewidget, getVol, "$1", 15)
 
-npwidget = widget({ type = 'textbox', name = 'npwidget', align = 'right'})
 -- Run it once so we don't have to wait for the hooks to see our now playing song
-cmusinfo()
-wicked.register(npwidget, cmusinfo, "$1", 20)
 
 -- Create a system tray
 systray = widget({ type = "systray", name = "systray", align = "right" })
@@ -217,8 +212,7 @@ for s = 1, screen.count() do
                            , tasklist[s]
                            , promptbox[s]
                            , separator
-													 , npwidget
-													 , separator
+						   , separator
                            , memwidget
                            , separator
                            , clockwidget
@@ -274,10 +268,7 @@ keybinding({ modMask }              , "Right"   , awful.tag.viewnext):add()
 keybinding({ modMask }              , "Return"       , function () awful.util.spawn(term) end):add()
 keybinding({ modMask }              , "f"       , function () awful.util.spawn(browser) end):add()
 keybinding({ modMask }              , "p"       , function () awful.util.spawn(fileManager) end):add()
-keybinding({ modMask }              , "n"       , function () awful.util.spawn("tail -n1 ~/.cmus-status | xclip") end):add()
-keybinding({         }              , "F7"      , function () awful.util.spawn("cmus-remote -r") end):add()
-keybinding({         }              , "F8"      , function () awful.util.spawn("cmus-remote -u") end):add()
-keybinding({         }              , "F9"      , function () awful.util.spawn("cmus-remote -n") end):add()
+keybinding({ modMask }              , "n"       , function () awful.util.spawn("np") end):add()
 keybinding({         }              , "F11"      , function () awful.util.spawn("amixer set DAC,0 3%- && amixer set DAC,1 3%-") end):add()
 keybinding({         }              , "F12"      , function () awful.util.spawn("amixer set DAC,0 3%+ && amixer set DAC,1 3%+") end):add()
 keybinding({ modMask, "Control" }   , "r"       , function () promptbox[mouse.screen].text = awful.util.escape(awful.util.restart()) end):add()

@@ -157,17 +157,6 @@ function gputemp()
     return gpuTemp
 end
 
-function cmusinfo()
-	local np = io.popen("tail -n1 ~/.cmus-status")
-	local npstring = np:read()
-	np:close()
-	if (npsrint == "[]") then
-		return ''
-	end
-
-	return spacer..npstring..spacer
-end
-
 function sysInfo(widget, args)
     local core1 = spacer..setFg(beautiful.fg_focus, "C1:")..args[2].."%"..spacer..cputemp(0).."°"
     local core2 = spacer..setFg(beautiful.fg_focus, "C2:")..args[3].."%"..spacer..cputemp(1).."°"
