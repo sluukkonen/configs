@@ -60,3 +60,7 @@ inoremap {<CR>  {<CR>}<Esc>O
 inoremap {{     {
 inoremap {}     {}
 
+autocmd FileType java let b:jcommenter_class_author='Sakumatti Luukkonen <sakumatti.luukkonen@cs.helsinki.fi>'
+autocmd FileType java let b:jcommenter_file_author='Sakumatti Luukkonen <sakumatti.luukkonen@cs.helsinki.fi>'
+autocmd FileType java source ~/.vim/plugin/jcommenter.vim
+autocmd FileType java map <Leader>cj :call JCommentWriter()<CR> 
