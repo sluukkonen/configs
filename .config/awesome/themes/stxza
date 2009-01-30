@@ -2,7 +2,7 @@
 -- saku's Awesome Theme --
 ---------------------------
 
-font            = Terminus 7
+font            = Dina 8
 
 bg_normal       = #000000AA
 bg_focus        = #1C1C1CAA
@@ -30,5 +30,5 @@ menu_submenu_icon         = /home/saku/.config/awesome/icons/submenu.png
 menu_height               = 12
 menu_width                = 100
 
-wallpaper_cmd = awsetbg -f /home/saku/Pictures/Wallpapers/diagonal-blue.png
+# wallpaper_cmd = awsetbg -f /home/saku/Pictures/Wallpapers/diagonal-blue.png
 # vim: ft=conf

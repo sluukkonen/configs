@@ -163,9 +163,9 @@ function cpuUsg(widget, args)
     local fcpufr = io.open("/proc/cpuinfo")
     local cpufr = fcpufr:read("*a"):match("cpu MHz%s*:%s*([^%s]*)")
     fcpufr:close()
-    cpufr = spacer..cpufr..setFg(beautiful.fg_focus, " MHz")..spacer
-    local core1 = setFg(beautiful.fg_focus, "C1: ")..args[2].."%"
-    local core2 = spacer..setFg(beautiful.fg_focus, "C2: ")..args[3].."%"
+    cpufr = setFg(beautiful.fg_focus, tonumber(cpufr).."MHz")..spacer
+    local core1 = setFg(beautiful.fg_focus, "C1:")..setFg(beautiful.fg_focus, args[2]).."%"
+    local core2 = spacer..setFg(beautiful.fg_focus, "C2:")..setFg(beautiful.fg_focus, args[3]).."%"
     local cpuUsg = cpufr..core1..core2..spacer
     
   return cpuUsg
