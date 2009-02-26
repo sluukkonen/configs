@@ -2,7 +2,7 @@
 -- saku's Awesome Theme --
 ---------------------------
 
-font            = Dina 8
+font            = Terminus 8
 
 bg_normal       = #000000AA
 bg_focus        = #1C1C1CAA
@@ -12,7 +12,7 @@ fg_normal       = #C4C4C4
 fg_focus        = #3579A8
 fg_urgent       = #EFEFEF
 
-border_width    = 2
+border_width    = 3
 border_normal   = #4C4C4C66
 border_focus    = #3579A866
 border_marked   = #FF000066

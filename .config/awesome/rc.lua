@@ -31,7 +31,7 @@ modMask             = "Mod4"
 -- Default apps
 term        = "urxvtc"
 browser     = "/usr/bin/firefox"
-fileManager = "thunar"
+fileManager = "nautilus --no-desktop"
 
 -- Theme
 theme_path = os.getenv("HOME").."/.config/awesome/themes/stxza"
@@ -77,9 +77,9 @@ floatApps = {
 apptags = { 
 	["Gran Paradiso"] = { screen = 1, tag = 2 },
 	["MPlayer"] = { screen = 1, tag = 6 },
-	["Thunar"]  = { screen = 1, tag = 4 },
+	["Nautilus"]  = { screen = 1, tag = 4 },
 	["gvim"]    = { screen = 1, tag = 3 },
-	["Gimp"]    = { screen = 1, tag = 5 }
+	["Gimp"]    = { screen = 1, tag = 6 }
 }
 
 --}}}
@@ -132,9 +132,9 @@ clockInfo("%d/%m/%Y", "%T")
 -- wifiInfo("wlan0")
 
 -- Create the battery widget
- batterywidget = widget({ type = "textbox", name = "batterywidget", align = "right" })
+ -- batterywidget = widget({ type = "textbox", name = "batterywidget", align = "right" })
 -- Run it once so we don't have to wait for the hooks to see our percentage
-batteryInfo("BAT0")
+-- batteryInfo("BAT0")
 
 -- Create the memory widget
 memwidget = widget({ type = "textbox", name = "memwidget", align = "right" })
@@ -148,8 +148,8 @@ memInfo()
  -- 15)
 
 -- Create the CPU Usage, CPU Temps, GPU Temp widget
-cpuwidget = widget({ type = 'textbox', name = 'cpuwidget', align = 'right' })
-wicked.register(cpuwidget, 'cpu', cpuUsg, 1, nil, 2)
+-- cpuwidget = widget({ type = 'textbox', name = 'cpuwidget', align = 'right' })
+-- wicked.register(cpuwidget, 'cpu', cpuUsg, 1, nil, 2)
 
 -- Create the volume widget
 -- volumewidget = widget({ type = 'textbox', name = 'volumewidget', align = 'right' })
@@ -215,8 +215,8 @@ for s = 1, screen.count() do
 						   , batterywidget 
 						   , separator
                            , memwidget
-                           , separator
-						   , cpuwidget
+                           -- , separator
+						   -- , cpuwidget
 						   , seperator
                            , clockwidget
                            , s == 1 and systray or nil
@@ -272,6 +272,8 @@ keybinding({ modMask }              , "Return"       , function () awful.util.sp
 keybinding({ modMask }              , "f"       , function () awful.util.spawn(browser) end):add()
 keybinding({ modMask }              , "p"       , function () awful.util.spawn(fileManager) end):add()
 keybinding({ modMask }              , "n"       , function () awful.util.spawn("np") end):add()
+keybinding({ }              , "F11"       , function () awful.util.spawn("amixer set DAC,0 3%- && amixer set DAC,1 3%-") end):add()
+keybinding({ }              , "F12"       , function () awful.util.spawn("amixer set DAC,0 3%+ && amixer set DAC,1 3%+") end):add()
 keybinding({ modMask, "Control" }   , "r"       , function () promptbox[mouse.screen].text = awful.util.escape(awful.util.restart()) end):add()
 keybinding({ modMask, "Shift" }     , "q"       , awesome.quit):add()
 keybinding({ modMask }              , "m"       , awful.client.maximize):add()
