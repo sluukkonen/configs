@@ -9,7 +9,7 @@
 ;; and brighter; it simply makes everything else vanish."
 ;; -Neal Stephenson, "In the Beginning was the Command Line"
 
-;; Load path etc:
+;; Load path etc.
 
 (setq dotfiles-dir (file-name-directory
                     (or (buffer-file-name) load-file-name)))
@@ -23,7 +23,7 @@
 (setq custom-file (concat dotfiles-dir "custom.el"))
 
 ;; These should be loaded on startup rather than autoloaded on demand
-;; since they are likely to be used in every session:
+;; since they are likely to be used in every session
 
 (require 'cl)
 (require 'saveplace)
@@ -36,13 +36,13 @@
 ;; out-of-date js stuff. TODO: fix it to use ELPA dependencies
 (load "elpa-to-submit/nxhtml/autostart")
 
-;; Load up ELPA, the package manager:
+;; Load up ELPA, the package manager
 
 (require 'package)
 (package-initialize)
 (require 'starter-kit-elpa)
 
-;; Load up starter kit customizations:
+;; Load up starter kit customizations
 
 (require 'starter-kit-defuns)
 (require 'starter-kit-bindings)
@@ -57,13 +57,16 @@
 (regen-autoloads)
 (load custom-file 'noerror)
 
-;; More complicated packages that haven't made it into ELPA yet:
+;; More complicated packages that haven't made it into ELPA yet
 
 (autoload 'jabber-connect "jabber" "" t)
 ;; TODO: rinari, slime
 
-;; You can keep system- or user-specific customizations here:
+;; Work around a bug on OS X where system-name is FQDN
+(if (eq system-type 'darwin)
+    (setq system-name (car (split-string system-name "\\."))))
 
+;; You can keep system- or user-specific customizations here
 (setq system-specific-config (concat dotfiles-dir system-name ".el")
       user-specific-config (concat dotfiles-dir user-login-name ".el")
       user-specific-dir (concat dotfiles-dir user-login-name))
@@ -75,3 +78,6 @@
   (mapc #'load (directory-files user-specific-dir nil ".*el$")))
 
 ;;; init.el ends here
+(put 'downcase-region 'disabled nil)
+
+(put 'upcase-region 'disabled nil)

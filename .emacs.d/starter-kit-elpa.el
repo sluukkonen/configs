@@ -9,7 +9,8 @@
                                    'css-mode
                                    'nxml
                                    'gist
-                               ;; To submit:
+                                   'rinari
+                               ;; To submit
 ;;;                                "magit"
 ;;;                                "paredit"
 ;;;                                "clojure-mode"
@@ -21,17 +22,13 @@
 ;;;                                "color-theme"
 ;;;                                "color-theme-zenburn"
 ;;;                                "color-theme-vivid-chalk"
-                               ;; Complicated ones:
+                               ;; Complicated ones
 ;;;                                "nxhtml"
-;;;                                "rinari"
 ;;;                                "jabber"
 ;;;                                "slime"
 ;;;                                "swank-clojure"
                                    )
   "Libraries that should be installed by default.")
-
-;; Work around a bug in ELPA
-(ignore-errors (load "elpa/inf-ruby-2.0/inf-ruby-autoloads"))
 
 (defun starter-kit-elpa-install ()
   "Install all starter-kit packages that aren't installed."
@@ -47,6 +44,7 @@
 
 Windows does not have the network-interface-list function, so we
 just have to assume it's online."
+  ;; TODO how could this work on Windows?
   (if (and (functionp 'network-interface-list)
            (network-interface-list))
       (some (lambda (iface) (unless (equal "lo" (car iface))
@@ -56,6 +54,7 @@ just have to assume it's online."
     t))
 
 ;; On your first run, this should pull in all the base packages.
-(when (esk-online?) (ignore-errors (starter-kit-elpa-install)))
+(when (esk-online?) (ignore-errors (with-timeout (15)
+                                     (starter-kit-elpa-install))))
 
 (provide 'starter-kit-elpa)

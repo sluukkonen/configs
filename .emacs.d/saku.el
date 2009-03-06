@@ -1,12 +1,15 @@
 ;; Saku's Emacs settings
 
+;; Vendor directory for custom .el files.
+(add-to-list 'load-path (concat dotfiles-dir "vendor"))
+
 ;; For describe-unbound-keys
 (require 'unbound)
 
-;; Snippets
+;; Snippets.
 (require 'yasnippet) 
 (yas/initialize)
-(yas/load-directory "~/.emacs.d/saku/snippets")
+(yas/load-directory "~/.emacs.d/vendor/snippets")
 
 ;; Per-filetype compiler settings.
 (autoload 'mode-compile "mode-compile"
@@ -19,7 +22,7 @@
 ;; Color themes
 (require 'color-theme)
 (color-theme-initialize)
-(color-theme-charcoal-black)
+;; (color-theme-charcoal-black)
 
 ;; A full screen command
 (defun toggle-fullscreen ()
@@ -29,29 +32,23 @@
                                          'fullboth)))
 (global-set-key (kbd "M-n") 'toggle-fullscreen)
 
-;; Skeleton pairing
-(setq skeleton-pair t)
-(setq skeleton-pair-on-word t) ; apply skeleton trick even in front of a word.
-(global-set-key (kbd "(")  'skeleton-pair-insert-maybe)
-(global-set-key (kbd "[")  'skeleton-pair-insert-maybe)
-(global-set-key (kbd "{")  'skeleton-pair-insert-maybe)
-(global-set-key (kbd "\"") 'skeleton-pair-insert-maybe)
-(global-set-key (kbd "\'") 'skeleton-pair-insert-maybe)
-
 ;; Indent comments.
 (setq comment-style 'indent)
 
 ;; Default tab width.
 (setq default-tab-width 4)
 
-;; Textmate-like newline
+;; Use spaces instead of tabs.
+(setq-default indent-tabs-mode nil)
+
+;; Textmate-like newline from M-RET.
 (defun textmate-next-line ()
   (interactive)
   (end-of-line)
   (newline-and-indent))
 (global-set-key (kbd "M-RET") 'textmate-next-line)
 
-;; Line width
+;; Line width.
 (setq-default fill-column 80 )
 
 ;; Display column/line numbers in the status line.
@@ -59,3 +56,43 @@
 
 ;; Disable scrollbars
 (toggle-scroll-bar -1)
+
+;; Invoke M-x without alt
+(global-set-key "\C-x\C-m" 'execute-extended-command)
+(global-set-key "\C-c\C-m" 'execute-extended-command)
+
+;; C-mode settings
+(setq c-default-style "bsd"
+      c-basic-offset 4)
+(add-hook 'c-mode-common-hook
+          (lambda () (c-toggle-auto-hungry-state 1)))
+
+;; Ruby electric keys fix until emacs starter kit fixes it.
+(add-hook 'ruby-mode-hook
+          (lambda()
+            (add-hook 'local-write-file-hooks
+                      '(lambda()
+                         (save-excursion
+                           (untabify (point-min) (point-max))
+                           (delete-trailing-whitespace)
+                           )))
+            (set (make-local-variable 'indent-tabs-mode) 'nil)
+            (set (make-local-variable 'tab-width) 2)
+            (imenu-add-to-menubar "IMENU")
+            (require 'ruby-electric)
+            (ruby-electric-mode t)
+            ))
+
+;; Map backwards-delete-char to C-h and remap help to M-?.
+(global-set-key "\C-h" 'delete-backward-char)
+(global-set-key "\M-?" 'help-command)
+
+;; Some mac-specific hacks.
+(setq mac-pass-command-to-system nil)   ; Disable cmd-h in carbon emacs.
+(setq mac-pass-control-to-system nil)   ; Disable control keybindings for OS X.
+
+;; Replace dabbrev-expand with hippie-expand.
+(global-set-key (kbd "M-/") 'hippie-expand)
+
+
+(setq hippie-expand-try-functions-list '(try-expand-dabbrev try-expand-dabbrev-all-buffers try-expand-dabbrev-from-kill try-complete-file-name-partially try-complete-file-name try-expand-all-abbrevs try-expand-list try-expand-line try-complete-lisp-symbol-partially try-complete-lisp-symbol))

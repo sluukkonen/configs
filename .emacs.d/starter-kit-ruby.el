@@ -4,13 +4,15 @@
 
 (eval-after-load 'ruby-mode
   '(progn
-     (require 'ruby-compilation)
+     ;; work around possible elpa bug
+     (ignore-errors (require 'ruby-compilation))
+     (setq ruby-use-encoding-map nil)
      (add-hook 'ruby-mode-hook 'inf-ruby-keys)
      (define-key ruby-mode-map (kbd "RET") 'reindent-then-newline-and-indent)
      (define-key ruby-mode-map (kbd "C-M-h") 'backward-kill-word)
      (define-key ruby-mode-map (kbd "C-c l") "lambda")))
 
-(global-set-key (kbd "C-h r") 'ri)
+(global-set-key "\M-? r" 'ri)
 
 ;; Rake files are ruby, too, as are gemspecs.
 (add-to-list 'auto-mode-alist '("\\.rake$" . ruby-mode))
@@ -83,20 +85,10 @@ exec-to-string command, but it works and seems fast"
                                   'flymake-display-err-menu-for-current-line)
                    (flymake-mode t))))))
 
-(add-hook 'ruby-mode-hook
-          (lambda()
-            (add-hook 'local-write-file-hooks
-                      '(lambda()
-                         (save-excursion
-                           (untabify (point-min) (point-max))
-                           (delete-trailing-whitespace)
-                           )))
-            (set (make-local-variable 'indent-tabs-mode) 'nil)
-            (set (make-local-variable 'tab-width) 2)
-            (require 'ruby-electric)
-            (ruby-electric-mode t)
-            ))
-
+;; Rinari (Minor Mode for Ruby On Rails)
+(setq rinari-major-modes
+      (list 'mumamo-after-change-major-mode-hook 'dired-mode-hook 'ruby-mode-hook
+	    'css-mode-hook 'yaml-mode-hook 'javascript-mode-hook))
 
 ;; TODO: set up ri
 ;; TODO: electric

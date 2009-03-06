@@ -152,10 +152,20 @@
         (switch-to-buffer buffer)
       (funcall function))))
 
+(defun insert-date ()
+  "Insert a time-stamp according to locale's date and time format."
+  (interactive)
+  (insert (format-time-string "%c" (current-time))))
+
 (defun pairing-bot ()
   "If you can't pair program with a human, use this instead."
   (interactive)
   (message (if (y-or-n-p "Do you have a test for that? ") "Good." "Bad!")))
+
+;; A monkeypatch to cause annotate to ignore whitespace
+(defun vc-git-annotate-command (file buf &optional rev)
+  (let ((name (file-relative-name file)))
+    (vc-git-command buf 0 name "blame" "-w" rev)))
 
 (provide 'starter-kit-defuns)
 ;;; starter-kit-defuns.el ends here
