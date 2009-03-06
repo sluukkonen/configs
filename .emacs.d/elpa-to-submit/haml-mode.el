@@ -142,6 +142,8 @@ text nested beneath them.")
     (define-key map "\C-c\C-u" 'haml-up-list)
     (define-key map "\C-c\C-d" 'haml-down-list)
     (define-key map "\C-c\C-k" 'haml-kill-line-and-indent)
+    (define-key map "\C-c\C-r" 'haml-output-region)
+    (define-key map "\C-c\C-l" 'haml-output-buffer)
     map))
 
 ;;;###autoload
@@ -206,6 +208,11 @@ text nested beneath them.")
     (yank)
     (haml-indent-region (point-min) (point-max))
     (shell-command-on-region (point-min) (point-max) "haml" "haml-output")))
+
+(defun haml-output-buffer ()
+  "Displays the HTML output for entire buffer."
+  (interactive)
+  (haml-output-region (point-min) (point-max)))
 
 ;; Navigation
 
@@ -361,6 +368,8 @@ The first time this command is used, the line will be indented to the
 maximum sensible indentation.  Each immediately subsequent usage will
 back-dent the line by `haml-indent-offset' spaces.  On reaching column
 0, it will cycle back to the maximum sensible indentation."
+  ;; TODO: pressing tab to bring the point to the first non-whitespace
+  ;; char marks the buffer as modified even though it doesn't change anything
   (interactive "*")
   (let ((ci (current-indentation))
         (cc (current-column))

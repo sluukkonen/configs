@@ -65,7 +65,7 @@
 (setq c-default-style "bsd"
       c-basic-offset 4)
 (add-hook 'c-mode-common-hook
-          (lambda () (c-toggle-auto-hungry-state 1)))
+          (lambda () (c-toggle-auto-newline 1) (c-subword-mode 1))
 
 ;; Ruby electric keys fix until emacs starter kit fixes it.
 (add-hook 'ruby-mode-hook

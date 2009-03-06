@@ -1,0 +1,159 @@
+;;; -*- coding: emacs-mule -*-
+
+;; ----- ido-last-directory-list -----
+(
+ ("/Users/Saku/.emacs.d/vendor/snippets/text-mode/" . "perl-mode/")
+ ("/Users/Saku/.emacs.d/vendor/snippets/" . "text-mode/")
+ ("/Users/Saku/.emacs.d/vendor/" . "snippets/")
+ ("/Users/Saku/Downloads/" . "emacs-starter-kit/")
+ ("/Users/Saku/dotemacs/" . ".emacs.d/")
+ ("/soluukko@melkki.cs.helsinki.fi:public_html/kurssit/tira/" . "harj3/")
+ ("/soluukko@melkki.cs.helsinki.fi:public_html/kurssit/" . "tira/")
+ ("/soluukko@melkki.cs.helsinki.fi:public_html/" . "kurssit/")
+ ("/soluukko@melkki.cs.helsinki.fi:" . "public_html/")
+ ("/Users/Saku/Development/javalabra/src/org/hy/soluukko/" . "javalabra/")
+ ("/Users/Saku/Development/javalabra/src/org/hy/" . "soluukko/")
+ ("/Users/Saku/Development/javalabra/src/org/" . "hy/")
+ ("/Users/Saku/Development/javalabra/src/" . "org/")
+ ("/Users/Saku/Development/javalabra/" . "src/")
+ ("/Users/Saku/.emacs.d/saku/snippets/text-mode/cc-mode/" . "java-mode/")
+ ("/Users/Saku/.emacs.d/saku/snippets/text-mode/" . "cc-mode/")
+ ("/Users/Saku/.emacs.d/saku/snippets/" . "text-mode/")
+ ("/Users/Saku/.emacs.d/saku/" . "snippets/")
+ ("/Users/Saku/Development/tira/" . "harj1/")
+ ("/Users/Saku/.emacs.d/elpa/" . "ruby-mode-1.0/")
+ ("/Users/Saku/.emacs.d/" . "vendor/")
+ ("/Users/" . "Saku/")
+ ("/Users/Saku/" . ".emacs.d/")
+ ("/Users/Saku/Development/configs/" . "bin/")
+ ("/Users/Saku/Development/" . "euler/")
+)
+
+;; ----- ido-work-directory-list -----
+(
+ "/Users/Saku/.emacs.d/vendor/snippets/text-mode/perl-mode/"
+ "/Users/Saku/.emacs.d/elpa/ruby-mode-1.0/"
+ "/Users/Saku/.emacs.d/"
+ "/Users/Saku/Development/euler/"
+ "/Users/Saku/Downloads/emacs-starter-kit/"
+ "/Users/Saku/dotemacs/.emacs.d/"
+ "/Users/Saku/Development/javalabra/src/org/hy/soluukko/javalabra/"
+ "/Users/Saku/"
+ "/scp:soluukko@melkki.cs.helsinki.fi:/fs-0/5/soluukko/public_html/kurssit/tira/harj3/"
+ "/soluukko@melkki.cs.helsinki.fi:public_html/kurssit/tira/harj3/"
+ "/Users/Saku/Development/k&r/"
+ "/Users/Saku/.emacs.d/saku/snippets/text-mode/cc-mode/"
+ "/Users/Saku/Development/tira/harj1/"
+ "/Users/Saku/.emacs.d/saku/snippets/text-mode/cc-mode/java-mode/"
+ "/Users/Saku/.emacs.d/saku/snippets/text-mode/cc-mode/c-mode/"
+ "/Users/Saku/Downloads/configs/"
+ "/Users/Saku/configs/"
+ "/Users/Saku/Development/"
+ "/"
+ "/Users/Saku/.emacs.d/elpa-to-submit/"
+ "/Users/Saku/Development/configs/"
+ "/Users/Saku/Development/Euler/"
+)
+
+;; ----- ido-work-file-list -----
+(
+ "for"
+ "ruby-mode.el"
+ "starter-kit-eshell.el"
+ "starter-kit-misc.el"
+ "Helpers.rb"
+ "saku.el"
+ "starter-kit-ruby.el"
+ "47ruby.el"
+ "starter-kit-defuns.el"
+ "init.el"
+)
+
+;; ----- ido-dir-file-cache -----
+(
+ ("/Users/Saku/.emacs.d/vendor/snippets/text-mode/perl-mode/" (18798 20370) "xwhile" "xunless" "xif" "xfore" "while" "unless" "sub" "ifee" "ife" "if" "fore" "for" "eval" "cperl-mode/" "../" "./")
+
+ ("/Users/Saku/.emacs.d/vendor/snippets/text-mode/cc-mode/" (18863 22125) "while" "struct" "once" "main" "java-mode/" "inc.1" "inc" "if" "for" "do" "csharp-mode/" "c-mode/" "c++-mode/" "#do#" "../" "./")
+
+ ("/Users/Saku/.emacs.d/vendor/snippets/text-mode/" (18798 20370) "time" "sql-mode/" "scala-mode/" "ruby-mode/" "rst-mode/" "python-mode/" "perl-mode/" "objc-mode/" "nxml-mode/" "markdown-mode/" "latex-mode/" "html-mode/" "f90-mode/" "erlang-mode/" "email" "css-mode/" "cc-mode/" "../" "./")
+
+ ("/Users/Saku/.emacs.d/vendor/snippets/" (18798 20370) "text-mode/" "../" "./")
+
+ ("/Users/Saku/.emacs.d/" (18865 38135) "vendor/" "url/" "TODO" "starter-kit-ruby.el" "starter-kit-registers.el" "starter-kit-perl.el" "starter-kit-misc.el" "starter-kit-lisp.el" "starter-kit-js.el" "starter-kit-eshell.el" "starter-kit-elpa.el" "starter-kit-defuns.el" "starter-kit-bindings.el" "saku.el" "README.markdown" "places" "package.el" "loaddefs.el" "init.el" "elpa-to-submit/" "elpa/" "COPYING" "backups/" "auto-save-list/" "#starter-kit-misc.el#" "../" "./")
+
+ ("/Users/Saku/" (18865 38135) "Sites/" "rinari-demo.small.ogg" "Public/" "Pictures/" "News/" "Music/" "Movies/" "Library/" "Downloads/" "Documents/" "Development/" "Desktop/" ".zshrc" ".zshhistory" ".zcompdump" ".xmodmap" ".xinitrc" ".Xdefaults" ".Xcode/" ".Xauthority" ".webrenderer/" ".vpsuite_installation.xml" ".vplls/" ".vpinstall.properties" ".visualparadigm/" ".viper~" ".viper" ".vimrc" ".vimperatorrc" ".viminfo" ".vimfuzzyfinder" ".vim/" ".vifm/" ".Trash/" ".temp-nxhtml-browse.htm" ".svz" ".svy" ".svx" ".svk/" ".subversion/" ".ssh/" ".smb/" ".screenrc" ".rnd" ".riece/" ".recentf" ".profile" ".mysql_history" ".mplayer/" ".metadata/" ".macports/" ".lol.html.swp" ".login" ".lesshst" ".irb_history" ".ido.last" ".histfile" ".gvimrc" ".gitignore" ".fontconfig/" ".eshell/" ".emacs.d/" ".dvdcss/" ".DS_Store" ".dircolors" ".cups/" ".config/" ".CFUserTextEncoding" ".bashrc" ".bash_history" ".avidemux/" "../" "./")
+
+ ("/Users/Saku/Development/javalabra/bin/org/hy/soluukko/javalabra/" (18865 37396) "MineSweeper.class" "MineSweeper$Level.class" "MineSweeper$1.class" "MineGrid.class" "MineGrid$State.class" "LcdPanel.class" "HighScoreWindow.class" "HighScores.class" "HighScores$HighScoreItem.class" "HighScoreItem.class" "Cell.class" "../" "./")
+
+ ("/Users/Saku/Development/javalabra/src/org/hy/soluukko/javalabra/" (18865 36143) "MineSweeper.java" "MineGrid.java" "LcdPanel.java" "HighScoreWindow.java" "HighScores.java" "HighScoreItem.java" "Cell.java" ".#MineGrid.java" "../" "./")
+
+ ("/Users/Saku/Development/Euler/" (18865 34283) "words.txt" "triangle.txt" "tags" "Problem92.java" "Problem92.class" "poker.txt" "Pascal.py" "names.txt" "Helpers.rb" "helpers.pyc" "helpers.py" "hand.rb" "cipher1.txt" "card.rb" "97.rb" "92.rb" "9.rb" "9.py" "8.rb" "8.py" "76.rb" "7.rb" "7.py" "67.rb" "63.rb" "6.rb" "6.py" "59.rb" "56.rb" "55.rb" "54.rb" "53.rb" "52.rb" "50.rb" "5.rb" "5.py" "49.rb" "48.rb" "47.rb" "46.rb" "45.rb" "44.rb" "43.rb" "42.rb" "41.rb" "40.rb" "4.rb" "4.py" "4" "3b.py" "39.rb" "38.rb" "37.rb" "36.rb" "35.rb" "34.rb" "33.rb" "32.rb" "31.rb" "30.py" "3.rb" "3.py" "3" "29.py" "28.py" "27.rb" "26.rb" "26.py" "25.rb" "25.py" "24.rb" "23.rb" "23.py" "22.rb" "21.rb" "20.rb" "20.py" "2.rb" "2.py" "19.py" "18.rb" "17.rb" "17.py" "16.rb" "16.py" "15.rb" "15.py" "14.rb" "14.py" "13.rb" "13.py" "12.rb" "12.py" "11.rb" "11.py" "10.rb" "10.py" "1.rb" "1.py" "#Helpers.rb#" "../" "./")
+
+ ("/Users/Saku/.emacs.d/elpa/ruby-mode-1.0/" (18865 27693) "ruby-mode.elc" "ruby-mode.el" "ruby-mode-pkg.elc" "ruby-mode-pkg.el" "ruby-mode-autoloads.el~" "ruby-mode-autoloads.el" "#ruby-mode.el#" "../" "./")
+
+ ("/Users/Saku/Development/euler/" (18865 34283) "words.txt" "triangle.txt" "tags" "Problem92.java" "Problem92.class" "poker.txt" "Pascal.py" "names.txt" "Helpers.rb" "helpers.pyc" "helpers.py" "hand.rb" "cipher1.txt" "card.rb" "97.rb" "92.rb" "9.rb" "9.py" "8.rb" "8.py" "76.rb" "7.rb" "7.py" "67.rb" "63.rb" "6.rb" "6.py" "59.rb" "56.rb" "55.rb" "54.rb" "53.rb" "52.rb" "50.rb" "5.rb" "5.py" "49.rb" "48.rb" "47.rb" "46.rb" "45.rb" "44.rb" "43.rb" "42.rb" "41.rb" "40.rb" "4.rb" "4.py" "4" "3b.py" "39.rb" "38.rb" "37.rb" "36.rb" "35.rb" "34.rb" "33.rb" "32.rb" "31.rb" "30.py" "3.rb" "3.py" "3" "29.py" "28.py" "27.rb" "26.rb" "26.py" "25.rb" "25.py" "24.rb" "23.rb" "23.py" "22.rb" "21.rb" "20.rb" "20.py" "2.rb" "2.py" "19.py" "18.rb" "17.rb" "17.py" "16.rb" "16.py" "15.rb" "15.py" "14.rb" "14.py" "13.rb" "13.py" "12.rb" "12.py" "11.rb" "11.py" "10.rb" "10.py" "1.rb" "1.py" "#Helpers.rb#" "../" "./")
+
+ ("/Applications/Emacs.app/Contents/Resources/lisp/" (18865 30822) "xt-mouse.elc" "xt-mouse.el" "xml.elc" "xml.el" "x-dnd.elc" "x-dnd.el" "woman.elc" "woman.el" "winner.elc" "winner.el" "window.elc" "window.el" "windmove.elc" "windmove.el" "widget.elc" "widget.el" "wid-edit.elc" "wid-edit.el" "wid-browse.elc" "wid-browse.el" "whitespace.elc" "whitespace.el" "wdired.elc" "wdired.el" "w32-vars.elc" "w32-vars.el" "w32-fns.elc" "w32-fns.el" "vt100-led.elc" "vt100-led.el" "vt-control.elc" "vt-control.el" "vmsproc.elc" "vmsproc.el" "vms-patch.elc" "vms-patch.el" "view.elc" "view.el" "version.el" "vcursor.elc" "vcursor.el" "vc.elc" "vc.el" "vc-svn.elc" "vc-svn.el" "vc-sccs.elc" "vc-sccs.el" "vc-rcs.elc" "vc-rcs.el" "vc-mtn.elc" "vc-mtn.el" "vc-mcvs.elc" "vc-mcvs.el" "vc-hooks.elc" "vc-hooks.el" "vc-hg.elc" "vc-hg.el" "vc-git.elc" "vc-git.el" "vc-cvs.elc" "vc-cvs.el" "vc-bzr.elc" "vc-bzr.el" "vc-arch.elc" "vc-arch.el" "userlock.elc" "userlock.el" "url/" "uniquify.elc" "uniquify.el" "type-break.elc" "type-break.el" "tutorial.elc" "tutorial.el" "tree-widget.elc" "tree-widget.el" "tooltip.elc" "tooltip.el" "tool-bar.elc" "tool-bar.el" "tmm.elc" "tmm.el" "timezone.elc" "timezone.el" "time.elc" "time.el" "time-stamp.elc" "time-stamp.el" "thumbs.elc" "thumbs.el" "thingatpt.elc" "thingatpt.el" "textmodes/" "terminal.elc" "terminal.el" "term.elc" "term.el" "term/" "tempo.elc" "tempo.el" "tar-mode.elc" "tar-mode.el" "talk.elc" "talk.el" "tabify.elc" "tabify.el" "t-mouse.elc" "t-mouse.el" "subr.elc" "subr.el" "subdirs.el" "strokes.elc" "strokes.el" "startup.elc" "startup.el" "speedbar.elc" "speedbar.el" "soundex.elc" "soundex.el" "sort.elc" "sort.el" "smerge-mode.elc" "smerge-mode.el" "skeleton.elc" "skeleton.el" "site-load.elc" "site-load.el" "site-init.elc" "site-init.el" "simple.elc" "simple.el" "shell.elc" "shell.el" "shadowfile.elc" "shadowfile.el" "ses.elc" "ses.el" "server.elc" "server.el" "select.elc" "select.el" "scroll-lock.elc" "scroll-lock.el" "scroll-bar.elc" "scroll-bar.el" "scroll-all.elc" "scroll-all.el" "sb-image.elc" "sb-image.el" "saveplace.elc" "saveplace.el" "savehist.elc" "savehist.el" "s-region.elc" "s-region.el" "ruler-mode.elc" "ruler-mode.el" "rot13.elc" "rot13.el" "rfn-eshadow.elc" "rfn-eshadow.el" "reveal.elc" "reveal.el" "resume.elc" "resume.el" "reposition.elc" "reposition.el" "replace.elc" "replace.el" "repeat.elc" "repeat.el" "register.elc" "register.el" "rect.elc" "rect.el" "recentf.elc" "recentf.el" "README" "ps-print.elc" "ps-print.el" "ps-mule.elc" "ps-mule.el" "ps-bdf.elc" "ps-bdf.el" "progmodes/" "printing.elc" "printing.el" "play/" "pgg.elc" "pgg.el" "pgg-pgp5.elc" "pgg-pgp5.el" "pgg-pgp.elc" "pgg-pgp.el" "pgg-parse.elc" "pgg-parse.el" "pgg-gpg.elc" "pgg-gpg.el" "pgg-def.elc" "pgg-def.el" "pcvs.elc" "pcvs.el" "pcvs-util.elc" "pcvs-util.el" "pcvs-parse.elc" "pcvs-parse.el" "pcvs-info.elc" "pcvs-info.el" "pcvs-defs.elc" "pcvs-defs.el" "pcomplete.elc" "pcomplete.el" "pcmpl-unix.elc" "pcmpl-unix.el" "pcmpl-rpm.elc" "pcmpl-rpm.el" "pcmpl-linux.elc" "pcmpl-linux.el" "pcmpl-gnu.elc" "pcmpl-gnu.el" "pcmpl-cvs.elc" "pcmpl-cvs.el" "paths.el" "patcomp.el" "paren.elc" "paren.el" "outline.elc" "outline.el" "novice.elc" "novice.el" "newcomment.elc" "newcomment.el" "net/" "mwheel.elc" "mwheel.el" "msb.elc" "msb.el" "mouse.elc" "mouse.el" "mouse-sel.elc" "mouse-sel.el" "mouse-drag.elc" "mouse-drag.el" "mouse-copy.elc" "mouse-copy.el" "misc.elc" "misc.el" "minibuf-eldef.elc" "minibuf-eldef.el" "midnight.elc" "midnight.el" "mh-e/" "menu-bar.elc" "menu-bar.el" "master.elc" "master.el" "man.elc" "man.el" "makesum.elc" "makesum.el" "mail/" "macros.elc" "macros.el" "mac/" "ls-lisp.elc" "ls-lisp.el" "lpr.elc" "lpr.el" "longlines.elc" "longlines.el" "log-view.elc" "log-view.el" "log-edit.elc" "log-edit.el" "locate.elc" "locate.el" "loadup.el" "loadhist.elc" "loadhist.el" "loaddefs.el" "ledit.elc" "ledit.el" "ldefs-boot.el" "language/" "kmacro.elc" "kmacro.el" "kermit.elc" "kermit.el" "jka-compr.elc" "jka-compr.el" "jka-cmpr-hook.elc" "jka-cmpr-hook.el" "jit-lock.elc" "jit-lock.el" "iswitchb.elc" "iswitchb.el" "isearchb.elc" "isearchb.el" "isearch.elc" "isearch.el" "international/" "informat.elc" "informat.el" "info.elc" "info.el" "info-xref.elc" "info-xref.el" "info-look.elc" "info-look.el" "indent.elc" "indent.el" "imenu.elc" "imenu.el" "image.elc" "image.el" "image-mode.elc" "image-mode.el" "image-file.elc" "image-file.el" "image-dired.elc" "image-dired.el" "iimage.elc" "iimage.el" "ielm.elc" "ielm.el" "ido.elc" "ido.el" "icomplete.elc" "icomplete.el" "ibuffer.elc" "ibuffer.el" "ibuf-macs.elc" "ibuf-macs.el" "ibuf-ext.elc" "ibuf-ext.el" "hl-line.elc" "hl-line.el" "hippie-exp.elc" "hippie-exp.el" "hilit-chg.elc" "hilit-chg.el" "hi-lock.elc" "hi-lock.el" "hexl.elc" "hexl.el" "help.elc" "help.el" "help-mode.elc" "help-mode.el" "help-macro.elc" "help-macro.el" "help-fns.elc" "help-fns.el" "help-at-pt.elc" "help-at-pt.el" "gs.elc" "gs.el" "gnus/" "generic-x.elc" "generic-x.el" "fringe.elc" "fringe.el" "frame.elc" "frame.el" "forms.elc" "forms.el" "forms-pass.el" "forms-d2.el" "forms-d2.dat" "format.elc" "format.el" "font-lock.elc" "font-lock.el" "font-core.elc" "font-core.el" "follow.elc" "follow.el" "foldout.elc" "foldout.el" "flow-ctrl.elc" "flow-ctrl.el" "finder.elc" "finder.el" "finder-inf.el" "find-lisp.elc" "find-lisp.el" "find-file.elc" "find-file.el" "find-dired.elc" "find-dired.el" "filesets.elc" "filesets.el" "files.elc" "files.el" "filecache.elc" "filecache.el" "ffap.elc" "ffap.el" "faces.elc" "faces.el" "facemenu.elc" "facemenu.el" "ezimage.elc" "ezimage.el" "expand.elc" "expand.el" "eshell/" "erc/" "env.elc" "env.el" "emulation/" "emerge.elc" "emerge.el" "emacs-lock.elc" "emacs-lock.el" "emacs-lisp/" "elide-head.elc" "elide-head.el" "electric.elc" "electric.el" "ehelp.elc" "ehelp.el" "edmacro.elc" "edmacro.el" "ediff.elc" "ediff.el" "ediff-wind.elc" "ediff-wind.el" "ediff-vers.elc" "ediff-vers.el" "ediff-util.elc" "ediff-util.el" "ediff-ptch.elc" "ediff-ptch.el" "ediff-mult.elc" "ediff-mult.el" "ediff-merg.elc" "ediff-merg.el" "ediff-init.elc" "ediff-init.el" "ediff-hook.elc" "ediff-hook.el" "ediff-help.elc" "ediff-help.el" "ediff-diff.elc" "ediff-diff.el" "echistory.elc" "echistory.el" "ebuff-menu.elc" "ebuff-menu.el" "double.elc" "double.el" "dos-w32.elc" "dos-w32.el" "dos-vars.elc" "dos-vars.el" "dos-fns.elc" "dos-fns.el" "dnd.elc" "dnd.el" "disp-table.elc" "disp-table.el" "dirtrack.elc" "dirtrack.el" "dired.elc" "dired.el" "dired-x.elc" "dired-x.el" "dired-aux.elc" "dired-aux.el" "diff.elc" "diff.el" "diff-mode.elc" "diff-mode.el" "dframe.elc" "dframe.el" "desktop.elc" "desktop.el" "descr-text.elc" "descr-text.el" "delsel.elc" "delsel.el" "delim-col.elc" "delim-col.el" "dabbrev.elc" "dabbrev.el" "cvs-status.elc" "cvs-status.el" "custom.elc" "custom.el" "cus-theme.elc" "cus-theme.el" "cus-start.elc" "cus-start.el" "cus-load.el" "cus-face.elc" "cus-face.el" "cus-edit.elc" "cus-edit.el" "cus-dep.elc" "cus-dep.el" "COPYING" "composite.elc" "composite.el" "completion.elc" "completion.el" "complete.elc" "complete.el" "compare-w.elc" "compare-w.el" "comint.elc" "comint.el" "cmuscheme.elc" "cmuscheme.el" "chistory.elc" "chistory.el" "cdl.elc" "cdl.el" "case-table.elc" "case-table.el" "calendar/" "calculator.elc" "calculator.el" "calc/" "button.elc" "button.el" "buff-menu.elc" "buff-menu.el" "bs.elc" "bs.el" "bookmark.elc" "bookmark.el" "bindings.elc" "bindings.el" "battery.elc" "battery.el" "avoid.elc" "avoid.el" "autorevert.elc" "autorevert.el" "autoinsert.elc" "autoinsert.el" "autoarg.elc" "autoarg.el" "array.elc" "array.el" "arc-mode.elc" "arc-mode.el" "apropos.elc" "apropos.el" "ansi-color.elc" "ansi-color.el" "allout.elc" "allout.el" "align.elc" "align.el" "add-log.elc" "add-log.el" "abbrevlist.elc" "abbrevlist.el" "abbrev.elc" "abbrev.el" "../" "./")
+
+ ("/Users/Saku/.emacs.d/elpa-to-submit/" (18863 23109) "zenburn.el" "yaml-mode.el" "twilight.el" "tt-mode.el" "textile-mode.el" "scpaste.el" "sass-mode.el" "ruby-electric.el" "ruby-compilation.el" "rinari.el" "ri.el" "pod-mode.el" "perl-find-library.el" "pcmpl-rake.el" "paredit.el" "oddmuse.el" "nxhtml/" "moz.el" "mode-compile.el" "markdown-mode.el" "magit.el" "jump.el" "jabber/" "inflections.el" "inf-ruby.el" "htmlize.el" "haml-mode.el" "gist.el" "findr.el" "find-file-in-project.el" "eshell-vc.el" "cssh.el" "cperl-mode.el" "color-theme.el" "clojure-mode.el" "cheat.el" "blackboard.el" "../" "./")
+
+ ("/Users/Saku/.emacs.d/vendor/" (18863 46564) "yasnippet.el" "unbound.el" "themes/" "snippets/" "mark-lines.el" "color-theme.el" "balanced.el" "../" "./")
+
+ ("/Users/Saku/.emacs.d/saku/" (18863 46564) "yasnippet.el" "unbound.el" "themes/" "snippets/" "mark-lines.el" "color-theme.el" "balanced.el" "../" "./")
+
+ ("/Users/Saku/Downloads/emacs-starter-kit/" (18863 23051) "TODO" "starter-kit-ruby.el" "starter-kit-registers.el" "starter-kit-perl.el" "starter-kit-misc.el" "starter-kit-lisp.el" "starter-kit-js.el" "starter-kit-eshell.el" "starter-kit-elpa.el" "starter-kit-defuns.el" "starter-kit-bindings.el" "README.markdown" "package.el" "init.el" "elpa-to-submit/" "elpa/" "COPYING" ".gitignore" ".git/" "../" "./")
+
+ ("/Users/Saku/Downloads/" (18863 35527) "xulrunner-1.9.0.8pre.en-US.mac-pkg.dmg" "Uri Caine Trio - Blue Wail (1998) [FLAC] {Winter& Winter}.1.torrent" "U2 - No Line On The Horizon (2009)[Flac].torrent" "textmate.el" "textmate-1.el" "teht06.pdf" "teht05.pdf" "Spotify.dmg" "Sequential203e.zip" "Sequential/" "Safari4.0BetaLeo.dmg" "sada-2007-poster.pdf" "rt.pdf" "rt-2.pdf" "rt-1.pdf" "ratk06.pdf" "ratk06-1.pdf" "Ozric Tentacles - Waterfall Cities (1999) [FLAC].torrent" "Ozric Tentacles - Spirals in Hyperspace - 2004 (CD - FLAC - Lossless).torrent" "McCoy Tyner - The Real McCoy - 1999 (CD - FLAC - Lossless).torrent" "McCoy Tyner - Sahara (1972) [FLAC] {MFSL}.torrent" "LyX-1.6.1-Mac-Universal.dmg" "lyhyt2e.pdf" "luvut4-5.pdf" "luvut1-3.pdf" "luntti.pdf" "Jefferson Airplane - Long John Silver (1972) [FLAC] {remaster}.torrent" "javalabra_luukkonen.zip" "javalabra/" "icame-2007-poster.pdf" "ht_4.pdf" "hr_5b.pdf" "hr_5a.pdf" "hr_4.pdf" "geru-poster-2008-05-26.pdf" "Feist - The Reminder (2007) [FLAC].torrent" "Feist - Let It Die (2004) [FLAC].torrent" "esimerkki.pdf" "Ennio Morricone - The Good, The Bad And The Ugly - 2004 (CD - FLAC - Lossless).torrent" "emacs-starter-kit/" "CV.pdf" "conkeror-master.tar" "conkeror/" "configs/" "Bonobo - Dial 'M' For Monkey (2003) [FLAC].torrent" "Bonobo - Days To Come (2006) [FLAC].torrent" "BjÅˆrk - The Music From Drawing Restraint 9 (2005) [FLAC].torrent" "all.pdf" ".localized" ".DS_Store" "../" "./")
+
+ ("/Users/Saku/Downloads/configs/" (18863 24385) "copy_config.sh" "bin/" ".zshrc" ".xmodmap" ".xinitrc" ".Xdefaults" ".vimrc" ".vimperatorrc" ".vim/" ".screenrc" ".gvimrc" ".gitignore" ".git/" ".emacs.d/" ".config/" ".bashrc" "../" "./")
+
+ ("/Users/Saku/dotemacs/.emacs.d/" (17746 33113) "misc/" "emacs-rails-head/" "99bindings.el" "90misc.el" "80zenirc.el" "60eshell.el" "51css.el" "50yaml.el" "49javascript.el" "48rails.el" "47ruby.el" "46python.el" "45cc.el" "44elisp.el" "40cedet.el" "35nxml.el" "30planner.el" "20muse.el" "10gnus.el" "04tramp.el" "02ido.el" "01hideshow.el" "00setup.el" "../" "./")
+
+ ("/Users/Saku/dotemacs/" (17746 34549) "README" ".emacs.el" ".emacs.d/" "../" "./")
+
+ ("/Users/Saku/Development/k&r/" (18863 22843) "tags" "a.out.dSYM/" "a.out" "1-9.c" "1-8.c" "1-7.c" "1-6.c" "1-5.c" "1-4.c" "1-3.c" "1-2.c" "1-10.c" "1-1.c" "../" "./")
+
+ ("/Users/Saku/.emacs.d/saku/snippets/text-mode/cc-mode/" (18863 22125) "while" "struct" "once" "main" "java-mode/" "inc.1" "inc" "if" "for" "do" "csharp-mode/" "c-mode/" "c++-mode/" "#do#" "../" "./")
+
+ ("/Users/Saku/.emacs.d/saku/snippets/text-mode/" (18798 20370) "time" "sql-mode/" "scala-mode/" "ruby-mode/" "rst-mode/" "python-mode/" "perl-mode/" "objc-mode/" "nxml-mode/" "markdown-mode/" "latex-mode/" "html-mode/" "f90-mode/" "erlang-mode/" "email" "css-mode/" "cc-mode/" "../" "./")
+
+ ("/Users/Saku/.emacs.d/saku/snippets/" (18798 20370) "text-mode/" "../" "./")
+
+ ("/Users/Saku/.emacs.d/elpa/" (18798 20369) "ruby-mode-1.0/" "inf-ruby-2.0/" "idle-highlight-1.0/" "builtin-packages" "archive-contents" ".gitignore" "../" "./")
+
+ ("/Users/Saku/.emacs.d/saku/snippets/text-mode/cc-mode/c-mode/" (18798 20370) "fopen" "../" "./")
+
+ ("/Users/Saku/.emacs.d/saku/snippets/text-mode/cc-mode/java-mode/" (18798 24430) "main" "class" "#sout#" "../" "./")
+
+ ("/Users/Saku/Development/tira/harj1/" (18815 3305) "T5.java" "T5.class" "#T5.java#" "../" "./")
+
+ ("/Users/Saku/Development/" (18845 13172) "workspace/" "tito/" "tira/" "spoj/" "saku@thor/" "random/" "railstest/" "ohpe/" "mediadb/" "k&r/" "javalabra/" "euler/" "configs/" "../" "./")
+
+ ("/Users/Saku/Development/javalabra/src/org/hy/soluukko/" (18845 13173) "javalabra/" "../" "./")
+
+ ("/Users/Saku/Development/javalabra/src/org/hy/" (18845 13173) "soluukko/" "../" "./")
+
+ ("/Users/Saku/Development/javalabra/src/org/" (18845 13173) "hy/" "../" "./")
+
+ ("/Users/Saku/Development/javalabra/src/" (18848 13936) "org/" "MineGridTest.java" "../" "./")
+
+ ("/Users/Saku/Development/javalabra/" (18859 57194) "src/" "images/" "doc/" "bin/" ".git/" "../" "./")
+
+ ("/Users/Saku/Development/configs/" (18798 20227) "url/" "TODO" "starter-kit-ruby.el" "starter-kit-registers.el" "starter-kit-perl.el" "starter-kit-misc.el" "starter-kit-lisp.el" "starter-kit-js.el" "starter-kit-eshell.el" "starter-kit-elpa.el" "starter-kit-defuns.el" "starter-kit-bindings.el" "saku.el" "saku/" "README.markdown" "places" "package.el" "loaddefs.el" "init.el" "elpa-to-submit/" "elpa/" "COPYING" "backups/" "auto-save-list/" ".emacs.d/" "#starter-kit-misc.el#" "../" "./")
+
+ ("/Users/Saku/configs/" (18795 8251) "copy_config.sh" "bin/" ".zshrc" ".xmodmap" ".xinitrc" ".Xdefaults" ".vimrc" ".vimperatorrc" ".vim/" ".screenrc" ".gvimrc" ".git/" ".config/" ".bashrc" "../" "./")
+
+ ("/Users/Saku/Development/tito/" (18795 8148) "TITO.tmproj" "test.k91" "e-300.k91" "e-300.b91" "d-400.k91" "d-400.b91" "c-500.k91" "c-500.b91" "c-260.k91" "c-260.b91" "c-200.k91" "c-200.b91" "b-900.k91" "b-900.b91" "b-770.k91" "b-770.b91" "b-700.k91" "b-700.b91" "b-660.k91" "b-660.b91" "b-410.k91" "b-410.b91" "b-400.k91" "b-400.b91" "b-350.k91" "b-350.b91" "b-260.b91" "b-200.k91" "b-200.b91" "../" "./")
+
+ ("/Users/Saku/Development/tira/" (18796 19903) "harj1/" "../" "./")
+
+ ("/Users/" (18622 62709) "Shared/" "Saku/" ".localized" "../" "./")
+
+ ("/Users/Saku/Desktop/" (18784 2401) ".localized" ".DS_Store" "../" "./")
+
+ ("/Users/Saku/Development/configs/bin/" (18787 58545) "github" "../" "./")
+)
+
+;; ----- ido-unc-hosts-cache -----
+t
+
