@@ -1,19 +1,25 @@
-URxvt*font:              xft:Consolas:pixelsize=13
+! URxvt*font:              xft:Consolas:pixelsize=13
+URxvt*font:                -*-dina-medium-r-normal-*-*-*-*-*-*-*-*-*
+
 
 URxvt*saveLines:         32767
 URxvt*scrollBar:         false
 URxvt*termName:          rxvt
 URxvt*cutchars:          "()*,<>[]{}|"
 URxvt*secondaryScroll:   true
-urxvt*perl-lib:          /usr/lib/urxvt/perl/
-urxvt*perl-ext-common:   default,matcher
-URxvt*urlLauncher:       /usr/bin/firefox
-URxvt*matcher.button:    1
-URxvt*matcher.pattern.1: \\bwww\\.[\\w-]+\\.[\\w./?&@#-]*[\\w/-]
 URxvt*visualBell:        true
 URxvt*background:        #111111
 URxvt*foreground:        #B4B4B4
 URxvt*cursorColor:       #FFAF00
+
+URxvt.keysym.M-u: perl:mark-yank-urls:activate_mark_mode
+URxvt.underlineURLs: true
+URxvt.perl-lib: /home/saku/.urxvt
+URxvt.perl-ext: selection,mark-yank-urls
+URxvt.urlLauncher: conkeror
+urxvt*perl-ext-common:   default,matcher
+URxvt*matcher.button:    1
+URxvt*matcher.pattern.1: \\bwww\\.[\\w-]+\\.[\\w./?&@#-]*[\\w/-]
 
 xterm*utf8:              2
 xterm*background:        #1c1c1c
