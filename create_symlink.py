@@ -2,7 +2,8 @@
 import os
 home = os.path.abspath(os.environ['HOME'])
 path = os.path.join(home, 'src/configs') 
-excludes = ['.gitignore', '.config', 'create_symlinks.py'] 
+excludes = ['.gitignore', '.config', 'create_symlinks.py', 'bin',
+            'copy_config.sh'] 
 for f in os.listdir(path):
     if f not in excludes:
         dst = os.path.join(home, f)
