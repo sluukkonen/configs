@@ -22,7 +22,7 @@
 ;; Color themes
 (require 'color-theme)
 (color-theme-initialize)
-;; (color-theme-charcoal-black)
+(color-theme-vivid-chalk)
 
 ;; A full screen command
 (defun toggle-fullscreen ()
@@ -96,3 +96,9 @@
 
 
 (setq hippie-expand-try-functions-list '(try-expand-dabbrev try-expand-dabbrev-all-buffers try-expand-dabbrev-from-kill try-complete-file-name-partially try-complete-file-name try-expand-all-abbrevs try-expand-list try-expand-line try-complete-lisp-symbol-partially try-complete-lisp-symbol))
+
+;; Marking a single line.
+(require 'mark-lines)
+(global-set-key [(control x) (control p)] 'mark-lines-previous-line)
+(global-set-key [(control x) (control n)] 'mark-lines-next-line)
+

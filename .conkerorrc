@@ -1,0 +1,6 @@
+modifiers.M = new modifier(
+    function (event) { return event.metaKey; },
+    function (event) { event.metaKey = true; });
+
+url_completion_use_history = true;
+url_completion_use_bookmarks = false;
