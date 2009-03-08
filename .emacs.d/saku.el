@@ -22,7 +22,7 @@
 ;; Color themes
 (require 'color-theme)
 (color-theme-initialize)
-(color-theme-vivid-chalk)
+(color-theme-charcoal-black)
 
 ;; A full screen command
 (defun toggle-fullscreen ()
