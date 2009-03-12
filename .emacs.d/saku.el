@@ -22,7 +22,7 @@
 ;; Color themes
 (require 'color-theme)
 (color-theme-initialize)
-(color-theme-charcoal-black)
+(color-theme-vivid-chalk)
 
 ;; A full screen command
 (defun toggle-fullscreen ()
@@ -102,3 +102,5 @@
 (global-set-key [(control x) (control p)] 'mark-lines-previous-line)
 (global-set-key [(control x) (control n)] 'mark-lines-next-line)
 
+;; Latex settings
+(add-hook 'LaTeX-mode-hook 'LaTeX-math-mode)
