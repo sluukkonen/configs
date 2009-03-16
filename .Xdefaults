@@ -16,7 +16,7 @@ URxvt.keysym.M-u: perl:mark-yank-urls:activate_mark_mode
 URxvt.underlineURLs: true
 URxvt.perl-lib: /home/saku/.urxvt
 URxvt.perl-ext: selection,mark-yank-urls
-URxvt.urlLauncher: conkeror
+URxvt.urlLauncher: firefox
 urxvt*perl-ext-common:   default,matcher
 URxvt*matcher.button:    1
 URxvt*matcher.pattern.1: \\bwww\\.[\\w-]+\\.[\\w./?&@#-]*[\\w/-]
