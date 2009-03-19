@@ -8,7 +8,7 @@ URxvt*termName:          rxvt
 URxvt*cutchars:          "()*,<>[]{}|"
 URxvt*secondaryScroll:   true
 URxvt*visualBell:        true
-URxvt*background:        #111111
+URxvt*background:        #1C1C1C
 URxvt*foreground:        #B4B4B4
 URxvt*cursorColor:       #FFAF00
 
@@ -27,7 +27,7 @@ xterm*background:        #1c1c1c
 Xft.lcdfilter:           lcddefault
 Xft.hintstyle:           hintslight
 
-Emacs.font:              DejaVu\ Sans\ Mono-10
+Emacs.font:              DejaVu\ Sans\ Mono-9
 emacs.FontBackend:       xft
 
 ! tangoesque scheme
