@@ -8,7 +8,7 @@ URxvt*termName:          rxvt
 URxvt*cutchars:          "()*,<>[]{}|"
 URxvt*secondaryScroll:   true
 URxvt*visualBell:        true
-URxvt*background:        #1C1C1C
+URxvt*background:        #222222
 URxvt*foreground:        #B4B4B4
 URxvt*cursorColor:       #FFAF00
 
@@ -16,7 +16,7 @@ URxvt.keysym.M-u: perl:mark-yank-urls:activate_mark_mode
 URxvt.underlineURLs: true
 URxvt.perl-lib: /home/saku/.urxvt
 URxvt.perl-ext: selection,mark-yank-urls
-URxvt.urlLauncher: firefox
+URxvt.urlLauncher: conkeror
 urxvt*perl-ext-common:   default,matcher
 URxvt*matcher.button:    1
 URxvt*matcher.pattern.1: \\bwww\\.[\\w-]+\\.[\\w./?&@#-]*[\\w/-]

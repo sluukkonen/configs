@@ -4,3 +4,6 @@ modifiers.M = new modifier(
 
 url_completion_use_history = true;
 url_completion_use_bookmarks = false;
+browser_prevent_automatic_form_focus_mode(true);
+
+url_remoting_fn = load_url_in_new_buffer;
