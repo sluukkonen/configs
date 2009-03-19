@@ -26,7 +26,7 @@ tasklist   = {}
 -------------------------------------------------------------------------------------
 --{{{ Variables
 
-modMask             = "Mod4"
+modMask             = "Mod1"
 
 -- Default apps
 term        = "urxvtc"
@@ -38,7 +38,7 @@ theme_path = os.getenv("HOME").."/.config/awesome/themes/stxza"
 -- Load Theme
 beautiful.init(theme_path)
 -- Titlebar
-use_titlebar = false
+use_titlebar = true
 
 -- The layouts we will use
 layouts = { 
@@ -69,13 +69,13 @@ layoutText = {
 -- Apps that should be forced floating
 floatApps = { 
 	["Gimp"]         = true,
-	["eog"]      = true,
-	["transmission"] = true,
+	["Mirage"]      = true,
 	["mplayer"]      = true
 }
 
 apptags = { 
 	["Gran Paradiso"] = { screen = 1, tag = 2 },
+	["Navigator"] = { screen = 1, tag = 2 },
 	["MPlayer"] = { screen = 1, tag = 6 },
 	["Nautilus"]  = { screen = 1, tag = 4 },
 	["gvim"]    = { screen = 1, tag = 3 },
@@ -212,12 +212,8 @@ for s = 1, screen.count() do
                            , tasklist[s]
                            , promptbox[s]
                            , separator
-						   , batterywidget 
-						   , separator
                            , memwidget
-                           -- , separator
-						   -- , cpuwidget
-						   , seperator
+						   , separator
                            , clockwidget
                            , s == 1 and systray or nil
                            }
@@ -343,6 +339,13 @@ awful.hooks.manage.register(function (c)
     c.border_width = beautiful.border_width
     c.border_color = beautiful.border_normal
 
+	if use_titlebar then
+		-- Add a titlebar
+		awful.titlebar.add(c, { modkey = modkey, height = "16" })
+		c.opacity = 0
+	end
+
+
     -- Check if the application should be floating
     local cls = c.class
     local inst = c.instance
@@ -400,7 +403,7 @@ end)
 -- 5 seconds
 awful.hooks.timer.register(15, function()
     memInfo()
-	batteryInfo("BAT0")
+	-- batteryInfo("BAT0")
 end)
 
 -- 20 seconds

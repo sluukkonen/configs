@@ -2,20 +2,26 @@
 -- saku's Awesome Theme --
 ---------------------------
 
-font            = Terminus 8
+font            = Terminus 7
 
-bg_normal       = #000000AA
-bg_focus        = #1C1C1CAA
-bg_urgent       = #3579A8AA
+bg_normal       = #1C1C1C
+bg_focus        = #1C1C1C
+bg_urgent       = #3579A8
 
-fg_normal       = #C4C4C4
-fg_focus        = #3579A8
+fg_normal       = #FFFFFF
+fg_focus        = #204A87
 fg_urgent       = #EFEFEF
 
-border_width    = 3
-border_normal   = #4C4C4C66
-border_focus    = #3579A866
-border_marked   = #FF000066
+border_width    = 1
+border_normal   = #333333
+border_focus    = #204A87
+border_marked   = #FF0000
+
+titlebar_bg_focus = #204A87
+titlebar_fg_focus = #FFFFFF
+titlebar_bg_normal = #333333
+titlebar_fg_normal = #FFFFFF
+titlebar_close_button = true
 
 
 taglist_squares           = true
