@@ -8,7 +8,7 @@ require("naughty")
 
 -- {{{ Variable definitions
 -- Theme
-theme_path = "/home/saku/.config/awesome/themes/stxza"
+-theme_path = os.getenv("HOME").."/.config/awesome/themes/stxza"
 
 -- Actually load the theme
 beautiful.init(theme_path)
