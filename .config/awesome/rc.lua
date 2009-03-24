@@ -386,7 +386,7 @@ awful.hooks.arrange.register(function (screen)
     else
         layouticon[screen].text = nil
     end
-
+pp
     -- Give focus to the latest client in history if no window has focus
     if not client.focus then
         local c = awful.client.focus.history.get(screen, 0)

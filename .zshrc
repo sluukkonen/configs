@@ -35,6 +35,7 @@ alias la='ls -la'
 alias v='vim'
 alias sv='sudo vim'
 alias e='emacs'
+alias l='less'
 
 # Functions
 
