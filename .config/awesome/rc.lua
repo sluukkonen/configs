@@ -36,7 +36,7 @@ layouts =
     awful.layout.suit.fair.horizontal,
     awful.layout.suit.max,
     awful.layout.suit.max.fullscreen,
-    awful.layout.suit.magnifier,
+n    awful.layout.suit.magnifier,
     awful.layout.suit.floating
 }
 
@@ -134,6 +134,11 @@ separator.image = image(awful.util.getdir("config").."/icons/separators/link2.pn
 clockwidget = widget({ type = "textbox", name = "clockwidget", align = "right" })
 -- Run it once so we don't have to wait for the hooks to see our clock
 clockInfo("%d/%m/%Y", "%T")
+
+-- Create the cpu widget
+cpuwidget = widget({ type = "textbox", name = "cpuwidget", align = "right" })
+-- Run it once so we don't have to wait for the hooks to see our cpu usage
+wicked.register(cpuwidget, 'cpu', cpuUsg, 1, nil, 2)
  
 -- Create the memory widget
 memwidget = widget({ type = "textbox", name = "memwidget", align = "right" })
@@ -199,6 +204,8 @@ for s = 1, screen.count() do
                            separator,
                            memwidget,
                            separator,
+                           cpuwidget,
+                           separator.
                            clockwidget,
                            separator,
                            s == 1 and mysystray or nil }
@@ -269,7 +276,7 @@ globalkeys =
             awful.util.getdir("cache") .. "/history")
         end),
 
-    -- Custom keybindings.
+    -- Custom keybindings
     key({ }, "F11", function () awful.util.spawn("amixer set DAC,0 3%- && amixer set DAC,1 3%-") end),
     key({ }, "F12", function () awful.util.spawn("amixer set DAC,0 3%+ && amixer set DAC,1 3%+") end)
 }
