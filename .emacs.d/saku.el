@@ -22,7 +22,7 @@
 ;; Color themes
 (require 'color-theme)
 (color-theme-initialize)
-(color-theme-charcoal-black)
+(color-theme-vivid-chalk)
 
 ;; A full screen command
 (defun toggle-fullscreen ()
@@ -104,3 +104,6 @@
 
 ;; Latex settings
 (add-hook 'LaTeX-mode-hook 'LaTeX-math-mode)
+
+;; Join two lines
+(global-set-key (kbd "C-M-j") 'join-line)

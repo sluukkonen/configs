@@ -1,5 +1,5 @@
-! URxvt*font:              xft:Consolas:pixelsize=13
-URxvt*font:                -*-dina-medium-r-normal-*-*-*-*-*-*-*-*-*
+URxvt*font:              xft:DejaVu\ Sans\ Mono:pixelsize=13
+! URxvt*font:                -*-dina-medium-r-normal-*-*-*-*-*-*-*-*-*
 
 
 URxvt*saveLines:         32767
@@ -8,8 +8,8 @@ URxvt*termName:          rxvt
 URxvt*cutchars:          "()*,<>[]{}|"
 URxvt*secondaryScroll:   true
 URxvt*visualBell:        true
-URxvt*background:        #222222
-URxvt*foreground:        #B4B4B4
+URxvt*background:        #000000
+URxvt*foreground:        #FFFFFF
 URxvt*cursorColor:       #FFAF00
 
 URxvt.keysym.M-u: perl:mark-yank-urls:activate_mark_mode
@@ -27,7 +27,7 @@ xterm*background:        #1c1c1c
 Xft.lcdfilter:           lcddefault
 Xft.hintstyle:           hintslight
 
-Emacs.font:              DejaVu\ Sans\ Mono-9
+Emacs.font:              DejaVu\ Sans\ Mono-10
 emacs.FontBackend:       xft
 
 ! tangoesque scheme
