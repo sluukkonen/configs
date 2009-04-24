@@ -24,17 +24,15 @@ set bs=2
 set wildmenu
 " no annoying files~
 set nobackup
+" line length 78 characters
+set textwidth=78
 " better end and start of line
-map H ^
-map L $
-map <C-]> <C-s>
+nmap H ^
+nmap L $
 
 filetype on
 filetype plugin on
 filetype indent on
-
-" easier switching to tag under cursor
-nnoremap <C-p> <C-]>
 
 " ruby omni completion
 autocmd FileType ruby,eruby set omnifunc=rubycomplete#Complete
@@ -42,9 +40,12 @@ autocmd FileType ruby,eruby let g:rubycomplete_buffer_loading = 1
 autocmd FileType ruby,eruby let g:rubycomplete_rails = 1
 autocmd FileType ruby,eruby let g:rubycomplete_classes_in_global = 1
 
+" TextMate-like cmd-enter"
+imap <D-Enter> <Esc>o
+
 " modifier key
 let mapleader = ","
-map <leader>f :FuzzyFinderTextMate<CR>
+nmap <leader>f :FuzzyFinderTextMate<CR>
 
 " standard library ctags for C-like languages
 set tags=/.vim/tags/stdtags,tags,.tags,../tags
@@ -54,13 +55,3 @@ command WQ wq
 command Wq wq
 command W w
 command Q q
-
-inoremap {      {}<Left>
-inoremap {<CR>  {<CR>}<Esc>O
-inoremap {{     {
-inoremap {}     {}
-
-autocmd FileType java let b:jcommenter_class_author='Sakumatti Luukkonen <sakumatti.luukkonen@cs.helsinki.fi>'
-autocmd FileType java let b:jcommenter_file_author='Sakumatti Luukkonen <sakumatti.luukkonen@cs.helsinki.fi>'
-autocmd FileType java source ~/.vim/plugin/jcommenter.vim
-autocmd FileType java map <Leader>cj :call JCommentWriter()<CR> 
