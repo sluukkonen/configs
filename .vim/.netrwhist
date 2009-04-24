@@ -1,0 +1,5 @@
+let g:netrw_dirhistmax  =10
+let g:netrw_dirhist_cnt =3
+let g:netrw_dirhist_1='/Users/Saku/Development/Euler'
+let g:netrw_dirhist_2='/Users/Saku/.vim/after/ftplugin'
+let g:netrw_dirhist_3='/Users/Saku/Development/euler'
