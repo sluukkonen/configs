@@ -10,7 +10,7 @@
      (add-hook 'ruby-mode-hook 'inf-ruby-keys)
      (define-key ruby-mode-map (kbd "RET") 'reindent-then-newline-and-indent)
      (define-key ruby-mode-map (kbd "C-M-h") 'backward-kill-word)
-     (define-key ruby-mode-map (kbd "C-c l") "lambda")))
+     (define-key ruby-mode-map (kbd "C-c l") "€ô¦¦†ëlambda")))
 
 (global-set-key (kbd "C-h r") 'ri)
 
@@ -32,7 +32,7 @@
    "Return a list of all the rake tasks defined in the current
 projects.  I know this is a hack to put all the logic in the
 exec-to-string command, but it works and seems fast"
-   (delq nil (mapcar '(lambda(line)
+   (delq nil (mapcar '(€ô¦¦†ëlambda(line)
 			(if (string-match "rake \\([^ ]+\\)" line) (match-string 1 line)))
 		     (split-string (shell-command-to-string "rake -T") "[\n]"))))
 
@@ -77,7 +77,7 @@ exec-to-string command, but it works and seems fast"
            flymake-err-line-patterns)
 
      (add-hook 'ruby-mode-hook
-               (lambda ()
+               (€ô¦¦†ëlambda ()
                  (when (and buffer-file-name
                             (file-writable-p
                              (file-name-directory buffer-file-name))

@@ -6,6 +6,11 @@
 ;; For describe-unbound-keys
 (require 'unbound)
 
+;; paredit-mode
+(autoload 'paredit-mode "paredit"
+  "Minor mode to enter various characters in pairs."
+  t)
+
 ;; Snippets.
 (require 'yasnippet) 
 (yas/initialize)
@@ -20,9 +25,9 @@
 (global-set-key "\C-ck" 'mode-compile-kill)
 
 ;; Color themes
-(require 'color-theme)
-(color-theme-initialize)
-(color-theme-vivid-chalk)
+;; (require 'color-theme)
+;; (color-theme-initialize)
+;; (color-theme-twilight)
 
 ;; A full screen command
 (defun toggle-fullscreen ()
@@ -65,7 +70,9 @@
 (setq c-default-style "bsd"
       c-basic-offset 4)
 (add-hook 'c-mode-common-hook
-          (lambda () (c-toggle-auto-hungry-state 1)))
+          (lambda ()
+            (c-toggle-auto-hungry-state 1)
+            (paredit-mode +1)))
 
 ;; Ruby electric keys fix until emacs starter kit fixes it.
 (add-hook 'ruby-mode-hook
@@ -78,7 +85,7 @@
                            )))
             (set (make-local-variable 'indent-tabs-mode) 'nil)
             (set (make-local-variable 'tab-width) 2)
-            (imenu-add-to-menubar "IMENU")
+            ;; (imenu-add-to-menubar "IMENU")
             (require 'ruby-electric)
             (ruby-electric-mode t)
             ))
@@ -93,8 +100,6 @@
 
 ;; Replace dabbrev-expand with hippie-expand.
 (global-set-key (kbd "M-/") 'hippie-expand)
-
-
 (setq hippie-expand-try-functions-list '(try-expand-dabbrev try-expand-dabbrev-all-buffers try-expand-dabbrev-from-kill try-complete-file-name-partially try-complete-file-name try-expand-all-abbrevs try-expand-list try-expand-line try-complete-lisp-symbol-partially try-complete-lisp-symbol))
 
 ;; Marking a single line.
