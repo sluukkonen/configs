@@ -10,7 +10,8 @@ set nocompatible
 " Indentation level
 set tabstop=4
 set shiftwidth=4
-set expandtab
+set softtabstop=4
+set noexpandtab
 " syntax highlighting 
 syntax on
 " show caret position in the status bar

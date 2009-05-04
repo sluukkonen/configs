@@ -1,7 +1,7 @@
 snippet main
 	public static void main (String [] args)
 	{
-		${1:/* code */}
+		${1}
 	}
 snippet pu
 	public
@@ -41,29 +41,47 @@ snippet j.n
 snippet j.m
 	java.math.
 snippet if
-	if (${1}) ${2}
+	if (${1}) {
+		${2}
+	}
 snippet el
-	else 
+	else {
+		${1}
+	}
 snippet elif
-	else if (${1}) ${2}
+	else if (${1}) {
+		${2}
+	}
 snippet wh
-	while (${1}) ${2}
+	while (${1}) {
+		${2}
+	}
 snippet for
-	for (${1}; ${2}; ${3}) ${4}
+	for (${1}; ${2}; ${3}) {
+		${4}
+	}
 snippet fore
-	for (${1} : ${2}) ${3}
+	for (${1} : ${2}) {
+		${3}
+	}
 snippet sw
-	switch (${1}) ${2}
+	switch (${1}) {
+		${2}
+	}
 snippet cs
 	case ${1}:
 		${2}
 	${3}
 snippet tc
-	public class ${1:`Filename()`} extends ${2:TestCase}
+	public class ${1:`Filename()`} extends ${2:TestCase} {
+		${3}
+	}
 snippet t
 	public void test${1:Name}() throws Exception ${2}
 snippet cl
-	class ${1:`Filename("", "untitled")`} ${2}
+	class ${1:`Filename("", "untitled")`} {
+		${2}
+	}
 snippet in
 	interface ${1:`Filename("", "untitled")`} ${2:extends Parent}${3}
 snippet m
