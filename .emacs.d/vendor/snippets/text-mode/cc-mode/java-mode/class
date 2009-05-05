@@ -1,6 +1,0 @@
-#name : public class foo { ... }
-# --
-public class (${className})
-{
-        $0
-}

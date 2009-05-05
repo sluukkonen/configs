@@ -1,9 +1,0 @@
-all:: ncurses
-
-ncurses: empty.c
-	gcc -o $@ $? -lncurses
-
-clean::
-	rm -f ncurses
-
-.PHONY: clean

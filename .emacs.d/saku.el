@@ -6,10 +6,8 @@
 ;; For describe-unbound-keys
 (require 'unbound)
 
-;; paredit-mode
-(autoload 'paredit-mode "paredit"
-  "Minor mode to enter various characters in pairs."
-  t)
+;; Textmate-mode
+(require 'textmate-mode)
 
 ;; Snippets.
 (require 'yasnippet) 
@@ -27,7 +25,7 @@
 ;; Color themes
 ;; (require 'color-theme)
 ;; (color-theme-initialize)
-;; (color-theme-twilight)
+;; (color-theme-zenburn)                   
 
 ;; A full screen command
 (defun toggle-fullscreen ()
@@ -42,9 +40,6 @@
 
 ;; Default tab width.
 (setq default-tab-width 4)
-
-;; Use spaces instead of tabs.
-(setq-default indent-tabs-mode nil)
 
 ;; Textmate-like newline from M-RET.
 (defun textmate-next-line ()
@@ -67,12 +62,12 @@
 (global-set-key "\C-c\C-m" 'execute-extended-command)
 
 ;; C-mode settings
-(setq c-default-style "bsd"
+(setq c-default-style "k&r"
       c-basic-offset 4)
 (add-hook 'c-mode-common-hook
           (lambda ()
             (c-toggle-auto-hungry-state 1)
-            (paredit-mode +1)))
+            (textmate-mode)))
 
 ;; Ruby electric keys fix until emacs starter kit fixes it.
 (add-hook 'ruby-mode-hook
@@ -112,3 +107,15 @@
 
 ;; Join two lines
 (global-set-key (kbd "C-M-j") 'join-line)
+
+;; Spell check comments
+(autoload 'flyspell-mode "flyspell" "On-the-fly spelling checker." t)
+(add-hook 'message-mode-hook 'turn-on-flyspell)
+(add-hook 'text-mode-hook 'turn-on-flyspell)
+(add-hook 'c-mode-common-hook 'flyspell-prog-mode)
+(add-hook 'ruby-mode-hook 'flyspell-prog-mode)
+(add-hook 'tcl-mode-hook 'flyspell-prog-mode)
+(defun turn-on-flyspell ()
+   "Force flyspell-mode on using a positive arg.  For use in hooks."
+   (interactive)
+   (flyspell-mode 1))
