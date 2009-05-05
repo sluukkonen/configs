@@ -1,16 +1,20 @@
 set lines=80
-set columns=82
+set columns=83
 set go-=T
-" Only rightscrollbars
+
+" Scrollbars only on the right side of the window
 set guioptions-=L
 set guioptions-=l
 set guioptions-=R
 set guioptions-=r 
 set guioptions-=m 
-set guifont=Consolas
+set guifont=DejaVu\ Sans\ Mono
 colorscheme zenburn
+
 " highlight the current line
 set cursorline
-"macvim fullscreen fix
-set fuopt=maxhorz,maxvert
 
+"macvim fullscreen fix
+if has("gui_mac")
+	set fuopt=maxhorz,maxvert
+endif
