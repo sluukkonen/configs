@@ -64,7 +64,7 @@
         ido-use-filename-at-point t
         ido-max-prospects 10))
 
-(set-default 'indent-tabs-mode nil)
+;; (set-default 'indent-tabs-mode nil)
 (set-default 'indicate-empty-lines t)
 (set-default 'imenu-auto-rescan t)
 

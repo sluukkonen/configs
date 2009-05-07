@@ -6,9 +6,6 @@
 ;; For describe-unbound-keys
 (require 'unbound)
 
-;; Textmate-mode
-(require 'textmate-mode)
-
 ;; Snippets.
 (require 'yasnippet) 
 (yas/initialize)
@@ -23,9 +20,9 @@
 (global-set-key "\C-ck" 'mode-compile-kill)
 
 ;; Color themes
-;; (require 'color-theme)
-;; (color-theme-initialize)
-;; (color-theme-zenburn)                   
+(require 'color-theme)
+(color-theme-initialize)
+(color-theme-charcoal-black)                   
 
 ;; A full screen command
 (defun toggle-fullscreen ()
@@ -54,33 +51,30 @@
 ;; Display column/line numbers in the status line.
 (setq column-number-mode t)
 
-;; Disable scrollbars
+;; Disable scroll bars.
 (toggle-scroll-bar -1)
 
-;; Invoke M-x without alt
+;; Invoke M-x without alt.
 (global-set-key "\C-x\C-m" 'execute-extended-command)
 (global-set-key "\C-c\C-m" 'execute-extended-command)
 
-;; C-mode settings
+;; C-mode settings.
 (setq c-default-style "k&r"
       c-basic-offset 4)
 (add-hook 'c-mode-common-hook
           (lambda ()
-            (c-toggle-auto-hungry-state 1)
-            (textmate-mode)))
+            (c-toggle-auto-hungry-state 1)))
 
 ;; Ruby electric keys fix until emacs starter kit fixes it.
 (add-hook 'ruby-mode-hook
-          (lambda()
+          (lambda ()
             (add-hook 'local-write-file-hooks
-                      '(lambda()
+                      '(lambda ()
                          (save-excursion
                            (untabify (point-min) (point-max))
                            (delete-trailing-whitespace)
                            )))
-            (set (make-local-variable 'indent-tabs-mode) 'nil)
             (set (make-local-variable 'tab-width) 2)
-            ;; (imenu-add-to-menubar "IMENU")
             (require 'ruby-electric)
             (ruby-electric-mode t)
             ))
@@ -102,7 +96,7 @@
 (global-set-key [(control x) (control p)] 'mark-lines-previous-line)
 (global-set-key [(control x) (control n)] 'mark-lines-next-line)
 
-;; Latex settings
+;; Latex settings.
 (add-hook 'LaTeX-mode-hook 'LaTeX-math-mode)
 
 ;; Join two lines
@@ -119,3 +113,27 @@
    "Force flyspell-mode on using a positive arg.  For use in hooks."
    (interactive)
    (flyspell-mode 1))
+
+;; rcodetools
+(require 'rcodetools)
+
+;; Textmate and paredit mode.
+(require 'textmate-mode) (require 'paredit-mode')
+(add-hook 'c-mode-common-hook (lambda () (textmate-mode)))
+o(add-hook emacs-lisp-mode-hook (lambda () paredit-mode +1))
+
+;; Disable auto-save
+(setq auto-save-default nil)
+
+(defun linux-c-mode ()
+  "C mode with adjusted defaults for use with the Linux kernel."
+  (interactive)
+  (c-mode)
+  (setq c-indent-level 8)
+  (setq c-brace-imaginary-offset 0)
+  (setq c-brace-offset -8)
+  (setq c-argdecl-indent 8)
+  (setq c-label-offset -8)
+  (setq c-continued-statement-offset 8)
+  (setq indent-tabs-mode nil)
+  (setq tab-width 8))
