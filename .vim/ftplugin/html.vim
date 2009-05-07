@@ -18,8 +18,8 @@ endif
 let b:html_mode = 1
 
 " html-filetype tweaks
-let g:html_indent_tags = "p"
-autocmd FileType html setlocal shiftwidth=2 | setlocal tabstop=2
+let g:html_indent_inctags = "html,body,head,tbody,p,li"
+setlocal shiftwidth=2 | setlocal tabstop=2
 
 " On to loading xml.vim
 runtime ftplugin/xml.vim

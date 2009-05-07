@@ -1,8 +1,9 @@
 " line numbers
-set number
+" set number
 " incremental search
 set incsearch
 " ignore case in searches, but be case-sensitive if capital letters are used
+
 set ignorecase
 set smartcase
 " we're using vim, not vi
@@ -30,6 +31,8 @@ nmap L $
 omap H ^
 omap L $
 
+
+
 filetype on
 filetype plugin on
 filetype indent on
@@ -50,15 +53,18 @@ command Wq wq
 command W w
 command Q q
 
-"""""""""""""""""""""""""""" Filetype settings """""""""""""""""""""""""""""" 
-
-" html 
-let g:html_indent_tags = "p"
-autocmd FileType html setlocal shiftwidth=2 | setlocal tabstop=2
-
-" ruby 
-autocmd FileType ruby setlocal shiftwidth=2 | setlocal tabstop=2
-autocmd FileType ruby,eruby set omnifunc=rubycomplete#Complete
-autocmd FileType ruby,eruby let g:rubycomplete_buffer_loading = 1
-autocmd FileType ruby,eruby let g:rubycomplete_rails = 1
-autocmd FileType ruby,eruby let g:rubycomplete_classes_in_global = 1
+" Insert mode readline-like bindings
+" start of line
+:inoremap <C-a>		<Home>
+" back one character
+:inoremap <C-b>		<Left>
+" delete character under cursor
+:inoremap <C-d>		<Del>
+" end of line
+:inoremap <C-e>		<End>
+" forward one character
+:inoremap <C-f>		<Right>
+" back one word
+:inoremap <M-b>  	<S-Left>
+" forward one word
+:inoremap <M-f>	    <S-Right>
