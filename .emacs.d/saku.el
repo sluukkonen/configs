@@ -65,7 +65,7 @@
           (lambda ()
             (c-toggle-auto-hungry-state 1)))
 
-;; Ruby electric keys fix until emacs starter kit fixes it.
+;; Ruby mode settings.
 (add-hook 'ruby-mode-hook
           (lambda ()
             (add-hook 'local-write-file-hooks
@@ -74,6 +74,7 @@
                            (untabify (point-min) (point-max))
                            (delete-trailing-whitespace)
                            )))
+			(set (make-local-variable 'indent-tabs-mode) 'nil)
             (set (make-local-variable 'tab-width) 2)
             (require 'ruby-electric)
             (ruby-electric-mode t)
@@ -109,6 +110,7 @@
 (add-hook 'c-mode-common-hook 'flyspell-prog-mode)
 (add-hook 'ruby-mode-hook 'flyspell-prog-mode)
 (add-hook 'tcl-mode-hook 'flyspell-prog-mode)
+
 (defun turn-on-flyspell ()
    "Force flyspell-mode on using a positive arg.  For use in hooks."
    (interactive)
@@ -118,22 +120,12 @@
 (require 'rcodetools)
 
 ;; Textmate and paredit mode.
-(require 'textmate-mode) (require 'paredit-mode')
+(require 'textmate-mode)
+(autoload 'paredit-mode "paredit"
+  "Minor mode for pseudo-structurally editing Lisp code."
+  t)
 (add-hook 'c-mode-common-hook (lambda () (textmate-mode)))
-o(add-hook emacs-lisp-mode-hook (lambda () paredit-mode +1))
+(add-hook 'emacs-lisp-mode-hook (lambda () (paredit-mode +1)))
 
 ;; Disable auto-save
 (setq auto-save-default nil)
-
-(defun linux-c-mode ()
-  "C mode with adjusted defaults for use with the Linux kernel."
-  (interactive)
-  (c-mode)
-  (setq c-indent-level 8)
-  (setq c-brace-imaginary-offset 0)
-  (setq c-brace-offset -8)
-  (setq c-argdecl-indent 8)
-  (setq c-label-offset -8)
-  (setq c-continued-statement-offset 8)
-  (setq indent-tabs-mode nil)
-  (setq tab-width 8))
