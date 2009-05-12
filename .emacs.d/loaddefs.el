@@ -4,7 +4,7 @@
 
 
 ;;;### (autoloads (color-theme-blackboard) "blackboard" "elpa-to-submit/blackboard.el"
-;;;;;;  (18944 33017))
+;;;;;;  (18945 24080))
 ;;; Generated autoloads from elpa-to-submit/blackboard.el
 
 (autoload (quote color-theme-blackboard) "blackboard" "\
@@ -14,8 +14,8 @@ Color theme by JD Huntington, based off the TextMate Blackboard theme, created 2
 
 ;;;***
 
-;;;### (autoloads (cheat) "cheat" "elpa-to-submit/cheat.el" (18944
-;;;;;;  33017))
+;;;### (autoloads (cheat) "cheat" "elpa-to-submit/cheat.el" (18945
+;;;;;;  24080))
 ;;; Generated autoloads from elpa-to-submit/cheat.el
 
 (autoload (quote cheat) "cheat" "\
@@ -29,7 +29,7 @@ as a string instead.
 ;;;***
 
 ;;;### (autoloads (cperl-perldoc-at-point cperl-perldoc cperl-mode)
-;;;;;;  "cperl-mode" "elpa-to-submit/cperl-mode.el" (18944 33017))
+;;;;;;  "cperl-mode" "elpa-to-submit/cperl-mode.el" (18945 24080))
 ;;; Generated autoloads from elpa-to-submit/cperl-mode.el
 
 (fset (quote perl-mode) (quote cperl-mode))
@@ -225,8 +225,8 @@ Run a `perldoc' on the word around point.
 
 ;;;***
 
-;;;### (autoloads (cssh-mode) "cssh" "elpa-to-submit/cssh.el" (18944
-;;;;;;  33017))
+;;;### (autoloads (cssh-mode) "cssh" "elpa-to-submit/cssh.el" (18945
+;;;;;;  24080))
 ;;; Generated autoloads from elpa-to-submit/cssh.el
 
 (autoload (quote cssh-mode) "cssh" "\
@@ -237,7 +237,7 @@ A major mode for controlling multiple terms at once.
 ;;;***
 
 ;;;### (autoloads (find-file-in-project) "find-file-in-project" "elpa-to-submit/find-file-in-project.el"
-;;;;;;  (18944 33017))
+;;;;;;  (18945 24080))
 ;;; Generated autoloads from elpa-to-submit/find-file-in-project.el
 
 (autoload (quote find-file-in-project) "find-file-in-project" "\
@@ -252,7 +252,7 @@ setting the `ffip-project-root' variable.
 ;;;***
 
 ;;;### (autoloads (haml-mode) "haml-mode" "elpa-to-submit/haml-mode.el"
-;;;;;;  (18944 33017))
+;;;;;;  (18945 24080))
 ;;; Generated autoloads from elpa-to-submit/haml-mode.el
 
 (autoload (quote haml-mode) "haml-mode" "\
@@ -268,7 +268,7 @@ Major mode for editing Haml files.
 
 ;;;### (autoloads (htmlize-many-files-dired htmlize-many-files htmlize-file
 ;;;;;;  htmlize-region htmlize-buffer) "htmlize" "elpa-to-submit/htmlize.el"
-;;;;;;  (18944 33017))
+;;;;;;  (18945 24080))
 ;;; Generated autoloads from elpa-to-submit/htmlize.el
 
 (autoload (quote htmlize-buffer) "htmlize" "\
@@ -334,7 +334,7 @@ HTMLize dired-marked files.
 ;;;***
 
 ;;;### (autoloads (magit-status) "magit" "elpa-to-submit/magit.el"
-;;;;;;  (18944 33017))
+;;;;;;  (18945 24080))
 ;;; Generated autoloads from elpa-to-submit/magit.el
 
 (autoload (quote magit-status) "magit" "\
@@ -345,7 +345,7 @@ Not documented
 ;;;***
 
 ;;;### (autoloads (markdown-mode) "markdown-mode" "elpa-to-submit/markdown-mode.el"
-;;;;;;  (18944 33017))
+;;;;;;  (18945 24080))
 ;;; Generated autoloads from elpa-to-submit/markdown-mode.el
 
 (autoload (quote markdown-mode) "markdown-mode" "\
@@ -358,7 +358,7 @@ Major mode for editing Markdown files.
 ;;;***
 
 ;;;### (autoloads (moz-minor-mode) "moz" "elpa-to-submit/moz.el"
-;;;;;;  (18944 33017))
+;;;;;;  (18945 24080))
 ;;; Generated autoloads from elpa-to-submit/moz.el
 
 (autoload (quote moz-minor-mode) "moz" "\
@@ -381,7 +381,7 @@ started as needed).
 ;;;### (autoloads (oddmuse-kill-url oddmuse-browse-this-page oddmuse-browse-page
 ;;;;;;  emacswiki-post oddmuse-insert-pagename oddmuse-revert oddmuse-post
 ;;;;;;  oddmuse-follow oddmuse-edit oddmuse-toggle-minor) "oddmuse"
-;;;;;;  "elpa-to-submit/oddmuse.el" (18944 33018))
+;;;;;;  "elpa-to-submit/oddmuse.el" (18945 24080))
 ;;; Generated autoloads from elpa-to-submit/oddmuse.el
 
 (autoload (quote oddmuse-toggle-minor) "oddmuse" "\
@@ -448,7 +448,7 @@ Make the URL of current oddmuse page the latest kill in the kill ring.
 ;;;***
 
 ;;;### (autoloads (paredit-mode) "paredit" "elpa-to-submit/paredit.el"
-;;;;;;  (18944 33018))
+;;;;;;  (18945 24080))
 ;;; Generated autoloads from elpa-to-submit/paredit.el
 
 (autoload (quote paredit-mode) "paredit" "\
@@ -460,7 +460,7 @@ Minor mode for pseudo-structurally editing Lisp code.
 ;;;***
 
 ;;;### (autoloads (pcomplete/rake) "pcmpl-rake" "elpa-to-submit/pcmpl-rake.el"
-;;;;;;  (18944 33018))
+;;;;;;  (18945 24080))
 ;;; Generated autoloads from elpa-to-submit/pcmpl-rake.el
 
 (autoload (quote pcomplete/rake) "pcmpl-rake" "\
@@ -471,7 +471,7 @@ Completion rules for the `ssh' command.
 ;;;***
 
 ;;;### (autoloads (perl-find-file perldoc) "perl-find-library" "elpa-to-submit/perl-find-library.el"
-;;;;;;  (18944 33018))
+;;;;;;  (18945 24080))
 ;;; Generated autoloads from elpa-to-submit/perl-find-library.el
 
 (autoload (quote perldoc) "perl-find-library" "\
@@ -488,7 +488,7 @@ Find a perl library by module name
 ;;;***
 
 ;;;### (autoloads (pod-mode) "pod-mode" "elpa-to-submit/pod-mode.el"
-;;;;;;  (18944 33018))
+;;;;;;  (18945 24080))
 ;;; Generated autoloads from elpa-to-submit/pod-mode.el
 
 (autoload (quote pod-mode) "pod-mode" "\
@@ -498,7 +498,7 @@ Major mode for editing POD files (Plain Old Documentation for Perl).
 
 ;;;***
 
-;;;### (autoloads (ri) "ri" "elpa-to-submit/ri.el" (18944 33018))
+;;;### (autoloads (ri) "ri" "elpa-to-submit/ri.el" (18945 24080))
 ;;; Generated autoloads from elpa-to-submit/ri.el
 
 (autoload (quote ri) "ri" "\
@@ -509,7 +509,7 @@ Look up Ruby documentation.
 ;;;***
 
 ;;;### (autoloads (ruby-electric-mode) "ruby-electric" "elpa-to-submit/ruby-electric.el"
-;;;;;;  (18944 33018))
+;;;;;;  (18945 24080))
 ;;; Generated autoloads from elpa-to-submit/ruby-electric.el
 
 (autoload (quote ruby-electric-mode) "ruby-electric" "\
@@ -530,7 +530,7 @@ strings. Note that you must have Font Lock enabled.
 ;;;***
 
 ;;;### (autoloads (sass-mode) "sass-mode" "elpa-to-submit/sass-mode.el"
-;;;;;;  (18944 33018))
+;;;;;;  (18945 24080))
 ;;; Generated autoloads from elpa-to-submit/sass-mode.el
 
 (autoload (quote sass-mode) "sass-mode" "\
@@ -543,7 +543,7 @@ Major mode for editing Sass files.
 ;;;***
 
 ;;;### (autoloads (scpaste-region scpaste) "scpaste" "elpa-to-submit/scpaste.el"
-;;;;;;  (18944 33018))
+;;;;;;  (18945 24080))
 ;;; Generated autoloads from elpa-to-submit/scpaste.el
 
 (autoload (quote scpaste) "scpaste" "\
@@ -559,7 +559,7 @@ Paste the current region via `scpaste'.
 ;;;***
 
 ;;;### (autoloads (textile-mode) "textile-mode" "elpa-to-submit/textile-mode.el"
-;;;;;;  (18944 33018))
+;;;;;;  (18945 24080))
 ;;; Generated autoloads from elpa-to-submit/textile-mode.el
 
 (autoload (quote textile-mode) "textile-mode" "\
@@ -572,7 +572,7 @@ A major mode for editing textile files.
 ;;;***
 
 ;;;### (autoloads (tt-mode) "tt-mode" "elpa-to-submit/tt-mode.el"
-;;;;;;  (18944 33018))
+;;;;;;  (18945 24080))
 ;;; Generated autoloads from elpa-to-submit/tt-mode.el
 
 (autoload (quote tt-mode) "tt-mode" "\
@@ -583,7 +583,7 @@ Major mode for editing Template Toolkit files
 ;;;***
 
 ;;;### (autoloads (color-theme-twilight) "twilight" "elpa-to-submit/twilight.el"
-;;;;;;  (18944 33018))
+;;;;;;  (18945 24080))
 ;;; Generated autoloads from elpa-to-submit/twilight.el
 
 (autoload (quote color-theme-twilight) "twilight" "\
@@ -594,7 +594,7 @@ Color theme by Marcus Crafter, based off the TextMate Twilight theme, created 20
 ;;;***
 
 ;;;### (autoloads (yaml-mode) "yaml-mode" "elpa-to-submit/yaml-mode.el"
-;;;;;;  (18944 33018))
+;;;;;;  (18945 24080))
 ;;; Generated autoloads from elpa-to-submit/yaml-mode.el
 
 (autoload (quote yaml-mode) "yaml-mode" "\
@@ -607,7 +607,7 @@ Simple mode to edit YAML.
 ;;;***
 
 ;;;### (autoloads (color-theme-zenburn) "zenburn" "elpa-to-submit/zenburn.el"
-;;;;;;  (18944 33018))
+;;;;;;  (18946 56590))
 ;;; Generated autoloads from elpa-to-submit/zenburn.el
 
 (autoload (quote color-theme-zenburn) "zenburn" "\
@@ -615,12 +615,10 @@ Just some alien fruit salad to keep you in the zone.
 
 \(fn)" t nil)
 
-(defalias (quote zenburn) (function color-theme-zenburn))
-
 ;;;***
 
 ;;;### (autoloads nil nil ("elpa-to-submit/color-theme.el" "elpa-to-submit/eshell-vc.el")
-;;;;;;  (18944 33156 900440))
+;;;;;;  (18951 63583 161868))
 
 ;;;***
 

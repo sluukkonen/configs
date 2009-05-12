@@ -50,7 +50,7 @@
                         '(("(\\|)" . 'esk-paren-face)))
 
 ;; You might like this, but it's a bit disorienting at first:
-;; (setq clojure-enable-paredit t)
+(setq clojure-enable-paredit t)
 
 ;;; Scheme
 
