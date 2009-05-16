@@ -9,7 +9,6 @@ set guioptions-=R
 set guioptions-=r 
 set guioptions-=m 
 set guifont=DejaVu\ Sans\ Mono
-colorscheme zenburn
 
 " highlight the current line
 set cursorline

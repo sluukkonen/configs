@@ -24,6 +24,9 @@ set bs=2
 set wildmenu
 " no annoying files~
 set nobackup
+" colorscheme
+set t_Co=256 " needed for 256 color colorschemes 
+colorscheme xoria256
 " better end and start of line
 nmap H ^
 nmap L $
