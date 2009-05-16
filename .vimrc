@@ -1,9 +1,8 @@
 " line numbers
-" set number
+set number
 " incremental search
 set incsearch
 " ignore case in searches, but be case-sensitive if capital letters are used
-
 set ignorecase
 set smartcase
 " we're using vim, not vi
@@ -31,8 +30,6 @@ nmap L $
 omap H ^
 omap L $
 
-
-
 filetype on
 filetype plugin on
 filetype indent on
@@ -54,17 +51,10 @@ command W w
 command Q q
 
 " Insert mode readline-like bindings
-" start of line
 :inoremap <C-a>		<Home>
-" back one character
 :inoremap <C-b>		<Left>
-" delete character under cursor
 :inoremap <C-d>		<Del>
-" end of line
 :inoremap <C-e>		<End>
-" forward one character
 :inoremap <C-f>		<Right>
-" back one word
 :inoremap <M-b>  	<S-Left>
-" forward one word
 :inoremap <M-f>	    <S-Right>
