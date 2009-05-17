@@ -37,12 +37,19 @@ filetype on
 filetype plugin on
 filetype indent on
 
-" TextMate-like cmd-enter"
+" omnicppcomplete settings
+let OmniCpp_ShowScopeInAbbr = 1
+let OmniCpp_ShowPrototypeInAbbr = 1
+
+" TextMate-like cmd-enter
 imap <D-Enter> <Esc>o
 
 " modifier key
 let mapleader = ","
-nmap <leader>f :FuzzyFinderTextMate<CR>
+" fuzzyfinder mappings
+nmap <leader>f :FuzzyFinderFile<CR>
+nmap <leader>d :FuzzyFinderDir<CR>
+nmap <leader>b :FuzzyFinderBuffer<CR>
 
 " standard library ctags for C-like languages
 set tags=/.vim/tags/stdtags,tags,.tags,../tags
