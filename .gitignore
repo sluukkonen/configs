@@ -2,5 +2,10 @@
 +\.\#*#
 +*~
 .emacs.d/backups/*.*
+.emacs.d/elpa
 .emacs.d/elpa/*.*
 .emacs.d/places
+.xmonad/xmonad.errors
+.xmonad/xmonad.hi
+.xmonad/xmonad.o
+.xmonad/xmonad-x86_64-linux
