@@ -26,7 +26,7 @@ set wildmenu
 set nobackup
 " colorscheme
 set t_Co=256 " needed for 256 color colorschemes 
-colorscheme xoria256
+colorscheme zenburn
 " better end and start of line
 nmap H ^
 nmap L $
@@ -36,10 +36,6 @@ omap L $
 filetype on
 filetype plugin on
 filetype indent on
-
-" omnicppcomplete settings
-let OmniCpp_ShowScopeInAbbr = 1
-let OmniCpp_ShowPrototypeInAbbr = 1
 
 " TextMate-like cmd-enter
 imap <D-Enter> <Esc>o
