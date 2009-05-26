@@ -48,7 +48,7 @@ nmap <leader>d :FuzzyFinderDir<CR>
 nmap <leader>b :FuzzyFinderBuffer<CR>
 
 " standard library ctags for C-like languages
-set tags=/.vim/tags/stdtags,tags,.tags,../tags
+set tags=~/.stdtags,tags,.tags,../tags
 
 " fix common typos
 command WQ wq
