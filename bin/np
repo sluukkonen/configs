@@ -1,2 +1,2 @@
 #!/bin/bash
-npbanshee|xclip
+npbanshee|xclip -selection c

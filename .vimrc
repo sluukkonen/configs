@@ -11,8 +11,8 @@ set nocompatible
 set tabstop=4
 set shiftwidth=4
 set softtabstop=4
-set noexpandtab
-" syntax highlighting 
+set expandtab
+" syntax highlighting
 syntax on
 " show caret position in the status bar
 set ruler
@@ -25,8 +25,8 @@ set wildmenu
 " no annoying files~
 set nobackup
 " colorscheme
-set t_Co=256 " needed for 256 color colorschemes 
-colorscheme zenburn
+set t_Co=256 " needed for 256 color colorschemes
+colorscheme vylight
 " better end and start of line
 nmap H ^
 nmap L $
@@ -57,10 +57,27 @@ command W w
 command Q q
 
 " Insert mode readline-like bindings
-:inoremap <C-a>		<Home>
-:inoremap <C-b>		<Left>
-:inoremap <C-d>		<Del>
-:inoremap <C-e>		<End>
-:inoremap <C-f>		<Right>
-:inoremap <M-b>  	<S-Left>
-:inoremap <M-f>	    <S-Right>
+inoremap <C-a>		<Home>
+inoremap <C-b>		<Left>
+inoremap <C-d>		<Del>
+inoremap <C-e>		<End>
+inoremap <C-f>		<Right>
+inoremap <M-b>  	<S-Left>
+inoremap <M-f>	    <S-Right>
+
+" Taglist
+nnoremap <silent> <Leader>t :TlistToggle<CR>
+
+" Window management.
+nmap <C-J> <C-W>j
+nmap <C-K> <C-W>k
+nmap <C-H> <C-W>h
+nmap <C-L> <C-W>l
+
+" Highligh trailing whitespace.
+match Underlined /\s\+$/
+
+" Functions
+function! StripTrailingWhitespace()
+    %s/\s\+$//e
+endfunction

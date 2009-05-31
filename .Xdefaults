@@ -1,4 +1,4 @@
-URxvt*font:              xft:DejaVu\ Sans\ Mono:pixelsize=13
+URxvt*font:              xft:Monospace:pixelsize=13
 ! URxvt*font:                -*-dina-medium-r-normal-*-*-*-*-*-*-*-*-*
 
 
@@ -27,7 +27,7 @@ xterm*background:        #1c1c1c
 Xft.lcdfilter:           lcddefault
 Xft.hintstyle:           hintslight
 
-Emacs.font:              Monospace-9
+Emacs.font:              Monospace-10
 emacs.FontBackend:       xft
 
 ! tangoesque scheme
