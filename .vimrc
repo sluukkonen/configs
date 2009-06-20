@@ -46,9 +46,10 @@ let mapleader = ","
 nmap <leader>f :FuzzyFinderFile<CR>
 nmap <leader>d :FuzzyFinderDir<CR>
 nmap <leader>b :FuzzyFinderBuffer<CR>
+nmap <leader>s :FuzzyFinderTag<CR>
 
 " standard library ctags for C-like languages
-set tags=~/.stdtags,tags,.tags,../tags
+set tags=tags,.tags,../tags,~/.stdtags
 
 " fix common typos
 command WQ wq
@@ -57,13 +58,13 @@ command W w
 command Q q
 
 " Insert mode readline-like bindings
-inoremap <C-a>		<Home>
-inoremap <C-b>		<Left>
-inoremap <C-d>		<Del>
-inoremap <C-e>		<End>
-inoremap <C-f>		<Right>
-inoremap <M-b>  	<S-Left>
-inoremap <M-f>	    <S-Right>
+noremap! <C-a>		<Home>
+noremap! <C-b>		<Left>
+noremap! <C-d>		<Del>
+noremap! <C-e>		<End>
+noremap! <C-f>		<Right>
+noremap! <M-b>  	<S-Left>
+noremap! <M-f>	    <S-Right>
 
 " Taglist
 nnoremap <silent> <Leader>t :TlistToggle<CR>
@@ -81,3 +82,28 @@ match Underlined /\s\+$/
 function! StripTrailingWhitespace()
     %s/\s\+$//e
 endfunction
+
+" Update the tags file in the current working directory.
+map <Leader>u :ctags -R --c++-kinds=+p --fields=+iaS --extra=+q .<CR>
+
+" Do not use ex-mode.
+map Q gq
+
+" Remap insert-mode indentation keys.
+" TODO
+
+" Statusline
+set statusline=
+set statusline+=%3.3n\ " buffer number
+set statusline+=%f\ " file name
+set statusline+=%h%1*%m%r%w%0* " flags
+set statusline+=\[%{strlen(&ft)?&ft:'none'}, " filetype
+set statusline+=%{strlen(&fenc)?&fenc:&enc}%{&bomb?'/bom':''}, " encoding
+set statusline+=%{&fileformat}] " file format
+" set statusline+=%{exists('loaded_VCSCommand')?VCSCommandGetStatusLine():''} " show vcs status
+" set statusline+=%{exists('loaded_scmbag')?SCMbag_Info():''} " show vcs status
+set statusline+=%= " right align
+set statusline+=\[%{exists('loaded_taglist')?Tlist_Get_Tag_Prototype_By_Line(expand('%'),line('.')):'no\ tags'}]\ " show tag prototype
+set statusline+=0x%-8B\ " current char
+set statusline+=%-14.(%l,%c%V%)\ %<%P " offset
+set laststatus=2
