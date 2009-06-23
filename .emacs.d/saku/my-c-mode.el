@@ -9,7 +9,7 @@
 (add-hook 'c-mode-common-hook
           (lambda ()
             (c-toggle-auto-hungry-state t)
-            (ignore-errors (flymake-mode t))
+            (local-set-key (kbd "{") 'cheeso-insert-open-brace)
             ;; Untabify files.
             (add-hook 'local-write-file-hooks
                       '(lambda ()

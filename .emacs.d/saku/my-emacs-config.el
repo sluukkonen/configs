@@ -8,7 +8,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (require 'unbound)
-(require 'yasnippet) 
+(require 'yasnippet)
 (require 'color-theme)
 (require 'mark-lines)
 (require 'rcodetools)
@@ -17,9 +17,9 @@
 
 ;;; mode-compile
 (autoload 'mode-compile "mode-compile"
-   "Command to compile current buffer file based on the major mode" t)
+  "Command to compile current buffer file based on the major mode" t)
 (autoload 'mode-compile-kill "mode-compile"
- "Command to kill a compilation launched by `mode-compile'" t)
+  "Command to kill a compilation launched by `mode-compile'" t)
 
 ;;; flyspell-mode
 (autoload 'flyspell-mode "flyspell" "On-the-fly spelling checker." t)
@@ -79,7 +79,7 @@
 
 ;; Color themes
 (color-theme-initialize)
-(color-theme-tango-2)                   
+(color-theme-light)
 
 ;; Indent comments.
 (setq comment-style 'indent)
@@ -102,10 +102,10 @@
 
 ;; hippie-expand expansions.
 (setq hippie-expand-try-functions-list '(try-expand-dabbrev
-try-expand-dabbrev-all-buffers try-expand-dabbrev-from-kill
-try-complete-file-name-partially try-complete-file-name
-try-expand-all-abbrevs try-expand-list try-expand-line
-try-complete-lisp-symbol-partially try-complete-lisp-symbol))
+                                         try-expand-dabbrev-all-buffers try-expand-dabbrev-from-kill
+                                         try-complete-file-name-partially try-complete-file-name
+                                         try-expand-all-abbrevs try-expand-list try-expand-line
+                                         try-complete-lisp-symbol-partially try-complete-lisp-symbol))
 
 ;; Disable auto-save
 (setq auto-save-default nil)
