@@ -1,5 +1,6 @@
 ;;; starter-kit-perl.el --- Some helpful Perl code
-;;P;; Part of the Emacs Starter Kit
+;;
+;; Part of the Emacs Starter Kit
 
 (eval-after-load 'cperl-mode
   '(progn
@@ -11,11 +12,6 @@
 (add-to-list 'auto-mode-alist '("\\.p[lm]$" . cperl-mode))
 (add-to-list 'auto-mode-alist '("\\.pod$" . pod-mode))
 (add-to-list 'auto-mode-alist '("\\.tt$" . tt-mode))
-
-(add-hook 'cperl-mode-hook
-          (lambda ()
-            (flymake-mode)
-            (setq cperl-hairy t)))
 
 ;; TODO: flymake
 ;; TODO: electric bugaloo 

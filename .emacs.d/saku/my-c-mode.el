@@ -8,7 +8,6 @@
 
 (add-hook 'c-mode-common-hook
           (lambda ()
-            (c-toggle-auto-hungry-state t)
             (local-set-key (kbd "{") 'cheeso-insert-open-brace)
             ;; Untabify files.
             (add-hook 'local-write-file-hooks
@@ -16,3 +15,7 @@
                          (save-excursion
                            (untabify (point-min) (point-max))
                            (delete-trailing-whitespace))))))
+
+(add-hook 'c-mode-hook
+          (lambda ()
+            (flymake-mode t)))
