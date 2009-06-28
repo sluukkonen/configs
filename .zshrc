@@ -30,6 +30,7 @@ PROMPT="%{$fg_bold[white]%}%n%{$reset_color%}%{$fg[blue]%}@%{$fg_bold[white]%}%m
 # Aliases
 alias loki='ssh saku@loki.endoftheinternet.org'
 alias melk='ssh soluukko@melkinpaasi.cs.helsinki.fi'
+alias irs='ssh soluukko@melkinpaasi.cs.helsinki.fi -t screen -dr'
 alias ls='ls --color=auto -F'
 alias la='ls -la'
 alias v='vim'

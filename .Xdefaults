@@ -27,7 +27,7 @@ xterm*background:        #1c1c1c
 Xft.lcdfilter:           lcddefault
 Xft.hintstyle:           hintslight
 
-Emacs.font:              Monospace-10
+Emacs.font:              Consolas-10
 emacs.FontBackend:       xft
 
 ! tangoesque scheme
