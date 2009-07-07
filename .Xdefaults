@@ -1,6 +1,5 @@
-URxvt*font:              xft:Monospace:pixelsize=13
+! URxvt*font:              xft:Consolas:pixelsize=12
 ! URxvt*font:                -*-dina-medium-r-normal-*-*-*-*-*-*-*-*-*
-
 
 URxvt*saveLines:         32767
 URxvt*scrollBar:         false
@@ -22,7 +21,6 @@ URxvt*matcher.button:    1
 URxvt*matcher.pattern.1: \\bwww\\.[\\w-]+\\.[\\w./?&@#-]*[\\w/-]
 
 xterm*utf8:              2
-xterm*background:        #1c1c1c
 
 Xft.lcdfilter:           lcddefault
 Xft.hintstyle:           hintslight

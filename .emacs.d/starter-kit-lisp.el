@@ -134,7 +134,6 @@ Kills existing SLIME session, if any."
 (add-hook 'scheme-mode-hook 'run-coding-hook)
 (add-hook 'scheme-mode-hook 'idle-highlight)
 (add-hook 'scheme-mode-hook 'turn-on-paredit)
-(setq-default scheme-program-name "guile")
 
 (font-lock-add-keywords 'scheme-mode
 			'(("(\\|)" . 'esk-paren-face)))

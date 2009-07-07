@@ -1,3 +1,5 @@
+require("global-overlay-keymap.js"); // For aliasing keys.
+
 modifiers.M = new modifier(
     function (event) { return event.metaKey; },
     function (event) { event.metaKey = true; });
@@ -9,3 +11,6 @@ browser_prevent_automatic_form_focus_mode(true);
 url_remoting_fn = load_url_in_new_buffer;
 
 read_url_handler_list = [read_url_make_default_webjump_handler("google")];
+
+define_key(default_global_keymap, "C-x C-m", "execute-extended-command");
+
