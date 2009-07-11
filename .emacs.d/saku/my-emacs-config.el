@@ -78,8 +78,8 @@
 (yas/load-directory "~/.emacs.d/vendor/snippets")
 
 ;; Color themes
-(color-theme-initialize)
-(color-theme-light)
+;; (color-theme-initialize)
+;; (color-theme-light)
 
 ;; Indent comments.
 (setq comment-style 'indent)

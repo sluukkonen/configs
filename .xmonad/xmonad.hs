@@ -3,12 +3,11 @@
 
 import XMonad
 import XMonad.Config.Gnome
-
 import XMonad.Layout.NoBorders
 
 main = xmonad $ gnomeConfig 
 		{ 
-			modMask = mod4Mask,
-			terminal = "terminator",
+			-- modMask = mod4Mask,
+			terminal = "urxvtc",
 			layoutHook = smartBorders $ layoutHook gnomeConfig
 		}

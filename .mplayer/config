@@ -1,0 +1,16 @@
+# ~/.mplayer/config
+
+# General options
+fs=1                            # Fullscreen
+lavdopts:threads=4              # 4 threads
+
+# Subtitle options
+fontconfig=yes
+ass=yes
+embeddedfonts=yes
+ass-color=FFFFFF00              # White subtitles
+ass-border-color=00000000       # Black outline
+ass-font-scale=1.5              # 1.5 subtitle size
+ass-hinting=2                   # Freetype autohinter
+
+

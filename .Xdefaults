@@ -1,32 +1,28 @@
-! URxvt*font:              xft:Consolas:pixelsize=12
-! URxvt*font:                -*-dina-medium-r-normal-*-*-*-*-*-*-*-*-*
+URxvt*font:               xft:Monospace:pixelsize=11:hintstyle=hintfull
 
-URxvt*saveLines:         32767
-URxvt*scrollBar:         false
-URxvt*termName:          rxvt
-URxvt*cutchars:          "()*,<>[]{}|"
-URxvt*secondaryScroll:   true
-URxvt*visualBell:        true
-URxvt*background:        #000000
-URxvt*foreground:        #FFFFFF
-URxvt*cursorColor:       #FFAF00
+URxvt*saveLines:          32767
+URxvt*scrollBar:          false
+URxvt*termName:           rxvt
+URxvt*cutchars:           "()*,<>[]{}|"
+URxvt*secondaryScroll:    true
+URxvt*visualBell:         true
+URxvt*background:         #101010
+URxvt*foreground:         #D3D3D3
+URxvt*cursorColor:        #FFAF00
 
-URxvt.keysym.M-u: perl:mark-yank-urls:activate_mark_mode
-URxvt.underlineURLs: true
-URxvt.perl-lib: /home/saku/.urxvt
-URxvt.perl-ext: selection,mark-yank-urls
-URxvt.urlLauncher: conkeror
-urxvt*perl-ext-common:   default,matcher
-URxvt*matcher.button:    1
-URxvt*matcher.pattern.1: \\bwww\\.[\\w-]+\\.[\\w./?&@#-]*[\\w/-]
+URxvt.keysym.M-u:         perl:mark-yank-urls:activate_mark_mode
+URxvt.underlineURLs:      true
+URxvt.perl-lib:           /home/saku/.urxvt
+URxvt.perl-ext:           selection,mark-yank-urls
+URxvt.urlLauncher:        firefox-3.5
+urxvt*perl-ext-common:    default,matcher
+URxvt*matcher.button:     1
+URxvt*matcher.pattern.1:  \\bwww\\.[\\w-]+\\.[\\w./?&@#-]*[\\w/-]
 
-xterm*utf8:              2
+xterm*utf8:               2
 
-Xft.lcdfilter:           lcddefault
-Xft.hintstyle:           hintslight
-
-Emacs.font:              Consolas-10
-emacs.FontBackend:       xft
+Xft.hintstyle:            hintslight
+Xft.lcdfilter:            lcddefault
 
 ! tangoesque scheme
 ! Black
@@ -53,4 +49,3 @@ emacs.FontBackend:       xft
 ! White
 *color7:        #cccccc
 *color15:       #ffffff
-

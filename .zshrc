@@ -35,9 +35,11 @@ alias ls='ls --color=auto -F'
 alias la='ls -la'
 alias v='vim'
 alias sv='sudo vim'
-alias e='emacs'
+alias e='emacsclient -t'
 alias l='less'
 
+# Shell settings
+export EDITOR='emacsclient'
 # Functions
 
 extract () {
