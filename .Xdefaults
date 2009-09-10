@@ -1,4 +1,4 @@
-URxvt*font:               xft:Monospace:pixelsize=11:hintstyle=hintfull
+URxvt*font:               xft:Monospace:pixelsize=13:hintstyle=none
 
 URxvt*saveLines:          32767
 URxvt*scrollBar:          false
@@ -6,23 +6,25 @@ URxvt*termName:           rxvt
 URxvt*cutchars:           "()*,<>[]{}|"
 URxvt*secondaryScroll:    true
 URxvt*visualBell:         true
-URxvt*background:         #101010
-URxvt*foreground:         #D3D3D3
-URxvt*cursorColor:        #FFAF00
+URxvt*background:         #000000
+URxvt*foreground:         #FFFFFF
+URxvt*cursorColor:        #FFFFFF
 
 URxvt.keysym.M-u:         perl:mark-yank-urls:activate_mark_mode
 URxvt.underlineURLs:      true
 URxvt.perl-lib:           /home/saku/.urxvt
 URxvt.perl-ext:           selection,mark-yank-urls
-URxvt.urlLauncher:        firefox-3.5
+URxvt.urlLauncher:        chromium-browser
 urxvt*perl-ext-common:    default,matcher
 URxvt*matcher.button:     1
 URxvt*matcher.pattern.1:  \\bwww\\.[\\w-]+\\.[\\w./?&@#-]*[\\w/-]
 
 xterm*utf8:               2
 
-Xft.hintstyle:            hintslight
+Xft.hintstyle:            hintnone
 Xft.lcdfilter:            lcddefault
+
+Emacs.font:               Monospace-10
 
 ! tangoesque scheme
 ! Black

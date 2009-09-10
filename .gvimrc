@@ -8,7 +8,7 @@ set guioptions-=l
 set guioptions-=R
 set guioptions-=r 
 set guioptions-=m 
-set guifont=Consolas
+set guifont=Consolas\ 12
 
 " highlight the current line
 set cursorline

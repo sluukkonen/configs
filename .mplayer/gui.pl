@@ -1,0 +1,2 @@
+/media/disk/DCIM/100_2607
+IMGP3181.AVI

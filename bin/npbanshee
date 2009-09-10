@@ -9,6 +9,6 @@ if banshee:
         currentTrack = banshee.GetCurrentTrack()
         state = banshee.GetCurrentState()
         if state == 'playing':
-            print ("np: " + currentTrack['artist'] + ": " +
-                    currentTrack['album'] + " - " +
-                    currentTrack['name']).encode('iso-8859-1')
+            print (currentTrack['artist'] + ": " +
+                   currentTrack['album'] + " - " +
+                   currentTrack['name']).encode('iso-8859-1')

@@ -29,8 +29,8 @@ PROMPT="%n%{$fg[blue]%}@%{$reset_color%}%m:%~ %% "
 
 # Aliases
 alias loki='ssh saku@loki.endoftheinternet.org'
-alias melk='ssh soluukko@melkinpaasi.cs.helsinki.fi'
-alias irs='ssh soluukko@melkinpaasi.cs.helsinki.fi -t screen -dr'
+alias melkki='ssh soluukko@melkki.cs.helsinki.fi'
+alias irs='ssh soluukko@melkki.cs.helsinki.fi -t screen -dr'
 alias ls='ls --color=auto -F'
 alias la='ls -la'
 alias v='vim'
