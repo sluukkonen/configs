@@ -1,4 +1,4 @@
-URxvt*font:               xft:Monospace:pixelsize=13:hintstyle=none
+URxvt*font:               xft:Droid Sans Mono:pixelsize=16:hintstyle=slight
 
 URxvt*saveLines:          32767
 URxvt*scrollBar:          false
@@ -14,10 +14,11 @@ URxvt.keysym.M-u:         perl:mark-yank-urls:activate_mark_mode
 URxvt.underlineURLs:      true
 URxvt.perl-lib:           /home/saku/.urxvt
 URxvt.perl-ext:           selection,mark-yank-urls
-URxvt.urlLauncher:        chromium-browser
+URxvt.urlLauncher:        firefox
 urxvt*perl-ext-common:    default,matcher
 URxvt*matcher.button:     1
-URxvt*matcher.pattern.1:  \\bwww\\.[\\w-]+\\.[\\w./?&@#-]*[\\w/-]
+URxvt*matcher.pattern.1:  \\bi((https?)://[-\\w]+(\\.\\w[-\\w]*)+|(?i:[a-z0-9](?:[-a-z0-9]*[a-z0-9])?\\.)+(?-i:com\\b|edu\\b|biz\\b|gov\\b|in(?:t|fo)\\b|mil\\b|net\\b|org\\b|[a-z][a-z]\\.[a-z][a-z]\\b))(:\\d+)?/[^.!,?;"\\'<>()\[\]\{\}\s\x7F-\\xFF]*([.!,?]+[^.!,?;"\\'<>()\\[\\]\{\\}\s\\x7F-\\xFF]+)*)?
+! URxvt*matcher.pattern.1:  \\bwww\\.[\\w-]+\\.[\\w./?&@#-]*[\\w/-]
 
 xterm*utf8:               2
 
