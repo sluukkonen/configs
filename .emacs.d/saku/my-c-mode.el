@@ -9,6 +9,7 @@
 (add-hook 'c-mode-common-hook
           (lambda ()
             (local-set-key (kbd "{") 'cheeso-insert-open-brace)
+            (local-set-key (kbd "C-c o") 'ff-find-other-file)
             ;; Untabify files.
             (add-hook 'local-write-file-hooks
                       '(lambda ()

@@ -48,7 +48,7 @@
 (global-set-key (kbd "C-x C-o") (lambda () (interactive) (other-window 2))) ;; forward two
 
 ;; Indentation help
-(global-set-key (kbd "C-x ^") 'join-line)
+(global-set-key (kbd "C-x ^") 'join-line) 
 
 ;; Start eshell or switch to it if it's active.
 (global-set-key (kbd "C-x m") 'eshell)
@@ -61,9 +61,6 @@
 
 ;; If you want to be able to M-x without meta
 (global-set-key (kbd "C-x C-m") 'execute-extended-command)
-
-;; Fetch the contents at a URL, display it raw.
-(global-set-key (kbd "C-x h") 'view-url)
 
 ;; Help should search more than just commands
 (global-set-key (kbd "C-h a") 'apropos)

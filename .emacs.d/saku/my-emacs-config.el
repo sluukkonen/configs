@@ -51,9 +51,6 @@
 (global-set-key "\C-x\C-p" 'mark-lines-previous-line)
 (global-set-key "\C-x\C-n" 'mark-lines-next-line)
 
-;;; Join two lines.
-(global-set-key "\C-\M-j" 'join-line)
-
 ;;; Rectangle selection commands.
 (global-set-key (kbd "C-x r C-SPC") 'rm-set-mark)
 (global-set-key (kbd "C-x r C-x")   'rm-exchange-point-and-mark)
