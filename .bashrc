@@ -101,7 +101,3 @@ if [ -f /etc/bash_completion ]; then
 fi
 
 complete -W "$(echo `cat ~/.ssh/known_hosts | cut -f 1 -d ' ' | sed -e s/,.*//g | uniq | grep -v "\["`;)" ssh]
-
-xmodmap -e 'keycode 66 = Control_L'
-xmodmap -e 'clear Lock'
-xmodmap -e 'add Control = Control_L'
