@@ -106,3 +106,7 @@
 
 ;; Disable auto-save
 (setq auto-save-default nil)
+
+;; Set meta key to cmd if on OS X.
+(if (eq system-type 'darwin)
+    (setq ns-command-modifier 'meta))
