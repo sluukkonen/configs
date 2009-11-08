@@ -1,5 +1,5 @@
-(require 'pymacs)
-(pymacs-load "ropemacs" "rope-")
+;; (require 'pymacs)
+;; (pymacs-load "ropemacs" "rope-")
 
 (when (load "flymake" t)
   (defun flymake-pyflakes-init ()

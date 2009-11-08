@@ -90,9 +90,6 @@
 ;; Display column/line numbers in the status line.
 (setq column-number-mode t)
 
-;; Disable scroll bars.
-(toggle-scroll-bar -1)
-
 ;; Some mac-specific hacks.
 (setq mac-pass-command-to-system nil)   ; Disable cmd-h in carbon emacs.
 (setq mac-pass-control-to-system nil)   ; Disable control keybindings for OS X.
