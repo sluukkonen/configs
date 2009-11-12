@@ -11,7 +11,7 @@
             (local-set-key (kbd "{") 'cheeso-insert-open-brace)
             (local-set-key (kbd "C-c o") 'ff-find-other-file)
             ;; Untabify files.
-            (add-hook 'local-write-file-hooks
+            (add-hook 'write-file-functions
                       '(lambda ()
                          (save-excursion
                            (untabify (point-min) (point-max))

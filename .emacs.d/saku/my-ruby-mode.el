@@ -1,7 +1,7 @@
 ;; Ruby mode settings.
 (add-hook 'ruby-mode-hook
           (lambda ()
-            (add-hook 'local-write-file-hooks
+            (add-hook 'write-file-functions
                       '(lambda ()
                          (save-excursion
                            (untabify (point-min) (point-max))
