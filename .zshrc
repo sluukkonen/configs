@@ -20,7 +20,6 @@ setopt hist_save_no_dups
 # Emacs style bindings
 bindkey -e
 
-
 # Prompt Theme
 autoload -U colors zsh/terminfo # Used in the colour alias below
 colors
