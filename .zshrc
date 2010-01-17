@@ -76,3 +76,11 @@ extract () {
         fi
     done
 }
+
+up() {
+    P=$PWD
+    for ((i = 1; i <= $1; ++i)) do
+        P=$P/..
+    done
+    cd $P
+}
