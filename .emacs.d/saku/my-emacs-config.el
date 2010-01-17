@@ -1,19 +1,19 @@
-;; Saku's Emacs settings
+;;; Saku's Emacs settings
 
 ;; Vendor directory for third party libraries.
 (add-to-list 'load-path (concat dotfiles-dir "vendor"))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Required libraries.
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Include Macports in the PATH
+(setq exec-path (cons "/opt/local/bin" exec-path))
+(setenv "PATH" (concat "/opt/local/bin:" (getenv "PATH")))
 
-(require 'unbound)
-(require 'yasnippet)
-(require 'color-theme)
 (require 'mark-lines)
-(require 'rcodetools)
-(require 'textmate-mode)
 (require 'rect-mark)
+(require 'autopair)
+(require 'yasnippet)
+
+(yas/initialize)
+(yas/load-directory (concat dotfiles-dir "vendor/snippets"))
 
 ;;; mode-compile
 (autoload 'mode-compile "mode-compile"
@@ -29,54 +29,12 @@
   "Minor mode for pseudo-structurally editing Lisp code."
   t)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;Keybindings
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;; A filetype agnostic compile command.
-(global-set-key "\C-cc" 'mode-compile)
-(global-set-key "\C-ck" 'mode-compile-kill)
-
-;;; Invoke M-x without M-x.
-(global-set-key "\C-x\C-m" 'execute-extended-command)
-
-;;; Set C-h to delete a char and remap help.
-(global-set-key "\C-h" 'delete-backward-char)
-(global-set-key "\M-?" 'help-command)
-
-;; ;;; Set M-/ to use hippie-expand instead of dabbrev-expand.
-;; (global-set-key "\M-/" 'hippie-expand)
-
-;;; Select whole lines.
-(global-set-key "\C-x\C-p" 'mark-lines-previous-line)
-(global-set-key "\C-x\C-n" 'mark-lines-next-line)
-
-;;; Rectangle selection commands.
-(global-set-key (kbd "C-x r C-SPC") 'rm-set-mark)
-(global-set-key (kbd "C-x r C-x")   'rm-exchange-point-and-mark)
-(global-set-key (kbd "C-x r C-w")   'rm-kill-region)
-(global-set-key (kbd "C-x r M-w")   'rm-kill-ring-save)
-
-(global-set-key (kbd "C-c F") 'toggle-fullscreen)
-(global-set-key (kbd "M-RET") 'textmate-next-line)
-
-;;; Flymake shortcuts.
-(global-set-key "\M-s" 'flymake-display-err-menu-for-current-line)
-(global-set-key "\M-n" 'flymake-goto-next-error)
-(global-set-key "\M-p" 'flymake-goto-prev-error)
-
+;;; autopair-mode
+(autopair-global-mode)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; General settings
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;; Snippets.
-(yas/initialize)
-(yas/load-directory "~/.emacs.d/vendor/snippets")
-
-;; Color themes
-(color-theme-initialize)
-(color-theme-light)
 
 ;; Indent comments.
 (setq comment-style 'indent)
@@ -85,14 +43,14 @@
 (setq default-tab-width 4)
 
 ;; Line width.
-(setq-default fill-column 80 )
+(setq-default fill-column 80)
 
 ;; Display column/line numbers in the status line.
 (setq column-number-mode t)
 
 ;; Some mac-specific hacks.
-(setq mac-pass-command-to-system nil)   ; Disable cmd-h in carbon emacs.
-(setq mac-pass-control-to-system nil)   ; Disable control keybindings for OS X.
+(when (eq system-type 'darwin)
+    (setq ns-command-modifier 'meta))
 
 ;; hippie-expand expansions.
 (setq hippie-expand-try-functions-list '(try-expand-dabbrev
@@ -104,6 +62,12 @@
 ;; Disable auto-save
 (setq auto-save-default nil)
 
-;; Set meta key to cmd if on OS X.
-(if (eq system-type 'darwin)
-    (setq ns-command-modifier 'meta))
+;; Mark end of sentences with one space.
+(set-variable 'sentence-end-double-space nil)
+
+;; Fix zsh prompt
+(autoload 'ansi-color-for-comint-mode-on "ansi-color" nil t)
+(add-hook 'shell-mode-hook 'ansi-color-for-comint-mode-on)
+
+;;; Set ispell to aspell
+(set-variable 'ispell-program-name "aspell")

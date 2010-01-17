@@ -1,5 +1,0 @@
-#name : for { ... }
-# --
-for (${1:Object o} : ${2:Objects}) {
-    $0
-}

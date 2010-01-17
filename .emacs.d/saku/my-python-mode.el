@@ -1,6 +1,6 @@
-;; (require 'pymacs)
-;; (pymacs-load "ropemacs" "rope-")
+;; Python mode settings.
 
+;; Use pycheckers script with flymake.
 (when (load "flymake" t)
   (defun flymake-pyflakes-init ()
     (let* ((temp-file (flymake-init-create-temp-buffer-copy

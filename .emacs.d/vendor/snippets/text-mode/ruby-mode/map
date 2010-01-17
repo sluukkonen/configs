@@ -1,4 +1,0 @@
-#name : map { |...| ... }
-#group : collections
-# --
-map { |${1:element}| $0 }
