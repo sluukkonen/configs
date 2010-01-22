@@ -1,4 +1,5 @@
-;;; flyspell-mode settings
+;;; Flyspell settings
+
 (add-hook 'message-mode-hook 'turn-on-flyspell)
 (add-hook 'text-mode-hook 'turn-on-flyspell)
 (add-hook 'c-mode-common-hook 'flyspell-prog-mode)

@@ -1,4 +1,6 @@
-;;; Saku's Emacs settings
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Load libraries
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; Vendor directory for third party libraries.
 (add-to-list 'load-path (concat dotfiles-dir "vendor"))
@@ -12,6 +14,7 @@
 (require 'autopair)
 (require 'yasnippet)
 
+;; Initialize yasnippet
 (yas/initialize)
 (yas/load-directory (concat dotfiles-dir "vendor/snippets"))
 
