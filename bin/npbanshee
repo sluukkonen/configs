@@ -5,10 +5,6 @@ import dbus
 bus = dbus.SessionBus()
 banshee = bus.get_object("org.bansheeproject.Banshee", "/org/bansheeproject/Banshee/PlayerEngine")
 
-if banshee:
-        currentTrack = banshee.GetCurrentTrack()
-        state = banshee.GetCurrentState()
-        if state == 'playing':
-            print (currentTrack['artist'] + ": " +
-                   currentTrack['album'] + " - " +
-                   currentTrack['name']).encode('iso-8859-1')
+if banshee and banshee.GetCurrentState() == 'playing':
+        track = banshee.GetCurrentTrack()
+        print "%s: %s - %s" % (track['artist'], track['album'], track['name'])
