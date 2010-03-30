@@ -19,9 +19,6 @@
 ;; Initialize yasnippet
 (yas/initialize)
 (yas/load-directory (concat dotfiles-dir "vendor/snippets"))
-(setq yas/scala-snippet-directory (concat dotfiles-dir
-                               "vendor/scala-mode/contrib/yasnippet/snippets"))
-(yas/load-directory yas/scala-snippet-directory)
 
 ;;; mode-compile
 (autoload 'mode-compile "mode-compile"
