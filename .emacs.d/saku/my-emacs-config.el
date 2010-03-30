@@ -4,6 +4,7 @@
 
 ;; Vendor directory for third party libraries.
 (add-to-list 'load-path (concat dotfiles-dir "vendor"))
+(add-to-list 'load-path (concat dotfiles-dir "vendor/scala-mode"))
 
 ;; Include Macports in the PATH
 (setq exec-path (cons "/opt/local/bin" exec-path))
@@ -13,10 +14,14 @@
 (require 'rect-mark)
 (require 'autopair)
 (require 'yasnippet)
+(require 'scala-mode-auto)
 
 ;; Initialize yasnippet
 (yas/initialize)
 (yas/load-directory (concat dotfiles-dir "vendor/snippets"))
+(setq yas/scala-snippet-directory (concat dotfiles-dir
+                               "vendor/scala-mode/contrib/yasnippet/snippets"))
+(yas/load-directory yas/scala-snippet-directory)
 
 ;;; mode-compile
 (autoload 'mode-compile "mode-compile"
