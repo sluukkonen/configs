@@ -5,5 +5,5 @@ die() {
   exit 1
 }
 
-[ "$#" -eq 3 ] || die "Usage: $0 word from-language to-language"
+[ "$#" -eq 3 ] || die "Usage: $(basename $0) word from-language to-language"
 curl -L http://$2.wikipedia.org/wiki/$1 2>/dev/null | grep $3.wikipedia.org | cut -d\" -f4 | cut -d/ -f5
