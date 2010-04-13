@@ -53,6 +53,13 @@
 ;; Display column/line numbers in the status line.
 (setq column-number-mode t)
 
+;; Display cursor as a vertical bar (I-beam)
+(setq default-frame-alist
+      '((cursor-type . bar)))
+
+;; Blink cursor
+(blink-cursor-mode 1)
+
 ;; Some mac-specific hacks.
 (when (eq system-type 'darwin)
     (setq ns-command-modifier 'meta))
