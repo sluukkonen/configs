@@ -1,15 +1,12 @@
-;;; A filetype agnostic compile command.
-(global-set-key "\C-cc" 'mode-compile)
-(global-set-key "\C-ck" 'mode-compile-kill)
+;; A filetype agnostic compile command
+(global-set-key (kbd "C-c c") 'mode-compile)
+(global-set-key (kbd "C-c k") 'mode-compile-kill)
 
-;; ;;; Set M-/ to use hippie-expand instead of dabbrev-expand.
-(global-set-key "\M-/" 'hippie-expand)
+;;; Select whole lines
+(global-set-key (kbd "C-x C-p") 'mark-lines-previous-line)
+(global-set-key (kbd "C-x C-n") 'mark-lines-next-line)
 
-;;; Select whole lines.
-(global-set-key "\C-x\C-p" 'mark-lines-previous-line)
-(global-set-key "\C-x\C-n" 'mark-lines-next-line)
-
-;;; Rectangle selection commands.
+;; Rectangle selection commands
 (global-set-key (kbd "C-x r C-SPC") 'rm-set-mark)
 (global-set-key (kbd "C-x r C-x")   'rm-exchange-point-and-mark)
 (global-set-key (kbd "C-x r C-w")   'rm-kill-region)
@@ -18,7 +15,10 @@
 (global-set-key (kbd "C-c F") 'toggle-fullscreen)
 (global-set-key (kbd "M-RET") 'textmate-next-line)
 
-;;; Flymake shortcuts.
-(global-set-key "\M-s" 'flymake-display-err-menu-for-current-line)
-(global-set-key "\M-n" 'flymake-goto-next-error)
-(global-set-key "\M-p" 'flymake-goto-prev-error)
+;; Flymake shortcuts.
+(global-set-key (kbd "M-s") 'flymake-display-err-menu-for-current-line)
+(global-set-key (kbd "M-n") 'flymake-goto-next-error)
+(global-set-key (kbd "M-p") 'flymake-goto-prev-error)
+
+;; Join the current line with the previous one
+(global-set-key (kbd "C-x j") 'join-line)
