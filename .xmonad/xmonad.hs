@@ -7,7 +7,6 @@ import XMonad.Layout.NoBorders
 
 main = xmonad $ gnomeConfig 
 		{ 
-			-- modMask = mod4Mask,
 			terminal = "gnome-terminal",
 			layoutHook = smartBorders $ layoutHook gnomeConfig
 		}
