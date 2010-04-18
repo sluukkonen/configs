@@ -43,7 +43,9 @@ alias l='less'
 
 ## Shell settings
 
-export EDITOR='jed'
+export EDITOR='em';
+export ALTERNATE_EDITOR='vi'
+export VISUAL='em'
 
 ## Functions
 
