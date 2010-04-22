@@ -30,7 +30,7 @@ autoload -U colors zsh/terminfo; colors
 setopt prompt_subst
 
 # Use red colour on a root shell, blue on normal shells
-[ "$(id -u)" = 0 ] && PROMPT_PRIMARY_COLOUR="red" || PROMPT_PRIMARY_COLOUR="blue"
+[[ "$(id -u)" = 0 ]] && PROMPT_PRIMARY_COLOUR="red" || PROMPT_PRIMARY_COLOUR="blue"
 PROMPT="%n%{$fg[${PROMPT_PRIMARY_COLOUR}]%}@%{$reset_color%}%m:%~ %% "
 
 ## Aliases
