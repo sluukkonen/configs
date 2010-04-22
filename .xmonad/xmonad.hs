@@ -5,7 +5,7 @@ import XMonad.Hooks.ManageHelpers (isFullscreen, doFullFloat)
 
 main = xmonad $ gnomeConfig 
     { 
-	    terminal   = "gnome-terminal",
+        terminal   = "gnome-terminal",
         layoutHook = smartBorders $ layoutHook gnomeConfig,
         manageHook = composeAll
             [ manageHook gnomeConfig,
