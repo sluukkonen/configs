@@ -7,4 +7,6 @@ banshee = bus.get_object("org.bansheeproject.Banshee", "/org/bansheeproject/Bans
 
 if banshee and banshee.GetCurrentState() == 'playing':
     track = banshee.GetCurrentTrack()
-    print "%s: %s - %s" % (track['artist'], track['album'], track['name'])
+    print "%s: %s - %s" % (track['artist'].encode("utf-8"),
+                           track['album'].encode("utf-8"),
+                           track['name'].encode("utf-8"))
