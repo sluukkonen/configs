@@ -7,7 +7,7 @@ set ignorecase
 set smartcase
 " we're using vim, not vi
 set nocompatible
-" Indentation level
+" default indentation level
 set tabstop=4
 set shiftwidth=4
 set softtabstop=4
@@ -19,28 +19,27 @@ set ruler
 " better buffer handling, ie. don't nag about saving files
 set hidden
 " backspace deletes eols, tabs, chars
-set bs=2
+set bs=indent,eol,start
 " smarter file prompt
 set wildmenu
 " no annoying files~
 set nobackup
 " colorscheme
 set t_Co=256 " needed for 256 color colorschemes
-colorscheme vylight
-" better end and start of line
-nmap H ^
-nmap L $
-omap H ^
-omap L $
+colorscheme zenburn
+" disable toolbar and menubar
+set guioptions-=T
+set guioptions-=m
+set guioptions-=r
+set guioptions-=l
+set guioptions-=b
 
+" automatic filetype detection
 filetype on
 filetype plugin on
 filetype indent on
 
-" TextMate-like cmd-enter
-imap <D-Enter> <Esc>o
-
-" modifier key
+" better mapleader key
 let mapleader = ","
 " fuzzyfinder mappings
 nmap <leader>f :FuzzyFinderFile<CR>
@@ -49,7 +48,7 @@ nmap <leader>b :FuzzyFinderBuffer<CR>
 nmap <leader>s :FuzzyFinderTag<CR>
 
 " standard library ctags for C-like languages
-set tags=tags,.tags,../tags,~/.stdtags
+set tags+=tags;$HOME
 
 " fix common typos
 command WQ wq
@@ -58,16 +57,13 @@ command W w
 command Q q
 
 " Insert mode readline-like bindings
-noremap! <C-a>		<Home>
-noremap! <C-b>		<Left>
-noremap! <C-d>		<Del>
-noremap! <C-e>		<End>
-noremap! <C-f>		<Right>
-noremap! <M-b>  	<S-Left>
-noremap! <M-f>	    <S-Right>
-
-" Taglist
-nnoremap <silent> <Leader>t :TlistToggle<CR>
+noremap! <C-a> <Home>
+noremap! <C-b> <Left>
+noremap! <C-d> <Del>
+noremap! <C-e> <End>
+noremap! <C-f> <Right>
+noremap! <M-b> <S-Left>
+noremap! <M-f> <S-Right>
 
 " Window management.
 nmap <C-J> <C-W>j
@@ -83,27 +79,5 @@ function! StripTrailingWhitespace()
     %s/\s\+$//e
 endfunction
 
-" Update the tags file in the current working directory.
-map <Leader>u :ctags -R --c++-kinds=+p --fields=+iaS --extra=+q .<CR>
-
-" Do not use ex-mode.
+" Easier gqap.
 map Q gq
-
-" Remap insert-mode indentation keys.
-" TODO
-
-" Statusline
-set statusline=
-set statusline+=%3.3n\ " buffer number
-set statusline+=%f\ " file name
-set statusline+=%h%1*%m%r%w%0* " flags
-set statusline+=\[%{strlen(&ft)?&ft:'none'}, " filetype
-set statusline+=%{strlen(&fenc)?&fenc:&enc}%{&bomb?'/bom':''}, " encoding
-set statusline+=%{&fileformat}] " file format
-" set statusline+=%{exists('loaded_VCSCommand')?VCSCommandGetStatusLine():''} " show vcs status
-" set statusline+=%{exists('loaded_scmbag')?SCMbag_Info():''} " show vcs status
-set statusline+=%= " right align
-set statusline+=\[%{exists('loaded_taglist')?Tlist_Get_Tag_Prototype_By_Line(expand('%'),line('.')):'no\ tags'}]\ " show tag prototype
-set statusline+=0x%-8B\ " current char
-set statusline+=%-14.(%l,%c%V%)\ %<%P " offset
-set laststatus=2
