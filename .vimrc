@@ -25,8 +25,7 @@ set wildmenu
 " no annoying files~
 set nobackup
 " colorscheme
-set t_Co=256 " needed for 256 color colorschemes
-colorscheme zenburn
+set background=dark
 " disable toolbar and menubar
 set guioptions-=T
 set guioptions-=m
@@ -81,3 +80,7 @@ endfunction
 
 " Easier gqap.
 map Q gq
+
+" delimitmate settings
+let g:delimitMate_expand_cr = 1
+let g:delimitMate_expand_space = 1
