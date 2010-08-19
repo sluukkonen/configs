@@ -11,3 +11,4 @@
 .xmonad/xmonad-x86_64-linux
 .emacs.d/elpa-to-submit/nxhtml/etc/schema/xhtml-loader.rnc
 .mplayer/gui*
+.vim/.netrwhist
