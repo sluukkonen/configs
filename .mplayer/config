@@ -11,3 +11,7 @@ embeddedfonts=yes
 ass-color=FFFFFF00              # White subtitles
 ass-border-color=00000000       # Black outline
 ass-hinting=2                   # Freetype autohinter
+
+# Try to use VDPAU if possible
+vo=vdpau,xv,
+vc=ffh264vdpau,ffmpeg12vdpau,
