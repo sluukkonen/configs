@@ -23,3 +23,6 @@ setlocal shiftwidth=2 | setlocal tabstop=2 | setlocal expandtab
 
 " On to loading xml.vim
 runtime ftplugin/xml.vim
+
+" Disable delimitMate pairing <>'s.
+let b:delimitMate_matchpairs = "(:),[:],{:}"
