@@ -4,7 +4,7 @@ import os
 
 home = os.path.abspath(os.environ['HOME'])
 path = os.path.dirname(__file__)
-excludes = ['.gitignore', '.git', '.gitmodules', 'create_symlink.py']
+excludes = ['.gitignore', '.git', '.gitmodules', os.path.basename(__file__)]
 
 for f in os.listdir(path):
     if f not in excludes:
