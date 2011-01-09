@@ -8,8 +8,8 @@ excludes = ['.gitignore', '.git', '.gitmodules', os.path.basename(__file__)]
 
 for f in os.listdir(path):
     if f not in excludes:
-        dst = os.path.join(home, f)
         src = os.path.abspath(f)
+        dst = os.path.join(home, f)
         try:
             print "Symlinking %s to %s" % (src, dst)
             os.symlink(src, dst)
