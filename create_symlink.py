@@ -14,5 +14,4 @@ for f in os.listdir(path):
             print "Symlinking %s to %s" % (src, dst)
             os.symlink(src, dst)
         except Exception, msg:
-            print "Failed to symlink %s to %s " % (src, dst)
-            print msg
+            print "Failed to symlink %s to %s: %s" % (src, dst, msg)
