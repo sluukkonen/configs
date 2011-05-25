@@ -1,0 +1,7 @@
+#!/bin/bash
+#
+# Requires esound (brew install esound) and SoundFlower
+# (http://code.google.com/p/soundflower/) set up as the default audio input and
+# output device.
+
+esd -tcp -bind ::1 & sleep 1 && (esdrec -s ::1 | esdcat -s thor.local)
