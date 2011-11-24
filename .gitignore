@@ -5,6 +5,8 @@
 .emacs.d/elpa
 .emacs.d/elpa/*.*
 .emacs.d/places
+.emacs.d/auto-save-list
+.emacs.d/.smex-items
 .xmonad/xmonad.errors
 .xmonad/xmonad.hi
 .xmonad/xmonad.o
