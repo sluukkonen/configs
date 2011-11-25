@@ -5,12 +5,15 @@
 .emacs.d/elpa
 .emacs.d/elpa/*.*
 .emacs.d/places
+.emacs.d/tramp
+.emacs.d/*session*
 .emacs.d/auto-save-list
 .emacs.d/.smex-items
 .xmonad/xmonad.errors
 .xmonad/xmonad.hi
 .xmonad/xmonad.o
 .xmonad/xmonad-x86_64-linux
+.xmonad/xmonad-i386-linux
 .emacs.d/elpa-to-submit/nxhtml/etc/schema/xhtml-loader.rnc
 .mplayer/gui*
 .vim/.netrwhist
