@@ -10,17 +10,19 @@
 (when (not package-archive-contents)
   (package-refresh-contents))
 
-(defvar my-packages '(starter-kit starter-kit-bindings starter-kit-lisp starter-kit-ruby autopair mode-compile rect-mark rinari ruby-electric scala-mode yasnippet-bundle)
+(defvar my-packages '(starter-kit starter-kit-bindings starter-kit-lisp starter-kit-ruby autopair mode-compile rect-mark rinari ruby-electric scala-mode yasnippet-bundle yaml-mode)
   "A list of packages to ensure are installed at launch.")
 
 (dolist (p my-packages)
   (when (not (package-installed-p p))
     (package-install p)))
 
-;;; Load some global libraries.
-(require 'autopair)
-(require 'rect-mark)
-(require 'yasnippet-bundle)
+;;; Load some libraries.
+(autoload 'autopair-global-mode "autopair" nil t)
+(autoload 'rect-mark "rect-mark" nil t)
+(autoload 'yasnippet-bundle "yasnippet-bundle" nil t)
+(autoload 'yaml-mode "yaml-mode" nil t)
+(add-to-list 'auto-mode-alist '("\\.yml$" . yaml-mode))
 
 (yas/initialize)
 
