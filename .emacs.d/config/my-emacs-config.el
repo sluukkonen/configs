@@ -28,6 +28,9 @@
        (setq ns-command-modifier 'meta)
        (menu-bar-mode t)))
 
+;; Disable auto-save.
+(setq auto-save-default nil)
+
 ;; Mark end of sentences with only one space. Y'know, like normal people do.
 (set-variable 'sentence-end-double-space nil)
 

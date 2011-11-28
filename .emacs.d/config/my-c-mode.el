@@ -3,5 +3,6 @@
 
 (add-hook 'c-mode-hook
           (lambda ()
-            (if (file-exists-p "Makefile") (flymake-mode t))
+            (when (file-exists-p "Makefile")
+              (flymake-mode t))
             (local-set-key (kbd "C-c o") 'ff-find-other-file)))
