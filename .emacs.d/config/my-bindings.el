@@ -19,3 +19,7 @@
 (global-set-key (kbd "M-s") 'flymake-display-err-menu-for-current-line)
 (global-set-key (kbd "M-n") 'flymake-goto-next-error)
 (global-set-key (kbd "M-p") 'flymake-goto-prev-error)
+
+;; Full-ack shortcut.
+(global-set-key (kbd "C-c a") 'ack)
+(global-set-key (kbd "C-c A") 'ack-same)
