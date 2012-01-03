@@ -20,6 +20,7 @@
 ;;; Load some libraries.
 (autoload 'autopair-global-mode "autopair" nil t)
 (autoload 'rect-mark "rect-mark" nil t)
+(autoload 'rvm "rvm" nil t)
 (autoload 'yasnippet-bundle "yasnippet-bundle" nil t)
 (autoload 'yaml-mode "yaml-mode" nil t)
 (add-to-list 'auto-mode-alist '("\\.yml$" . yaml-mode))
@@ -38,6 +39,9 @@
                ad-do-it)))))
 
 (yas/advise-indent-function 'ruby-indent-line)
+
+;;; Fix haml / rinari
+(add-hook 'haml-mode-hook 'rinari-minor-mode)
 
 ;;; Load personal configuration files.
 (setq my-config-dir (concat user-emacs-directory "config"))
