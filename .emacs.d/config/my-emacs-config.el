@@ -27,6 +27,8 @@
              '(("Preview" "/Applications/Preview.app/MacOS/Preview %q")))
        (setq ns-command-modifier 'meta)
        (menu-bar-mode t)))
+(cond ((eq system-type 'gnu/linux)
+       (setq ack-executable (executable-find "ack-grep"))))
 
 ;; Disable auto-save.
 (setq auto-save-default nil)
