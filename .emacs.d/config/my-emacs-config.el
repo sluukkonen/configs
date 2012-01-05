@@ -28,7 +28,8 @@
        (setq ns-command-modifier 'meta)
        (menu-bar-mode t)))
 (cond ((eq system-type 'gnu/linux)
-       (setq ack-executable (executable-find "ack-grep"))))
+       (setq ack-executable (executable-find "ack-grep"))
+       (menu-bar-mode t)))
 
 ;; Disable auto-save.
 (setq auto-save-default nil)
