@@ -10,7 +10,7 @@
 (when (not package-archive-contents)
   (package-refresh-contents))
 
-(defvar my-packages '(starter-kit starter-kit-bindings starter-kit-lisp starter-kit-ruby autopair full-ack haml-mode mode-compile rect-mark rvm rinari ruby-electric yasnippet-bundle yaml-mode zenburn-theme)
+(defvar my-packages '(starter-kit starter-kit-bindings starter-kit-eshell starter-kit-js starter-kit-lisp starter-kit-ruby autopair full-ack haml-mode mode-compile rect-mark rvm rinari ruby-electric yasnippet-bundle yaml-mode)
   "A list of packages to ensure are installed at launch.")
 
 (dolist (p my-packages)
@@ -23,7 +23,6 @@
 (autoload 'rvm "rvm" nil t)
 (autoload 'yasnippet-bundle "yasnippet-bundle" nil t)
 (autoload 'yaml-mode "yaml-mode" nil t)
-(add-to-list 'auto-mode-alist '("\\.yml$" . yaml-mode))
 
 (yas/initialize)
 
@@ -41,11 +40,15 @@
 (yas/advise-indent-function 'ruby-indent-line)
 
 ;;; Fix haml / rinari
+(add-to-list 'auto-mode-alist '("\\.yml$" . yaml-mode))
 (add-hook 'haml-mode-hook 'rinari-minor-mode)
+
+;;; Fix Javascript / rinari
+(add-to-list 'auto-mode-alist '("\\.js\.erb$" . yaml-mode))
+(add-hook 'js-mode-hook 'rinari-minor-mode)
 
 ;;; Load personal configuration files.
 (setq my-config-dir (concat user-emacs-directory "config"))
-
 (add-to-list 'load-path my-config-dir)
 (when (file-exists-p my-config-dir)
   (mapc 'load (directory-files my-config-dir nil "^[^#].*el$")))

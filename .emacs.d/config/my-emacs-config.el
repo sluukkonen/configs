@@ -1,6 +1,3 @@
-;;; Color theme.
-(load-theme 'zenburn t)
-
 ;;; Use autopair.
 (autopair-global-mode)
 
@@ -19,7 +16,7 @@
 ;; Set cursor to a vertical bar (I-beam) and make it blink.
 (setq default-frame-alist
       '((cursor-type . bar)
-        (cursor-color . "white")))
+        (cursor-color . "black")))
 (blink-cursor-mode 1)
 
 ;;; System specific tweaks.
