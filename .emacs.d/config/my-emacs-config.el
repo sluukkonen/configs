@@ -39,3 +39,6 @@
 
 ;; Use aspell as the default spell checker.
 (set-variable 'ispell-program-name "aspell")
+
+;;; Match only filenames in dired search
+(setq dired-isearch-filenames t)
