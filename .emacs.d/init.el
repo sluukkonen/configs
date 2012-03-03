@@ -10,7 +10,7 @@
 (when (not package-archive-contents)
   (package-refresh-contents))
 
-(defvar my-packages '(starter-kit starter-kit-bindings starter-kit-eshell starter-kit-js starter-kit-lisp starter-kit-ruby autopair full-ack haml-mode mode-compile rect-mark rvm rinari ruby-electric yasnippet-bundle yaml-mode)
+(defvar my-packages '(starter-kit starter-kit-bindings starter-kit-eshell starter-kit-js starter-kit-lisp starter-kit-ruby autopair dired-single full-ack haml-mode mode-compile rect-mark rvm rinari ruby-electric yasnippet-bundle yaml-mode)
   "A list of packages to ensure are installed at launch.")
 
 (dolist (p my-packages)
@@ -19,6 +19,10 @@
 
 ;;; Load some libraries.
 (autoload 'autopair-global-mode "autopair" nil t)
+(autoload 'dired-single-buffer "dired-single" "" t)
+(autoload 'dired-single-buffer-mouse "dired-single" "" t)
+(autoload 'dired-single-magic-buffer "dired-single" "" t)
+(autoload 'dired-single-toggle-buffer-name "dired-single" "" t)
 (autoload 'rect-mark "rect-mark" nil t)
 (autoload 'rvm "rvm" nil t)
 (autoload 'yasnippet-bundle "yasnippet-bundle" nil t)
