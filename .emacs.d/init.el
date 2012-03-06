@@ -10,7 +10,7 @@
 (when (not package-archive-contents)
   (package-refresh-contents))
 
-(defvar my-packages '(starter-kit starter-kit-bindings starter-kit-eshell starter-kit-js starter-kit-lisp starter-kit-ruby autopair dired-single full-ack haml-mode mode-compile rect-mark rvm rinari ruby-electric yasnippet-bundle yaml-mode)
+(defvar my-packages '(starter-kit starter-kit-bindings starter-kit-eshell starter-kit-lisp starter-kit-ruby autopair dired-single full-ack haml-mode mode-compile rect-mark rvm rinari ruby-electric yasnippet-bundle yaml-mode)
   "A list of packages to ensure are installed at launch.")
 
 (dolist (p my-packages)
