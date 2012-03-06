@@ -23,3 +23,6 @@
 ;; Full-ack shortcut.
 (global-set-key (kbd "C-c a") 'ack)
 (global-set-key (kbd "C-c A") 'ack-same)
+
+;; Open up ELPA
+(global-set-key (kbd "C-c p") 'package-list-packages)
