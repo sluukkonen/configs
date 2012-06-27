@@ -34654,10 +34654,11 @@ NUMBER_OF_PASSWORDS=20
 
 usage() {
     cat <<EOF
-    Usage: $0 [OPTION]
+    Usage: $(basename $0) [OPTIONS]
 
     OPTIONS:
         -n  number of words to generate
+        -t  number of passwords to generate
 EOF
 }
 
@@ -34666,10 +34667,10 @@ while getopts ":n:t:" OPTION
 do
     case $OPTION in
         n)
-            NUMBER_OF_WORDS=$OPTARG
+            NUMBER_OF_WORDS="$OPTARG"
             ;;
         t)
-            NUMBER_OF_PASSWORDS=$OPTARG
+            NUMBER_OF_PASSWORDS="$OPTARG"
             ;;
         ?)
             usage
