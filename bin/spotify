@@ -1,3 +1,0 @@
-#!/bin/sh
-# Launcher for spotify.exe
-wine ~/.wine/drive_c/Program\ Files/Spotify/spotify.exe
