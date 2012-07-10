@@ -6,6 +6,7 @@
 .emacs.d/elpa/*.*
 .emacs.d/places
 .emacs.d/tramp
+.emacs.d/swank
 .emacs.d/*session*
 .emacs.d/auto-save-list
 .emacs.d/.smex-items
