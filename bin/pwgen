@@ -34681,5 +34681,5 @@ done
 
 for i in $(seq 1 "$NUMBER_OF_PASSWORDS")
 do
-    echo "$SANALISTA" | shuf | head -n "$NUMBER_OF_WORDS" | awk '{ printf "%s ", $0 } END { printf "\n" }'
+    echo "$SANALISTA" | shuf -n "$NUMBER_OF_WORDS" | awk '{ printf "%s ", $0 } END { printf "\n" }'
 done
