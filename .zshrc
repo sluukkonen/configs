@@ -14,16 +14,16 @@ zstyle ':vcs_info:*' unstagedstr '%F{yellow}●%f'
 
 precmd () {
     if [[ -z $(git ls-files --other --exclude-standard 2> /dev/null) ]] {
-        zstyle ':vcs_info:*' formats ' [%F{magenta}%b%f%c%u]'
+        zstyle ':vcs_info:*' formats ' [%F{green}%b%f%c%u]'
     } else {
-        zstyle ':vcs_info:*' formats ' [%F{magenta}%b%f%c%u%F{red}●%f]'
+        zstyle ':vcs_info:*' formats ' [%F{green}%b%f%c%u%F{red}●%f]'
     }
  
     vcs_info
 }
 
 # Git status in $PROMPT
-PROMPT='%B%n%{$fg[blue]%}@%{$reset_color%}%m:%{$fg[cyan]%}%~%{$reset_color%}%b${vcs_info_msg_0_} '
+PROMPT='%B%n%{$fg[blue]%}@%{$reset_color%}%m:%{$fg[blue]%}%~%{$reset_color%}%b${vcs_info_msg_0_} '
 
 # History
 HISTSIZE=1000
