@@ -23,7 +23,7 @@ precmd () {
 }
 
 # Git status in $PROMPT
-PROMPT='%B%n%{$fg[blue]%}@%{$reset_color%}%m:%{$fg[blue]%}%~%{$reset_color%}%b${vcs_info_msg_0_} '
+PROMPT='%n%{$fg[blue]%}@%{$reset_color%}%m:%{$fg[blue]%}%~%{$reset_color%}${vcs_info_msg_0_} '
 
 # History
 HISTSIZE=1000
@@ -37,4 +37,3 @@ compinit -C
 
 ## Case-insensitive word, partial word and substring completion
 zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}' 'r:|[._-]=* r:|=*' 'l:|=* r:|=*'
-
