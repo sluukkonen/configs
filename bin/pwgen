@@ -34662,6 +34662,14 @@ usage() {
 EOF
 }
 
+shuffle() {
+    if hash gshuf 2>/dev/null; then
+        gshuf "$@"
+    else
+        shuf "$@"
+    fi
+}
+
 
 while getopts ":n:t:" OPTION
 do
@@ -34681,5 +34689,5 @@ done
 
 for i in $(seq 1 "$NUMBER_OF_PASSWORDS")
 do
-    echo "$SANALISTA" | shuf -n "$NUMBER_OF_WORDS" | awk '{ printf "%s ", $0 } END { printf "\n" }'
+    echo "$SANALISTA" | shuffle -n "$NUMBER_OF_WORDS" | awk '{ printf "%s ", $0 } END { printf "\n" }'
 done
