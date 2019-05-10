@@ -4,6 +4,7 @@ tap "homebrew/cask-fonts"
 tap "homebrew/core"
 tap "homebrew/services"
 
+brew "coreutils"
 brew "htop"
 brew "hub"
 brew "jq"
