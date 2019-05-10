@@ -14,6 +14,7 @@ brew "tig"
 brew "tmux"
 brew "tree"
 brew "wget"
+brew "zsh"
 brew "zsh-autosuggestions"
 brew "zsh-completions"
 
