@@ -8,7 +8,7 @@ path = os.path.abspath(os.path.dirname(__file__))
 bin = os.path.join(home, 'bin')
 local_bin = os.path.join(path, 'bin')
 
-excludes = ['.gitignore', '.git', '.gitmodules', os.path.basename(__file__), 'bin']
+excludes = ['.gitignore', '.git', '.gitmodules', os.path.basename(__file__), 'bin', 'Brewfile']
 
 def link_directory(srcdir, dstdir):
     for f in os.listdir(srcdir):
