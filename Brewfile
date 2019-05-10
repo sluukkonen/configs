@@ -21,6 +21,7 @@ brew "zsh-completions"
 
 cask "amethyst"
 cask "firefox"
+cask "flowdock"
 cask "font-fira-code"
 cask "google-chrome"
 cask "spotify"
