@@ -18,6 +18,7 @@ brew "tree"
 brew "wget"
 brew "zsh"
 
+cask "aerial"
 cask "amethyst"
 cask "firefox"
 cask "flowdock"
