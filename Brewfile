@@ -26,6 +26,7 @@ cask "font-fira-code"
 cask "google-chrome"
 cask "spotify"
 cask "visual-studio-code"
+cask "virtualbox"
 cask "webstorm"
 
 mas "com.agilebits.onepassword7", id: 1333542190
