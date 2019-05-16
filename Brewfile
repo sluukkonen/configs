@@ -5,6 +5,7 @@ tap "homebrew/core"
 tap "homebrew/services"
 
 brew "antigen"
+brew "rg"
 brew "coreutils"
 brew "htop"
 brew "hub"
