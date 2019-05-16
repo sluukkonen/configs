@@ -3,8 +3,9 @@ tap "homebrew/cask"
 tap "homebrew/cask-fonts"
 tap "homebrew/core"
 tap "homebrew/services"
+tap "getantibody/tap"
 
-brew "antigen"
+brew "antibody"
 brew "rg"
 brew "coreutils"
 brew "gnu-tar" # required by fpm
