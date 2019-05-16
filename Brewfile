@@ -32,9 +32,9 @@ cask "java"
 cask "pocket-casts"
 cask "sketch"
 cask "spotify"
-cask "virtualbox"
 cask "viscosity"
 cask "visual-studio-code"
+cask "vmware-fusion"
 cask "webstorm"
 
 mas "com.agilebits.onepassword7", id: 1333542190
