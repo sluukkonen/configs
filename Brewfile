@@ -8,6 +8,7 @@ tap "getantibody/tap"
 brew "antibody"
 brew "rg"
 brew "coreutils"
+brew "git"
 brew "gnu-tar" # required by fpm
 brew "htop"
 brew "hub"
