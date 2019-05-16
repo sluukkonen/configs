@@ -21,7 +21,8 @@ def link_file(file):
         os.symlink(file, abspath)
         print "ln -s %s %s" % (file, abspath)
     except:
-       pass
+      if not os.path.islink(abspath):
+        print "%s already exists!" % abspath
 
 def link_directory(dir):
     for file in os.listdir(dir):
