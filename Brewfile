@@ -7,6 +7,7 @@ tap "homebrew/services"
 brew "antigen"
 brew "rg"
 brew "coreutils"
+brew "gnu-tar" # required by fpm
 brew "htop"
 brew "hub"
 brew "jq"
