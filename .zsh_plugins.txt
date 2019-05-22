@@ -1,4 +1,5 @@
 robbyrussell/oh-my-zsh
+lukechilds/zsh-nvm
 zsh-users/zsh-syntax-highlighting
 zsh-users/zsh-autosuggestions
 zsh-users/zsh-completions
