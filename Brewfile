@@ -6,6 +6,7 @@ tap "homebrew/services"
 tap "getantibody/tap"
 
 brew "antibody"
+brew "awscli"
 brew "rg"
 brew "coreutils"
 brew "git"
