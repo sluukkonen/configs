@@ -3,3 +3,5 @@
 	name = Sakumatti Luukkonen
 [push]
 	default = current
+[sequence]
+	editor = interactive-rebase-tool

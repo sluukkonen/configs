@@ -13,6 +13,7 @@ brew "git"
 brew "gnu-tar" # required by fpm
 brew "htop"
 brew "hub"
+brew "interactive-rebase-tool"
 brew "jq"
 brew "mas"
 brew "parallel"
