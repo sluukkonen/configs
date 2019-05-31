@@ -7,8 +7,8 @@ tap "getantibody/tap"
 
 brew "antibody"
 brew "awscli"
-brew "rg"
 brew "coreutils"
+brew "ffmpeg"
 brew "git"
 brew "gnu-tar" # required by fpm
 brew "htop"
@@ -18,6 +18,7 @@ brew "jq"
 brew "mas"
 brew "parallel"
 brew "postgresql", restart_service: true
+brew "rg"
 brew "rg"
 brew "tig"
 brew "tmux"
