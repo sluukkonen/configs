@@ -19,7 +19,6 @@ brew "mas"
 brew "parallel"
 brew "postgresql", restart_service: true
 brew "rg"
-brew "rg"
 brew "tig"
 brew "tmux"
 brew "tree"
