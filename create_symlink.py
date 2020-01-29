@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import os
 
@@ -12,22 +12,22 @@ def ensure_directory(dir):
     targetpath = os.path.join(home, relpath)
     if not os.path.exists(targetpath):
         os.mkdir(targetpath)
-        print "mkdir %s" % targetpath
+        print("mkdir %s" % targetpath)
 
 def link_file(file):
     relpath = os.path.relpath(file, path)
     abspath = os.path.abspath(os.path.join(home, relpath)) 
     try:
         os.symlink(file, abspath)
-        print "ln -s %s %s" % (file, abspath)
+        print("ln -s %s %s" % (file, abspath))
     except:
-      if not os.path.islink(abspath):
-        print "%s already exists!" % abspath
+        if not os.path.islink(abspath):
+            print("%s already exists!" % abspath)
 
 def link_directory(dir):
     for file in os.listdir(dir):
         if file not in excludes:
-	    abspath = os.path.abspath(os.path.join(dir, file))
+            abspath = os.path.abspath(os.path.join(dir, file))
             if os.path.isfile(abspath):
                 link_file(abspath)
             elif os.path.isdir(abspath):
