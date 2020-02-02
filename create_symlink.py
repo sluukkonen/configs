@@ -5,7 +5,7 @@ import os
 home = os.path.abspath(os.environ['HOME'])
 path = os.path.abspath(os.path.dirname(__file__))
 
-excludes = ['.gitignore', '.git', '.gitmodules', os.path.basename(__file__), 'Brewfile']
+excludes = ['.gitignore', '.git', '.gitmodules', os.path.basename(__file__), 'Brewfile', 'Brewfile.lock.json']
 
 def ensure_directory(dir):
     relpath = os.path.relpath(dir, path)
