@@ -1,5 +1,5 @@
 set $mod Mod4
-font pango:Cascadia Code, Font Awesome 8
+font pango:Cascadia Code, Font Awesome 5 Free 8
 
 # This font is widely installed, provides lots of unicode glyphs, right-to-left
 # text rendering and scalability on retina/hidpi displays (thanks to pango).
@@ -164,5 +164,6 @@ bindsym $mod+r mode "resize"
 # finds out, if available)
 bar {
 	position top
+	separator_symbol "|"
         status_command i3status
 }
