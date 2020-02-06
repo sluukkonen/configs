@@ -1,7 +1,7 @@
 font:
   normal:
-    family: Cascadia Code
-  size: 8.0
+    family: Cascadia Code PL
+  size: 13.0
 colors:
   primary:
     background: '0x212733'
@@ -24,3 +24,8 @@ colors:
     magenta: '0xff55ff'
     cyan:    '0x99ffda'
     white:   '0xffffff'
+window:
+  decorations: transparent
+  padding:
+    y: 20
+    x: 0
