@@ -24,3 +24,4 @@
 /.emacs.d/eshell/lastdir
 /.emacs.d/url/cookies
 bin/lein
+Brewfile.lock.json
