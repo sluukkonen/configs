@@ -26,8 +26,8 @@ shift + alt - 9 : yabai -m window --space  9; yabai -m space --focus 9
 shift + alt - 0 : yabai -m window --space 10; yabai -m space --focus 10
 
 # increase window size
-shift + cmd - h : yabai -m window --resize left:-100:0
-shift + cmd - l : yabai -m window --resize left:100:0
+shift + cmd - h : yabai -m window --ratio rel:-0.1
+shift + cmd - l : yabai -m window --ratio rel:0.1
 
 # toggle window parent zoom
 alt - d : yabai -m window --toggle zoom-parent
