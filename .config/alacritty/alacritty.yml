@@ -1,7 +1,7 @@
 font:
   normal:
     family: Cascadia Code PL
-  size: 13.0
+  size: 14.0
 
 colors:
   primary:
@@ -29,7 +29,7 @@ colors:
 window:
   decorations: transparent
   padding:
-    y: 20
+    y: 22
     x: 0
 
 key_bindings:
