@@ -24,6 +24,7 @@ brew "parallel"
 brew "postgresql", restart_service: true
 brew "rg"
 brew "skhd"
+brew "stack"
 brew "tig"
 brew "tmux"
 brew "tree"
