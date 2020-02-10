@@ -1,0 +1,11 @@
+alanz.vscode-hie-server
+brunnerh.insert-unicode
+dbaeumer.vscode-eslint
+esbenp.prettier-vscode
+justusadam.language-haskell
+ms-vscode.cpptools
+ms-vscode.vscode-typescript-tslint-plugin
+redhat.vscode-xml
+teabyii.ayu
+timonwong.shellcheck
+vscodevim.vim

@@ -1,0 +1,12 @@
+{
+  "editor.formatOnSave": true,
+  "editor.fontSize": 14,
+  "editor.fontFamily": "Cascadia Code PL",
+  "editor.fontLigatures": true,
+  "editor.minimap.enabled": false,
+  "editor.codeActionsOnSave": {
+    "source.fixAll": true,
+    "source.organizeImports": true
+  },
+  "workbench.colorTheme": "Ayu Mirage Bordered"
+}
