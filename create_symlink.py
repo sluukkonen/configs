@@ -5,7 +5,9 @@ import os
 home = os.path.abspath(os.environ['HOME'])
 path = os.path.abspath(os.path.dirname(__file__))
 
-excludes = ['.gitignore', '.git', '.gitmodules', os.path.basename(__file__), 'Brewfile', 'Brewfile.lock.json']
+excludes = ['.gitignore', '.git', '.gitmodules', os.path.basename(
+    __file__), 'Brewfile', 'Brewfile.lock.json', 'setup_vscode.sh']
+
 
 def ensure_directory(dir):
     relpath = os.path.relpath(dir, path)
@@ -14,15 +16,17 @@ def ensure_directory(dir):
         os.mkdir(targetpath)
         print("mkdir %s" % targetpath)
 
+
 def link_file(file):
     relpath = os.path.relpath(file, path)
-    abspath = os.path.abspath(os.path.join(home, relpath)) 
+    abspath = os.path.abspath(os.path.join(home, relpath))
     try:
         os.symlink(file, abspath)
         print("ln -s %s %s" % (file, abspath))
     except:
         if not os.path.islink(abspath):
             print("%s already exists!" % abspath)
+
 
 def link_directory(dir):
     for file in os.listdir(dir):
@@ -33,5 +37,6 @@ def link_directory(dir):
             elif os.path.isdir(abspath):
                 ensure_directory(abspath)
                 link_directory(abspath)
+
 
 link_directory(path)
