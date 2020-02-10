@@ -8,6 +8,7 @@ tap "koekeishiya/formulae"
 
 brew "antibody"
 brew "awscli"
+brew "cabal-install"
 brew "coreutils"
 brew "exa"
 brew "ffmpeg"
