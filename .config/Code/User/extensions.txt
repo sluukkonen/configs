@@ -3,6 +3,7 @@ brunnerh.insert-unicode
 dbaeumer.vscode-eslint
 esbenp.prettier-vscode
 justusadam.language-haskell
+ms-python.python
 ms-vscode.cpptools
 ms-vscode.vscode-typescript-tslint-plugin
 redhat.vscode-xml
