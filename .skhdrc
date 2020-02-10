@@ -30,7 +30,7 @@ shift + cmd - h : yabai -m window --ratio rel:-0.1
 shift + cmd - l : yabai -m window --ratio rel:0.1
 
 # window layout toggles
-alt - d     : yabai -m window --toggle zoom-parent
-alt - space : yabai -m window --toggle zoom-fullscreen
-alt - f     : yabai -m window --toggle float
-alt - n     : yabai -m window --toggle split
+shift + alt - d     : yabai -m window --toggle zoom-parent
+shift + alt - space : yabai -m window --toggle zoom-fullscreen
+shift + alt - f     : yabai -m window --toggle float
+shift + alt - n     : yabai -m window --toggle split
