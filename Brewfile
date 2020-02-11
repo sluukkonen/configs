@@ -56,8 +56,6 @@ cask "vmware-fusion"
 cask "webstorm"
 
 mas "com.agilebits.onepassword7", id: 1333542190
-mas "com.apple.garageband10", id: 682658836
-mas "com.apple.iMovieApp", id: 408981434
 mas "com.apple.iWork.Keynote", id: 409183694
 mas "com.apple.iWork.Numbers", id: 409203825
 mas "com.apple.iWork.Pages", id: 409201541
