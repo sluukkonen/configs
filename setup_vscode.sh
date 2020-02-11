@@ -11,7 +11,7 @@ SETTINGS_FILE=settings.json
 ( code --list-extensions ; cat "$EXTENSIONS" ) | sort -u > "$TMPFILE"
 mv "$TMPFILE" "$EXTENSIONS"
 
-xargs -L 1 code --install-extension < "$EXTENSIONS"
+xargs -n 1 code --install-extension < "$EXTENSIONS"
 
 if [[ "$(uname)" == "Darwin" ]]; then
   mkdir -p "$MACOS_CONFDIR"
