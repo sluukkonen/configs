@@ -34,3 +34,4 @@ shift + alt - d     : yabai -m window --toggle zoom-parent
 shift + alt - space : yabai -m window --toggle zoom-fullscreen
 shift + alt - f     : yabai -m window --toggle float
 shift + alt - n     : yabai -m window --toggle split
+shift + alt - 0x18  : yabai -m space --balance
