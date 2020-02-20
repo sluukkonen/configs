@@ -40,7 +40,6 @@ cask "datagrip"
 cask "dropbox"
 cask "eurkey"
 cask "firefox"
-cask "flowdock"
 cask "font-cascadia"
 cask "font-cascadia-pl"
 cask "font-fira-code"
@@ -59,6 +58,4 @@ mas "com.agilebits.onepassword7", id: 1333542190
 mas "com.apple.iWork.Keynote", id: 409183694
 mas "com.apple.iWork.Numbers", id: 409203825
 mas "com.apple.iWork.Pages", id: 409201541
-mas "com.tinyspeck.slackmacgap", id: 803453959
-mas "it.bloop.airmail2", id: 918858936 
 mas "desktop.WhatsApp", id: 1147396723
