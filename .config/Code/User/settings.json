@@ -9,4 +9,5 @@
     "source.organizeImports": true
   },
   "workbench.colorTheme": "Atom One Dark",
+  "editor.lineNumbers": "relative",
 }
