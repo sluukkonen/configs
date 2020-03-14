@@ -1,3 +1,4 @@
+akamud.vscode-theme-onedark
 alanz.vscode-hie-server
 brunnerh.insert-unicode
 dbaeumer.vscode-eslint

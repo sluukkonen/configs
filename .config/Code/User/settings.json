@@ -8,6 +8,5 @@
     "source.fixAll": true,
     "source.organizeImports": true
   },
-  "workbench.colorTheme": "Ayu Mirage Bordered",
-  "workbench.iconTheme": "ayu",
+  "workbench.colorTheme": "Atom One Dark",
 }
