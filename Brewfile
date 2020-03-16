@@ -36,6 +36,7 @@ brew "zsh"
 
 cask "aerial"
 cask "alacritty"
+cask "clipy"
 cask "datagrip"
 cask "dropbox"
 cask "eurkey"
