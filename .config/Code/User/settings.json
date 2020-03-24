@@ -10,4 +10,7 @@
   },
   "workbench.colorTheme": "Atom One Dark",
   "editor.lineNumbers": "relative",
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
 }
