@@ -4,4 +4,3 @@ ZSH="$(antibody home)/https-COLON--SLASH--SLASH-github.com-SLASH-robbyrussell-SL
 source <(antibody init)
 antibody bundle < ~/.zsh_plugins.txt
 command -v exa >/dev/null && alias ls=exa
-bindkey -v
