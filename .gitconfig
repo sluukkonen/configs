@@ -7,3 +7,5 @@
 	editor = interactive-rebase-tool
 [includeIf "gitdir:~/Work/**"]
 	path = .gitconfig_work
+[core]
+	editor = vim
