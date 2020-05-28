@@ -8,4 +8,4 @@
 [includeIf "gitdir:~/Work/**"]
 	path = .gitconfig_work
 [core]
-	editor = vim
+	editor = vim -f
