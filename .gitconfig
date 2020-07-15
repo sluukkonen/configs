@@ -9,3 +9,5 @@
 	path = .gitconfig_work
 [core]
 	editor = vim -f
+[pull]
+	rebase = false
