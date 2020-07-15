@@ -11,6 +11,6 @@
 [core]
 	editor = vim -f
 [pull]
-	rebase = false
+	ff = only
 [commit]
 	pgpsign = true
