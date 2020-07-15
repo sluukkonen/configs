@@ -1,6 +1,7 @@
 [user]
 	email = sakumatti.luukkonen@gmail.com
 	name = Sakumatti Luukkonen
+	signingkey = 22BE06ED95DCD9AA
 [push]
 	default = current
 [sequence]
@@ -11,3 +12,5 @@
 	editor = vim -f
 [pull]
 	rebase = false
+[commit]
+	pgpsign = true
