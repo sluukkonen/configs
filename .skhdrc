@@ -7,11 +7,19 @@ alt - j : yabai -m window --focus south
 alt - k : yabai -m window --focus north
 alt - l : yabai -m window --focus east
 
+# focus display
+alt + ctrl -h : yabai -m display --focus west
+alt + ctrl- l : yabai -m display --focus east
+
 # move window
 shift + alt - h : yabai -m window --warp west
 shift + alt - j : yabai -m window --warp south
 shift + alt - k : yabai -m window --warp north
 shift + alt - l : yabai -m window --warp east
+
+# move window to display
+shift + alt + ctrl - h : yabai -m window --display west; yabai -m display --focus west
+shift + alt + ctrl - l : yabai -m window --display east; yabai -m display --focus east
 
 # send window to desktop and follow focus
 shift + alt - 1 : yabai -m window --space  1; yabai -m space --focus 1
@@ -24,6 +32,7 @@ shift + alt - 7 : yabai -m window --space  7; yabai -m space --focus 7
 shift + alt - 8 : yabai -m window --space  8; yabai -m space --focus 8
 shift + alt - 9 : yabai -m window --space  9; yabai -m space --focus 9
 shift + alt - 0 : yabai -m window --space 10; yabai -m space --focus 10
+
 
 # increase window size
 shift + cmd - h : yabai -m window --ratio rel:-0.1
