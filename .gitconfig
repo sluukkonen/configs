@@ -1,7 +1,7 @@
 [user]
 	email = sakumatti.luukkonen@gmail.com
 	name = Sakumatti Luukkonen
-	signingkey = 22BE06ED95DCD9AA
+	signingKey = 948E0E41E3389C15BAA83E5B22BE06ED95DCD9AA
 [push]
 	default = current
 [sequence]
@@ -13,4 +13,4 @@
 [pull]
 	ff = only
 [commit]
-	pgpsign = true
+	gpgsign = true
