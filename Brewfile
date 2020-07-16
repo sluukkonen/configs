@@ -61,7 +61,7 @@ cask "vmware-fusion"
 cask "webstorm"
 
 mas "com.agilebits.onepassword7", id: 1333542190
-mas "com.apple.iWork.Keynote", id: 409183694
-mas "com.apple.iWork.Numbers", id: 409203825
-mas "com.apple.iWork.Pages", id: 409201541
+# mas "com.apple.iWork.Keynote", id: 409183694
+# mas "com.apple.iWork.Numbers", id: 409203825
+# mas "com.apple.iWork.Pages", id: 409201541
 mas "desktop.WhatsApp", id: 1147396723
