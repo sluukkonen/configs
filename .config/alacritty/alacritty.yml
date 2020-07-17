@@ -30,7 +30,7 @@ window:
   decorations: transparent
   padding:
     y: 22
-    x: 8
+    x: 4
 
 key_bindings:
   - { key: Up, mods: Shift, action: ScrollPageUp }
