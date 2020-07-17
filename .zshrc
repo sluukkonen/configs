@@ -5,4 +5,6 @@ source <(antibody init)
 antibody bundle < ~/.zsh_plugins.txt
 command -v exa >/dev/null && alias ls=exa
 
+export GPG_TTY=$(tty)
+
 [[ -f ~/.zshrc.local ]] && source ~/.zshrc.local
