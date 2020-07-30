@@ -2,7 +2,7 @@ syntax on
 filetype plugin indent on
 
 set hidden
-set relativenumber
+set number
 set ignorecase
 set smartcase
 set incsearch
