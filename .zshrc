@@ -8,3 +8,4 @@ command -v exa >/dev/null && alias ls=exa
 export GPG_TTY=$(tty)
 
 [[ -f ~/.zshrc.local ]] && source ~/.zshrc.local
+[ -f "${GHCUP_INSTALL_BASE_PREFIX:=$HOME}/.ghcup/env" ] && source "${GHCUP_INSTALL_BASE_PREFIX:=$HOME}/.ghcup/env"
