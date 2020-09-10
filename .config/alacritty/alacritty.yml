@@ -36,5 +36,6 @@ window:
 key_bindings:
   - { key: Up, mods: Shift, action: ScrollPageUp }
   - { key: Down, mods: Shift, action: ScrollPageDown }
-  - { key: F, mods: Alt, chars: "\x1bf" }
   - { key: B, mods: Alt, chars: "\x1bb" }
+  - { key: D, mods: Alt, chars: "\x1bd" }
+  - { key: F, mods: Alt, chars: "\x1bf" }
