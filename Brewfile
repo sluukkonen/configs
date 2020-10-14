@@ -27,7 +27,6 @@ brew "postgresql", restart_service: true
 brew "rg"
 brew "shellcheck"
 brew "skhd"
-brew "stack"
 brew "tig"
 brew "tmux"
 brew "tree"
