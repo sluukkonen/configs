@@ -22,6 +22,7 @@ brew "htop"
 brew "interactive-rebase-tool"
 brew "jq"
 brew "mas"
+brew "p7zip"
 brew "parallel"
 brew "postgresql", restart_service: true
 brew "rg"
