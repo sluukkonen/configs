@@ -37,6 +37,7 @@ brew "zsh"
 
 cask "aerial"
 cask "alacritty"
+cask "aws-vault"
 cask "clipy"
 cask "datagrip"
 cask "docker"
