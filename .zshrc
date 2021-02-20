@@ -7,5 +7,6 @@ command -v exa >/dev/null && alias ls=exa
 
 export DOCKER_BUILDKIT=1
 export GPG_TTY=$(tty)
+export PATH=~/.ghcup/bin:$PATH
 
 [[ -f ~/.zshrc.local ]] && source ~/.zshrc.local
