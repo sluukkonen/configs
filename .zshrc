@@ -4,6 +4,7 @@ export GPG_TTY=$(tty)
 export NVM_LAZY_LOAD=true
 export PATH=~/.ghcup/bin:$PATH
 
+NVM_LAZY_LOAD=true
 ZSH_THEME="agnoster"
 DISABLE_AUTO_UPDATE=true
 ZSH="$(antibody home)/https-COLON--SLASH--SLASH-github.com-SLASH-robbyrussell-SLASH-oh-my-zsh"
