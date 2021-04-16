@@ -1,4 +1,4 @@
-robbyrussell/oh-my-zsh
+romkatv/powerlevel10k
 lukechilds/zsh-nvm
 zsh-users/zsh-syntax-highlighting
 zsh-users/zsh-autosuggestions
