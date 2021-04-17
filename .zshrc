@@ -7,7 +7,7 @@ fi
 
 export DOCKER_BUILDKIT=1
 export EDITOR=vim
-export GPG_TTY=$(tty)
+export GPG_TTY=$TTY
 export NVM_LAZY_LOAD=true
 export PATH=~/.ghcup/bin:$PATH
 
