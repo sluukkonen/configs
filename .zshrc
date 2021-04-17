@@ -19,6 +19,7 @@ antibody bundle < ~/.zsh_plugins.txt
 
 command -v exa >/dev/null && alias ls=exa
 command -v bat >/dev/null && alias cat=bat
+command -v vim >/dev/null && alias vi=vim
 
 [[ -f ~/.zshrc.local ]] && source ~/.zshrc.local
 
