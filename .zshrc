@@ -11,12 +11,8 @@ export GPG_TTY=$TTY
 export NVM_LAZY_LOAD=true
 export PATH=~/.ghcup/bin:$PATH
 
-HISTFILE="$HOME/.zsh_history"
-HISTSIZE=10000000
-SAVEHIST=10000000
+DISABLE_AUTO_UPDATE=true
 NVM_LAZY_LOAD=true
-
-# Initialize antibody
 source <(antibody init)
 antibody bundle < ~/.zsh_plugins.txt
 
