@@ -7,5 +7,6 @@ set ignorecase
 set smartcase
 set incsearch
 set hlsearch
+set termguicolors
 
 autocmd BufWritePre * %s/\s\+$//e
