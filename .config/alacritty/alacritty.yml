@@ -5,26 +5,26 @@ font:
 
 colors:
   primary:
-    background: "0x212733"
-    foreground: "0xd0cec3"
+    background: "#212733"
+    foreground: "#d0cec3"
   normal:
-    black: "0x212733"
-    red: "0xea5965"
-    green: "0xade46b"
-    yellow: "0xfec254"
-    blue: "0x2d91d0"
-    magenta: "0xc9aeff"
-    cyan: "0x86e2bf"
-    white: "0xbbbbbb"
+    black: "#212733"
+    red: "#ea5965"
+    green: "#ade46b"
+    yellow: "#fec254"
+    blue: "#2d91d0"
+    magenta: "#c9aeff"
+    cyan: "#86e2bf"
+    white: "#bbbbbb"
   bright:
-    black: "0x555555"
-    red: "0xea5965"
-    green: "0xc1e436"
-    yellow: "0xfed96d"
-    blue: "0x5555ff"
-    magenta: "0xff55ff"
-    cyan: "0x99ffda"
-    white: "0xffffff"
+    black: "#555555"
+    red: "#ea5965"
+    green: "#c1e436"
+    yellow: "#fed96d"
+    blue: "#5555ff"
+    magenta: "#ff55ff"
+    cyan: "#99ffda"
+    white: "#ffffff"
 
 window:
   decorations: transparent
