@@ -10,6 +10,9 @@
 	path = .gitconfig_work
 [core]
 	editor = vim -f
+	pager = delta
+[interactive]
+	diffFilter = delta --color-only
 [pull]
 	ff = only
 [commit]

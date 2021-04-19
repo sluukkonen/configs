@@ -15,6 +15,7 @@ brew "ffmpeg"
 brew "gh"
 brew "git"
 brew "git-absorb"
+brew "git-delta"
 brew "gnupg"
 brew "gnu-tar" # required by fpm
 brew "go"
