@@ -3,28 +3,65 @@ font:
     family: Cascadia Code PL
   size: 14.0
 
-colors:
-  primary:
-    background: "#212733"
-    foreground: "#d0cec3"
-  normal:
-    black: "#212733"
-    red: "#ea5965"
-    green: "#ade46b"
-    yellow: "#fec254"
-    blue: "#2d91d0"
-    magenta: "#c9aeff"
-    cyan: "#86e2bf"
-    white: "#bbbbbb"
-  bright:
-    black: "#555555"
-    red: "#ea5965"
-    green: "#c1e436"
-    yellow: "#fed96d"
-    blue: "#5555ff"
-    magenta: "#ff55ff"
-    cyan: "#99ffda"
-    white: "#ffffff"
+themes:
+  gruvbox_dark: &gruvbox_dark
+    bright:
+      black: '#7f7061'
+      blue: '#719586'
+      cyan: '#7db669'
+      green: '#aab01e'
+      magenta: '#c77089'
+      red: '#f73028'
+      white: '#e6d4a3'
+      yellow: '#f7b125'
+    cursor:
+      cursor: '#e6d4a3'
+      text: '#1e1e1e'
+    normal:
+      black: '#1e1e1e'
+      blue: '#377375'
+      cyan: '#578e57'
+      green: '#868715'
+      magenta: '#a04b73'
+      red: '#be0f17'
+      white: '#978771'
+      yellow: '#cc881a'
+    primary:
+      background: '#1e1e1e'
+      foreground: '#e6d4a3'
+    selection:
+      background: '#e6d4a3'
+      text: '#534a42'
+  grubbox_light: &gruvbox_light
+    bright:
+      black: '#9d8374'
+      blue: '#458588'
+      cyan: '#689d69'
+      green: '#98971a'
+      magenta: '#b16186'
+      red: '#cc241d'
+      white: '#7c6f64'
+      yellow: '#d79921'
+    cursor:
+      cursor: '#282828'
+      text: '#282828'
+    normal:
+      black: '#fbf1c7'
+      blue: '#076678'
+      cyan: '#427b58'
+      green: '#79740e'
+      magenta: '#8f3f71'
+      red: '#9d0006'
+      white: '#3c3836'
+      yellow: '#b57614'
+    primary:
+      background: '#fbf1c7'
+      foreground: '#282828'
+    selection:
+      background: '#d5c4a1'
+      text: '#665c54'
+
+colors: *gruvbox_light
 
 window:
   decorations: none
