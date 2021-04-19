@@ -69,6 +69,11 @@ window:
     y: 8
     x: 8
 
+cursor:
+  style:
+    blinking: Always
+    blink_interval: 500
+
 key_bindings:
   - { key: Up, mods: Shift, action: ScrollPageUp }
   - { key: Down, mods: Shift, action: ScrollPageDown }
