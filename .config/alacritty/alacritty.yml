@@ -27,10 +27,10 @@ colors:
     white: "#ffffff"
 
 window:
-  decorations: transparent
+  decorations: none
   padding:
-    y: 22
-    x: 4
+    y: 8
+    x: 8
 
 key_bindings:
   - { key: Up, mods: Shift, action: ScrollPageUp }
