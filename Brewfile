@@ -58,7 +58,6 @@ cask "microsoft-teams"
 cask "pocket-casts"
 cask "session-manager-plugin"
 cask "sketch"
-cask "slack"
 cask "spotify"
 cask "virtualbox"
 cask "viscosity"
@@ -71,5 +70,6 @@ mas "Bear", id: 1091189122
 mas "Highlight", id: 572867415
 mas "Kaleidoscope", id: 587512244
 mas "Pixelmator", id: 407963104
+mas "Slack", id: 803453959
 mas "WhatsApp", id: 1147396723
 mas "Xcode", id: 497799835
