@@ -47,7 +47,6 @@ cask "visual-studio-code"
 cask "webstorm"
 
 mas "1Password", id: 1333542190
-mas "Bear", id: 1091189122
 mas "Highlight", id: 572867415
 mas "Kaleidoscope", id: 587512244
 mas "Pixelmator", id: 407963104
