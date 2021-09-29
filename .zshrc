@@ -5,6 +5,8 @@ if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]
   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
 
+[[ -f ~/.zshrc.local ]] && source ~/.zshrc.local
+
 export BAT_THEME="Solarized (light)"
 export DOCKER_BUILDKIT=1
 export EDITOR=vim
@@ -22,8 +24,6 @@ command -v exa >/dev/null && alias ls=exa
 command -v bat >/dev/null && alias cat=bat
 command -v batcat >/dev/null && alias cat=batcat
 command -v vim >/dev/null && alias vi=vim
-
-[[ -f ~/.zshrc.local ]] && source ~/.zshrc.local
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
