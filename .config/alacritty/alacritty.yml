@@ -1,7 +1,7 @@
 font:
   normal:
     family: Cascadia Code PL
-  size: 16.0
+  size: 14.0
 
 themes:
   solarized_dark: &solarized_dark
