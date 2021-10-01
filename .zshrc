@@ -17,6 +17,7 @@ export PATH=~/.ghcup/bin:$PATH
 DISABLE_AUTO_UPDATE=true
 NVM_LAZY_LOAD=true
 ZSHZ_UNCOMMON=1
+ZSHZ_TRAILING_SLASH=1
 source <(antibody init)
 antibody bundle < ~/.zsh_plugins.txt
 
