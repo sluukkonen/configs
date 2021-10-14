@@ -5,8 +5,7 @@ if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]
   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
 
-[[ -f ~/.zshrc.local ]] && source ~/.zshrc.local
-
+# Environment variables
 export BAT_THEME="Solarized (light)"
 export DOCKER_BUILDKIT=1
 export EDITOR=vim
@@ -14,13 +13,23 @@ export GPG_TTY=$TTY
 export NVM_LAZY_LOAD=true
 export PATH=~/.ghcup/bin:$PATH
 
-DISABLE_AUTO_UPDATE=true
-NVM_LAZY_LOAD=true
-ZSHZ_UNCOMMON=1
-ZSHZ_TRAILING_SLASH=1
-source <(antibody init)
-antibody bundle < ~/.zsh_plugins.txt
+# Initialize zgen
+source ~/.zgen/zgen.zsh
 
+if ! zgen saved; then
+	zgen load agkozak/zsh-z
+	zgen load lukechilds/zsh-nvm
+	zgen load romkatv/powerlevel10k powerlevel10k
+	zgen load zsh-users/zsh-autosuggestions
+	zgen load zsh-users/zsh-completions
+
+	zgen save
+fi
+
+# Machine-specific customizations.
+[[ -f ~/.zshrc.local ]] && source ~/.zshrc.local
+
+# Aliases
 command -v exa >/dev/null && alias ls=exa
 command -v bat >/dev/null && alias cat=bat
 command -v batcat >/dev/null && alias cat=batcat

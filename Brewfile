@@ -1,6 +1,5 @@
 require "socket"
 
-tap "getantibody/tap"
 tap "homebrew/bundle"
 tap "homebrew/cask"
 tap "homebrew/cask-fonts"
@@ -9,7 +8,6 @@ tap "homebrew/core"
 tap "homebrew/services"
 tap "koekeishiya/formulae"
 
-brew "antibody"
 brew "bat"
 brew "coreutils"
 brew "exa"
