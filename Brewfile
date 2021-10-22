@@ -71,7 +71,6 @@ if Socket.gethostname.start_with? "L"
   cask "mactex-no-gui"
   cask "microsoft-teams"
   cask "session-manager-plugin"
-  cask "virtualbox"
   cask "viscosity"
   cask "vmware-fusion"
 end
