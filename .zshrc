@@ -17,6 +17,8 @@ export PATH=~/.ghcup/bin:$PATH
 source ~/.zgen/zgen.zsh
 
 if ! zgen saved; then
+    zgen oh-my-zsh
+
 	zgen load agkozak/zsh-z
 	zgen load lukechilds/zsh-nvm
 	zgen load romkatv/powerlevel10k powerlevel10k
