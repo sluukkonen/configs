@@ -8,7 +8,9 @@ set smartcase
 set incsearch
 set hlsearch
 set termguicolors
+set expandtab
 set tabstop=4
+set softtabstop=4
 set shiftwidth=4
 
 autocmd BufWritePre * %s/\s\+$//e
