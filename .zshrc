@@ -12,6 +12,7 @@ export EDITOR=vim
 export GPG_TTY=$TTY
 export NVM_LAZY_LOAD=true
 export PATH=~/.ghcup/bin:$PATH
+ZSHZ_UNCOMMON=1
 
 # Initialize zgen
 source ~/.zgen/zgen.zsh
