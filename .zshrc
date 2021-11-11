@@ -10,8 +10,11 @@ export BAT_THEME="Solarized (light)"
 export DOCKER_BUILDKIT=1
 export EDITOR=vim
 export GPG_TTY=$TTY
-export NVM_LAZY_LOAD=true
 export PATH=~/.ghcup/bin:$PATH
+
+# Shell settings
+NVM_LAZY_LOAD=true
+ZSHZ_TRAILING_SLASH=1
 ZSHZ_UNCOMMON=1
 
 # Initialize zgen
