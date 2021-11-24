@@ -14,6 +14,7 @@ export PATH=~/.ghcup/bin:$PATH
 
 # Shell settings
 NVM_LAZY_LOAD=true
+NVM_LAZY_LOAD_EXTRA_COMMANDS=yarn
 ZSHZ_TRAILING_SLASH=1
 ZSHZ_UNCOMMON=1
 
