@@ -6,7 +6,7 @@ if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]
 fi
 
 # Environment variables
-export BAT_THEME="Solarized (light)"
+export BAT_THEME="gruvbox-light"
 export DOCKER_BUILDKIT=1
 export EDITOR=vim
 export GPG_TTY=$TTY
