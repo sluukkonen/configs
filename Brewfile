@@ -59,14 +59,16 @@ if Socket.gethostname.start_with? "L"
   brew "ffmpeg"
   brew "gnu-tar" # required by fpm
   brew "go"
+  brew "maven"
+  brew "openjdk"
   brew "parallel"
   brew "postgresql", restart_service: true
 
   cask "aws-vault"
   cask "datagrip"
   cask "flowdock"
+  cask "intellij-idea"
   cask "google-chrome-canary"
-  cask "java"
   cask "keepassxc"
   cask "mactex-no-gui"
   cask "microsoft-teams"
