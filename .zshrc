@@ -38,8 +38,7 @@ fi
 
 # Aliases
 command -v exa >/dev/null && alias ls=exa
-command -v bat >/dev/null && alias cat=bat
-command -v batcat >/dev/null && alias cat=batcat
+command -v batcat >/dev/null && alias bat=batcat
 command -v vim >/dev/null && alias vi=vim
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
