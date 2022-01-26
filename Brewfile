@@ -66,7 +66,6 @@ if Socket.gethostname.start_with? "L"
 
   cask "aws-vault"
   cask "datagrip"
-  cask "flowdock"
   cask "intellij-idea"
   cask "google-chrome-canary"
   cask "keepassxc"
