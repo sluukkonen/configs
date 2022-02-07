@@ -13,6 +13,7 @@ export GPG_TTY=$TTY
 export PATH=~/.ghcup/bin:$PATH
 
 # Shell settings
+DISABLE_AUTO_UPDATE=1
 NVM_LAZY_LOAD=true
 NVM_LAZY_LOAD_EXTRA_COMMANDS=yarn
 ZSHZ_TRAILING_SLASH=1
