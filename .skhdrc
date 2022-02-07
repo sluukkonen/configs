@@ -1,5 +1,5 @@
 # open terminal
-shift + alt - return : /Applications/Alacritty.app/Contents/MacOS/alacritty
+shift + alt - return : alacritty msg create-window || alacritty
 
 # focus space
 ctrl - 1 : yabai -m space --focus 1
