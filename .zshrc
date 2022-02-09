@@ -10,7 +10,7 @@ export BAT_THEME="gruvbox-light"
 export DOCKER_BUILDKIT=1
 export EDITOR=vim
 export GPG_TTY=$TTY
-export PATH=~/.ghcup/bin:/opt/homebrew/bin/$PATH
+export PATH=~/.ghcup/bin:/opt/homebrew/bin:$PATH
 
 # Shell settings
 DISABLE_AUTO_UPDATE=1
