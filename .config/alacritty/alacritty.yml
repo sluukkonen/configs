@@ -75,6 +75,7 @@ cursor:
     blink_interval: 500
 
 key_bindings:
+  - { key: N, mods: Command, action: CreateNewWindow }
   - { key: Up, mods: Shift, action: ScrollPageUp }
   - { key: Down, mods: Shift, action: ScrollPageDown }
   - { key: B, mods: Alt, chars: "\x1bb" }
