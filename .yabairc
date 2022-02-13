@@ -33,3 +33,6 @@ yabai -m config bottom_padding               0
 yabai -m config left_padding                 0
 yabai -m config right_padding                0
 yabai -m config window_gap                   0
+
+# App-specific rules
+yabai -m rule --add app="Järjestelmä­asetukset" manage=off border=off
