@@ -8,6 +8,7 @@ set smartcase
 set incsearch
 set hlsearch
 set termguicolors
+set re=2
 set expandtab
 set tabstop=4
 set softtabstop=4
