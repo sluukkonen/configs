@@ -64,9 +64,9 @@ themes:
 colors: *gruvbox_light
 
 window:
-  decorations: none
+  decorations: transparent
   padding:
-    y: 8
+    y: 28
     x: 8
 
 cursor:
