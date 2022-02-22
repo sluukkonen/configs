@@ -76,6 +76,9 @@ cursor:
 
 key_bindings:
   - { key: N, mods: Command, action: CreateNewWindow }
+  - { key: Equals,   mods: Command, action: IncreaseFontSize }
+  - { key: Minus, mods: Command, action: DecreaseFontSize }
+  - { key: 0, mods: Command, action: ResetFontSize }
   - { key: Up, mods: Shift, action: ScrollPageUp }
   - { key: Down, mods: Shift, action: ScrollPageDown }
   - { key: B, mods: Alt, chars: "\x1bb" }
