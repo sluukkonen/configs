@@ -1,3 +1,5 @@
+# vim: ft=ruby
+
 require "socket"
 
 tap "homebrew/bundle"
@@ -30,6 +32,7 @@ brew "sponge"
 brew "tig"
 brew "tmux"
 brew "tree"
+brew "vim"
 brew "wget"
 brew "yabai", args: ["HEAD"]
 brew "zsh"
@@ -37,6 +40,7 @@ brew "zsh"
 cask "alacritty"
 cask "clipy"
 cask "docker"
+cask "discord"
 cask "eurkey"
 cask "firefox"
 cask "font-cascadia-code-pl"
@@ -57,22 +61,12 @@ mas "Xcode", id: 497799835
 
 if Socket.gethostname.start_with? "L"
   brew "awscli"
-  brew "ffmpeg"
-  brew "gnu-tar" # required by fpm
-  brew "go"
-  brew "maven"
-  brew "openjdk"
   brew "parallel"
-  brew "postgresql", restart_service: true
 
   cask "aws-vault"
   cask "datagrip"
   cask "intellij-idea"
   cask "google-chrome-canary"
-  cask "keepassxc"
-  cask "mactex-no-gui"
-  cask "microsoft-teams"
   cask "session-manager-plugin"
   cask "viscosity"
-  cask "vmware-fusion"
 end
