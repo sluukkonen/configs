@@ -34,7 +34,7 @@ brew "tmux"
 brew "tree"
 brew "vim"
 brew "wget"
-brew "yabai", args: ["HEAD"]
+brew "yabai"
 brew "zsh"
 
 cask "alacritty"
