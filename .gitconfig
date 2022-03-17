@@ -19,3 +19,5 @@
 	gpgsign = true
 [rebase]
 	autosquash = true
+[alias]
+    remove-merged = "!git branch --merged | egrep -v '(^\\*|main|master)' | xargs git branch -d"
