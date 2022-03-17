@@ -66,6 +66,5 @@ if Socket.gethostname.start_with? "L"
   cask "datagrip"
   cask "intellij-idea"
   cask "google-chrome-canary"
-  cask "session-manager-plugin"
   cask "viscosity"
 end
