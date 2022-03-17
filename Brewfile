@@ -61,7 +61,6 @@ mas "Xcode", id: 497799835
 
 if Socket.gethostname.start_with? "L"
   brew "awscli"
-  brew "parallel"
 
   cask "aws-vault"
   cask "datagrip"
