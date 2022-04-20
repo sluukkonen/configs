@@ -1,7 +1,7 @@
 font:
   normal:
     family: Cascadia Code PL
-  size: 16.0
+  size: 18.0
 
 themes:
   gruvbox_dark: &gruvbox_dark
