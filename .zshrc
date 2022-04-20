@@ -20,6 +20,7 @@ ZSHZ_TRAILING_SLASH=1
 ZSHZ_UNCOMMON=1
 plugins=(
   fzf
+  terraform
 )
 
 # Initialize zgen
