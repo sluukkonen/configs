@@ -51,7 +51,7 @@ cask "visual-studio-code"
 cask "webstorm"
 
 mas "1Password", id: 1333542190
-mas "Highlight", id: 572867415
+mas "AdGuard for Safari", id: 1440147259
 mas "Kaleidoscope", id: 587512244
 mas "Pixelmator", id: 407963104
 mas "Slack", id: 803453959
