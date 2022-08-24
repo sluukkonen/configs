@@ -31,6 +31,8 @@ shift + alt - l : yabai -m window --warp east
 
 # move window to display
 shift + alt + ctrl - h : yabai -m window --display west; yabai -m display --focus west
+shift + alt + ctrl - j : yabai -m window --display south; yabai -m display --focus south
+shift + alt + ctrl - k : yabai -m window --display north; yabai -m display --focus north
 shift + alt + ctrl - l : yabai -m window --display east; yabai -m display --focus east
 
 # move window to desktop and follow focus
