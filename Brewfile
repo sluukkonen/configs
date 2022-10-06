@@ -38,6 +38,7 @@ brew "wget"
 brew "yabai"
 brew "zsh"
 
+cask "1password"
 cask "alacritty"
 cask "docker"
 cask "discord"
@@ -48,14 +49,13 @@ cask "maccy"
 cask "notunes"
 cask "pocket-casts"
 cask "spotify"
+cask "slack"
 cask "visual-studio-code"
 cask "webstorm"
 
-mas "1Password", id: 1333542190
 mas "AdGuard for Safari", id: 1440147259
 mas "Kaleidoscope", id: 587512244
 mas "Pixelmator", id: 407963104
-mas "Slack", id: 803453959
 mas "WhatsApp", id: 1147396723
 mas "Xcode", id: 497799835
 
