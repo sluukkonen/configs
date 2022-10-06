@@ -53,10 +53,7 @@ cask "slack"
 cask "visual-studio-code"
 cask "webstorm"
 
-mas "AdGuard for Safari", id: 1440147259
-mas "Kaleidoscope", id: 587512244
 mas "Pixelmator", id: 407963104
-mas "WhatsApp", id: 1147396723
 mas "Xcode", id: 497799835
 
 if Socket.gethostname.start_with? "L"
