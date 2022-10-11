@@ -56,7 +56,7 @@ cask "webstorm"
 mas "Pixelmator", id: 407963104
 mas "Xcode", id: 497799835
 
-if Socket.gethostname.start_with? "L"
+if Socket.gethostname.start_with? "R"
   brew "awscli"
   brew "terraform"
   brew "tflint"
