@@ -14,14 +14,14 @@ shift + alt - return : alacritty msg create-window || /Applications/Alacritty.ap
 # ctrl - 0 : yabai -m space --focus 10
 
 # focus window
-alt - h : yabai -m window --focus west
-alt - j : yabai -m window --focus south
-alt - k : yabai -m window --focus north
-alt - l : yabai -m window --focus east
+alt - h : yabai -m window --focus west  || yabai -m display --focus west
+alt - j : yabai -m window --focus south || yabai -m display --focus south
+alt - k : yabai -m window --focus north || yabai -m display --focus north
+alt - l : yabai -m window --focus east  || yabai -m display --focus east
 
 # focus display
-alt + ctrl -h : yabai -m display --focus west
-alt + ctrl- l : yabai -m display --focus east
+alt + ctrl - h : yabai -m display --focus west
+alt + ctrl - l : yabai -m display --focus east
 
 # move window
 shift + alt - h : yabai -m window --warp west
