@@ -58,12 +58,7 @@ mas "Xcode", id: 497799835
 
 if Socket.gethostname.start_with? "R"
   brew "awscli"
-  brew "terraform"
-  brew "tflint"
-
-  cask "aws-vault"
   cask "datagrip"
-  cask "intellij-idea"
-  cask "google-chrome-canary"
+  cask "google-chrome"
   cask "viscosity"
 end
