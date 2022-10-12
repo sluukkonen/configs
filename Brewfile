@@ -36,6 +36,7 @@ brew "tree"
 brew "vim"
 brew "wget"
 brew "yabai"
+brew "ykman"
 brew "zsh"
 
 cask "1password"
