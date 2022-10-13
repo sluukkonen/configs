@@ -19,8 +19,8 @@ NVM_LAZY_LOAD_EXTRA_COMMANDS=yarn
 ZSHZ_TRAILING_SLASH=1
 ZSHZ_UNCOMMON=1
 plugins=(
+  aws
   fzf
-  terraform
 )
 
 # Initialize zgen
