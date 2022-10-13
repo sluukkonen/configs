@@ -21,6 +21,8 @@ alt - l : yabai -m window --focus east  || yabai -m display --focus east
 
 # focus display
 alt + ctrl - h : yabai -m display --focus west
+alt + ctrl - j : yabai -m display --focus south
+alt + ctrl - k : yabai -m display --focus north
 alt + ctrl - l : yabai -m display --focus east
 
 # move window
