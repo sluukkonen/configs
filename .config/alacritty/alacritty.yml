@@ -89,9 +89,9 @@ themes:
 colors: *solarized_light
 
 window:
-  decorations: none
+  decorations: transparent
   padding:
-    y: 8
+    y: 30
     x: 8
 
 cursor:
