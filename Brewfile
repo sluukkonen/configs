@@ -63,4 +63,5 @@ if Socket.gethostname.start_with? "R"
   brew "docker"
   cask "google-chrome"
   cask "viscosity"
+  cask "zulip"
 end
