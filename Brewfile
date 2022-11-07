@@ -42,7 +42,6 @@ brew "zsh"
 
 cask "1password"
 cask "alacritty"
-cask "docker"
 cask "discord"
 cask "firefox"
 cask "font-cascadia-code-pl"
@@ -60,6 +59,8 @@ mas "Xcode", id: 497799835
 
 if Socket.gethostname.start_with? "R"
   brew "awscli"
+  brew "colima"
+  brew "docker"
   cask "google-chrome"
   cask "viscosity"
 end
