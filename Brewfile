@@ -58,9 +58,12 @@ mas "Pixelmator", id: 407963104
 mas "Xcode", id: 497799835
 
 if Socket.gethostname.start_with? "R"
+  brew "aws-vault"
   brew "awscli"
   brew "colima"
   brew "docker"
+  brew "openconnect"
+  brew "terraform"
   cask "google-chrome"
   cask "viscosity"
   cask "zulip"
