@@ -7,6 +7,7 @@ fi
 
 # Environment variables
 export DOCKER_BUILDKIT=1
+export FORCE_COLOR=1
 export EDITOR=vim
 export GPG_TTY=$TTY
 export PATH=~/.ghcup/bin:/opt/homebrew/bin:$PATH
