@@ -9,13 +9,13 @@ fi
 export DOCKER_BUILDKIT=1
 export FORCE_COLOR=1
 export EDITOR=vim
+export NVM_LAZY_LOAD=true
+export NVM_LAZY_LOAD_EXTRA_COMMANDS=yarn
 export GPG_TTY=$TTY
 export PATH=~/.ghcup/bin:/opt/homebrew/bin:$PATH
 
 # Shell settings
 DISABLE_AUTO_UPDATE=true
-NVM_LAZY_LOAD=true
-NVM_LAZY_LOAD_EXTRA_COMMANDS=yarn
 ZSHZ_TRAILING_SLASH=1
 ZSHZ_UNCOMMON=1
 plugins=(
