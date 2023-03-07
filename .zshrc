@@ -34,6 +34,7 @@ if ! zgen saved; then
     zgen load romkatv/powerlevel10k powerlevel10k
     zgen load zsh-users/zsh-autosuggestions
     zgen load zsh-users/zsh-completions
+    zgen load cda0/zsh-tfenv
 
 	zgen save
 fi
