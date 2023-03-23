@@ -53,7 +53,6 @@ cask "notunes"
 cask "pocket-casts"
 cask "spotify"
 cask "slack"
-cask "visual-studio-code"
 cask "webstorm"
 
 mas "Pixelmator", id: 407963104
