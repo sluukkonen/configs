@@ -68,6 +68,7 @@ if Socket.gethostname.start_with? "R"
   brew "docker-credential-helper"
   brew "openconnect"
   cask "google-chrome"
+  cask "postman"
   cask "viscosity"
   cask "zulip"
 end
