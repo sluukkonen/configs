@@ -9,8 +9,6 @@ fi
 export DOCKER_BUILDKIT=1
 export FORCE_COLOR=1
 export EDITOR=vim
-export NVM_LAZY_LOAD=true
-export NVM_LAZY_LOAD_EXTRA_COMMANDS=yarn
 export GPG_TTY=$TTY
 export PATH=~/.ghcup/bin:/opt/homebrew/bin:$PATH
 
@@ -30,7 +28,6 @@ if ! zgen saved; then
     zgen oh-my-zsh
 
     zgen load agkozak/zsh-z
-    zgen load lukechilds/zsh-nvm
     zgen load romkatv/powerlevel10k powerlevel10k
     zgen load zsh-users/zsh-autosuggestions
     zgen load zsh-users/zsh-completions
@@ -38,6 +35,9 @@ if ! zgen saved; then
 
 	zgen save
 fi
+
+# FNM
+eval "$(fnm env)"
 
 # Machine-specific customizations.
 [[ -f ~/.zshrc.local ]] && source ~/.zshrc.local
