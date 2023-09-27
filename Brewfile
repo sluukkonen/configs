@@ -70,7 +70,6 @@ if Socket.gethostname.start_with? "R"
   brew "awscli"
   brew "openconnect"
   cask "google-chrome"
-  cask "postman"
   cask "viscosity"
   cask "zulip"
 end
