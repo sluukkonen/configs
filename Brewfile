@@ -57,9 +57,10 @@ cask "keycastr"
 cask "maccy"
 cask "notunes"
 cask "pocket-casts"
-cask "spotify"
 cask "slack"
+cask "spotify"
 cask "webstorm"
+cask "whatsapp"
 
 mas "Pixelmator", id: 407963104
 mas "Xcode", id: 497799835
