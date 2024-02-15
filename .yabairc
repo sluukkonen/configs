@@ -18,4 +18,5 @@ yabai -m config \
          window_gap                   8
 
 # App-specific rules
-yabai -m rule --add app="System Settings" manage=off
+yabai -m rule --add app="Järjestelmäasetukset" manage=off
+yabai -m rule --add app="Järjestelmän valvonta" manage=off
