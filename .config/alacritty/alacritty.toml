@@ -26,9 +26,9 @@ yellow = "#b58900"
 background = "#fdf6e3"
 foreground = "#657b83"
 
-[cursor.style]
+[cursor]
+style.blinking = "Always"
 blink_interval = 500
-blinking = "Always"
 
 [font]
 size = 16.0
@@ -80,150 +80,6 @@ mods = "Alt"
 chars = "\u001Bf"
 key = "F"
 mods = "Alt"
-
-[themes.argonaut.bright]
-black = "0x6D7070"
-blue = "0x1BA6FA"
-cyan = "0x73FBF1"
-green = "0xB8E466"
-magenta = "0xA578EA"
-red = "0xFF4352"
-white = "0xFEFEF8"
-yellow = "0xFFD750"
-
-[themes.argonaut.cursor]
-cursor = "0xFF261E"
-text = "0xFF261E"
-
-[themes.argonaut.normal]
-black = "0x0d0d0d"
-blue = "0x1BA6FA"
-cyan = "0x21DEEF"
-green = "0xA0E521"
-magenta = "0x8763B8"
-red = "0xFF301B"
-white = "0xEBEBEB"
-yellow = "0xFFC620"
-
-[themes.argonaut.primary]
-background = "0x292C3E"
-foreground = "0xEBEBEB"
-
-[themes.grubbox_light.bright]
-black = "#9d8374"
-blue = "#458588"
-cyan = "#689d69"
-green = "#98971a"
-magenta = "#b16186"
-red = "#cc241d"
-white = "#7c6f64"
-yellow = "#d79921"
-
-[themes.grubbox_light.cursor]
-cursor = "#282828"
-text = "#282828"
-
-[themes.grubbox_light.normal]
-black = "#fbf1c7"
-blue = "#076678"
-cyan = "#427b58"
-green = "#79740e"
-magenta = "#8f3f71"
-red = "#9d0006"
-white = "#3c3836"
-yellow = "#b57614"
-
-[themes.grubbox_light.primary]
-background = "#fbf1c7"
-foreground = "#282828"
-
-[themes.grubbox_light.selection]
-background = "#d5c4a1"
-text = "#665c54"
-
-[themes.gruvbox_dark.bright]
-black = "#7f7061"
-blue = "#719586"
-cyan = "#7db669"
-green = "#aab01e"
-magenta = "#c77089"
-red = "#f73028"
-white = "#e6d4a3"
-yellow = "#f7b125"
-
-[themes.gruvbox_dark.cursor]
-cursor = "#e6d4a3"
-text = "#1e1e1e"
-
-[themes.gruvbox_dark.normal]
-black = "#1e1e1e"
-blue = "#377375"
-cyan = "#578e57"
-green = "#868715"
-magenta = "#a04b73"
-red = "#be0f17"
-white = "#978771"
-yellow = "#cc881a"
-
-[themes.gruvbox_dark.primary]
-background = "#1e1e1e"
-foreground = "#e6d4a3"
-
-[themes.gruvbox_dark.selection]
-background = "#e6d4a3"
-text = "#534a42"
-
-[themes.one_dark.bright]
-black = "0x5c6370"
-blue = "0x61afef"
-cyan = "0x56b6c2"
-green = "0x98c379"
-magenta = "0xc678dd"
-red = "0xe06c75"
-white = "0xffffff"
-yellow = "0xd19a66"
-
-[themes.one_dark.normal]
-black = "0x1e2127"
-blue = "0x61afef"
-cyan = "0x56b6c2"
-green = "0x98c379"
-magenta = "0xc678dd"
-red = "0xe06c75"
-white = "0xabb2bf"
-yellow = "0xd19a66"
-
-[themes.one_dark.primary]
-background = "0x1e2127"
-foreground = "0xabb2bf"
-
-[themes.solarized_light.bright]
-black = "#002b36"
-blue = "#839496"
-cyan = "#93a1a1"
-green = "#586e75"
-magenta = "#6c71c4"
-red = "#cb4b16"
-white = "#fdf6e3"
-yellow = "#657b83"
-
-[themes.solarized_light.cursor]
-cursor = "#657b83"
-text = "#fdf6e3"
-
-[themes.solarized_light.normal]
-black = "#073642"
-blue = "#268bd2"
-cyan = "#2aa198"
-green = "#859900"
-magenta = "#d33682"
-red = "#dc322f"
-white = "#eee8d5"
-yellow = "#b58900"
-
-[themes.solarized_light.primary]
-background = "#fdf6e3"
-foreground = "#657b83"
 
 [window]
 decorations = "transparent"
