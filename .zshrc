@@ -47,6 +47,7 @@ eval "$(fnm env)"
 command -v exa >/dev/null && alias ls=exa
 command -v batcat >/dev/null && alias bat=batcat
 command -v vim >/dev/null && alias vi=vim
+command -v ssh >/dev/null && alias ssh='TERM=xterm ssh'
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
