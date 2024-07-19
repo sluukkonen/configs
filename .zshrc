@@ -44,7 +44,7 @@ eval "$(fnm env)"
 [[ -f ~/.zshrc.local ]] && source ~/.zshrc.local
 
 # Aliases
-command -v exa >/dev/null && alias ls=exa
+command -v eza >/dev/null && alias ls=eza
 command -v batcat >/dev/null && alias bat=batcat
 command -v vim >/dev/null && alias vi=vim
 command -v ssh >/dev/null && alias ssh='TERM=xterm ssh'
