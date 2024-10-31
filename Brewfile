@@ -70,4 +70,6 @@ if Socket.gethostname.start_with? "R"
   cask "google-chrome"
   cask "viscosity"
   cask "zulip"
+else
+  cask "steam"
 end
