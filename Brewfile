@@ -2,9 +2,6 @@
 
 require "socket"
 
-tap "homebrew/bundle"
-tap "homebrew/cask-fonts"
-tap "homebrew/services"
 tap "koekeishiya/formulae"
 tap "nikitabobko/tap"
 
