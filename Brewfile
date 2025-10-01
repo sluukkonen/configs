@@ -58,16 +58,11 @@ cask "spotify"
 cask "webstorm"
 cask "whatsapp"
 
-mas "Pixelmator", id: 407963104
 mas "Xcode", id: 497799835
 
 if Socket.gethostname.start_with? "R"
-  brew "aws-vault"
-  brew "awscli"
-  brew "openconnect"
   cask "google-chrome"
   cask "viscosity"
-  cask "zulip"
 else
   cask "steam"
 end
