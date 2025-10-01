@@ -1,3 +1,11 @@
+[column]
+    ui = auto
+[branch]
+    sort = -committerdate
+[tag]
+    sort = version:refname
+[diff]
+   #  algorithm = histogram
 [user]
 	email = sakumatti.luukkonen@gmail.com
 	name = Sakumatti Luukkonen
@@ -21,5 +29,6 @@
 	autosquash = true
 [alias]
     remove-merged = "!git branch --merged | egrep -v '(^\\*|main|master)' | xargs git branch -d"
+	commit-reuse = commit -eF .git/COMMIT_EDITMSG
 [init]
 	defaultBranch = main
