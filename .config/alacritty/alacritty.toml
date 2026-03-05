@@ -1,34 +1,78 @@
-[colors.bright]
-black = "#002b36"
-blue = "#839496"
-cyan = "#93a1a1"
-green = "#586e75"
-magenta = "#6c71c4"
-red = "#cb4b16"
-white = "#fdf6e3"
-yellow = "#657b83"
-
-[colors.cursor]
-cursor = "#657b83"
-text = "#fdf6e3"
-
-[colors.normal]
-black = "#073642"
-blue = "#268bd2"
-cyan = "#2aa198"
-green = "#859900"
-magenta = "#d33682"
-red = "#dc322f"
-white = "#eee8d5"
-yellow = "#b58900"
+# Nightfox Alacritty Colors
+## name: dayfox
+## upstream: https://github.com/edeneast/nightfox.nvim/raw/main/extra/dayfox/alacritty.toml
 
 [colors.primary]
-background = "#fdf6e3"
-foreground = "#657b83"
+background = "#f6f2ee"
+foreground = "#3d2b5a"
+dim_foreground = "#302b5d"
+bright_foreground = "#643f61"
+
+[colors.cursor]
+text = "#3d2b5a"
+cursor = "#643f61"
+
+[colors.vi_mode_cursor]
+text = "#3d2b5a"
+cursor = "#287980"
+
+[colors.search.matches]
+foreground = "#3d2b5a"
+background = "#a4c1c2"
+
+[colors.search.focused_match]
+foreground = "#3d2b5a"
+background = "#396847"
+
+[colors.footer_bar]
+foreground = "#3d2b5a"
+background = "#d3c7bb"
+
+[colors.hints.start]
+foreground = "#3d2b5a"
+background = "#955f61"
+
+[colors.hints.end]
+foreground = "#3d2b5a"
+background = "#d3c7bb"
+
+[colors.selection]
+text = "#3d2b5a"
+background = "#e7d2be"
+
+[colors.normal]
+black = "#352c24"
+red = "#a5222f"
+green = "#396847"
+yellow = "#ac5402"
+blue = "#2848a9"
+magenta = "#6e33ce"
+cyan = "#287980"
+white = "#f2e9e1"
+
+[colors.bright]
+black = "#534c45"
+red = "#b3434e"
+green = "#577f63"
+yellow = "#b86e28"
+blue = "#4863b6"
+magenta = "#8452d5"
+cyan = "#488d93"
+white = "#f4ece6"
+
+[colors.dim]
+black = "#2d251f"
+red = "#8c1d28"
+green = "#30583c"
+yellow = "#924702"
+blue = "#223d90"
+magenta = "#5e2baf"
+cyan = "#22676d"
+white = "#cec6bf"
 
 [cursor]
-style.blinking = "Always"
-blink_interval = 500
+style.shape = "Beam"
+style.blinking = "On"
 
 [font]
 size = 16.0
