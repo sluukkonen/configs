@@ -57,8 +57,6 @@ cask "slack"
 cask "spotify"
 cask "whatsapp"
 
-mas "Xcode", id: 497799835
-
 if Socket.gethostname.start_with? "R"
   cask "google-chrome"
   cask "viscosity"
