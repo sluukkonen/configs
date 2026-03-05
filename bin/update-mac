@@ -8,4 +8,25 @@ cd "$SCRIPT_DIR/.."
 
 brew upgrade
 brew bundle --upgrade
-softwareupdate --install --all
+
+softwareupdate_list_output="$(softwareupdate --list 2>&1)"
+should_restart=false
+
+if grep -q "No new software available" <<< "$softwareupdate_list_output"; then
+  echo "No macOS software updates available."
+  exit 0
+fi
+
+if grep -qiE '\[restart\]|Action:.*restart|Restart: YES|requires restart' <<< "$softwareupdate_list_output"; then
+  read -r -p "Some software updates require a restart. Restart automatically after install? [y/N]: " restart_answer
+  if [[ "$restart_answer" =~ ^[Yy]$ ]]; then
+    should_restart=true
+  fi
+fi
+
+softwareupdate_args=(--install --all)
+if [[ "$should_restart" == true ]]; then
+  softwareupdate_args+=(--restart)
+fi
+
+sudo softwareupdate "${softwareupdate_args[@]}"
