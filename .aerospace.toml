@@ -81,7 +81,7 @@ PATH = '/opt/homebrew/bin:/opt/homebrew/sbin:${PATH}'
 
 # You can uncomment this line to open up terminal with alt + enter shortcut
 # See: https://nikitabobko.github.io/AeroSpace/commands#exec-and-forget
-alt-shift-enter = 'exec-and-forget alacritty msg create-window || /Applications/Alacritty.app/Contents/MacOS/alacritty'
+alt-shift-enter = '''exec-and-forget osascript -e 'tell application "Ghostty" to new window''''
 
 # See: https://nikitabobko.github.io/AeroSpace/commands#layout
 alt-slash = 'layout tiles horizontal vertical'
