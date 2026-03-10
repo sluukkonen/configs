@@ -49,5 +49,8 @@ command -v batcat >/dev/null && alias bat=batcat
 command -v vim >/dev/null && alias vi=vim
 command -v ssh >/dev/null && alias ssh='TERM=xterm ssh'
 
+# Let ctrl-enter run a command in Ghostty
+bindkey '^[[27;5;13~' accept-line
+
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
