@@ -17,8 +17,9 @@ if grep -q "No new software available" <<< "$softwareupdate_list_output"; then
   exit 0
 fi
 
-if grep -qiE '\[restart\]|Action:.*restart|Restart: YES|requires restart' <<< "$softwareupdate_list_output"; then
-  read -r -p "Some software updates require a restart. Restart automatically after install? [y/N]: " restart_answer
+if grep -q "Action: restart" <<< "$softwareupdate_list_output"; then
+  echo "$softwareupdate_list_output"
+  read -r -p "Restart? [y/N]: " restart_answer
   if [[ "$restart_answer" =~ ^[Yy]$ ]]; then
     should_restart=true
   fi
