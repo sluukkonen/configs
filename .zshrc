@@ -38,7 +38,7 @@ if ! zgen saved; then
 fi
 
 # FNM
-eval "$(fnm env)"
+command -v fnm >/dev/null && eval "$(fnm env)"
 
 # Machine-specific customizations.
 [[ -f ~/.zshrc.local ]] && source ~/.zshrc.local
