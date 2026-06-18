@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+
+set -uo pipefail
+
+if [ "$#" -eq 0 ]; then
+  echo "Usage: ntfy <command> [args...]"
+  exit 1
+fi
+
+topic="$NTFY_TOPIC"
+cmd="$*"
+tags="$(hostname)"
+
+start_ts=$(date +%s)
+
+# Run the command
+"$@"
+rc=$?
+
+end_ts=$(date +%s)
+duration=$((end_ts - start_ts))
+
+format_duration() {
+  local d=$1
+
+  if [ "$d" -lt 60 ]; then
+    echo "${d}s"
+  elif [ "$d" -lt 3600 ]; then
+    echo "$((d/60))min"
+  elif [ "$d" -lt 86400 ]; then
+    echo "$((d/3600))h"
+  else
+    echo "$((d/86400))d"
+  fi
+}
+
+dur_str=$(format_duration "$duration")
+
+if [ "$rc" -eq 0 ]; then
+  body="Command succeeded after $dur_str: $cmd"
+  tags+=",white_check_mark"
+else
+  body="Command failed after $dur_str: $cmd"
+  tags+=",x"
+fi
+
+curl -s -H "X-Tags: $tags" -d "$body" "https://ntfy.sh/${topic}" > /dev/null
+
+exit "$rc"
