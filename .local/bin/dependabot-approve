@@ -1,3 +1,0 @@
-#!/bin/bash
-
- gh pr list | grep dependabot | awk '{print $1}' | xargs -I {} gh pr review {} --comment --body "@dependabot merge"
