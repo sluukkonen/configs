@@ -13,8 +13,26 @@ tags="$(hostname)"
 
 start_ts=$(date +%s)
 
-# Run the command
-"$@"
+run_with_sleep_inhibitor() {
+  case "$(uname -s)" in
+    Darwin)
+      if command -v caffeinate >/dev/null 2>&1; then
+        caffeinate -i -s "$@"
+        return
+      fi
+      ;;
+    Linux)
+      if command -v systemd-inhibit >/dev/null 2>&1; then
+        systemd-inhibit --why="ntfy: $cmd" "$@"
+        return
+      fi
+      ;;
+  esac
+
+  "$@"
+}
+
+run_with_sleep_inhibitor "$@"
 rc=$?
 
 end_ts=$(date +%s)
