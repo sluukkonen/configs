@@ -1,0 +1,20 @@
+[options]
+focus_follows_mouse = true
+mouse_follows_focus = true
+animation_speed = 20
+preset_column_widths = [0.33, 0.5, 0.66]
+
+[bindings]
+window_focus_west = "alt - h"
+window_focus_east = "alt - l"
+window_swap_west = "alt + ctrl - h"
+window_swap_east = "alt + ctrl - l"
+window_nextdisplay = ["alt + ctrl - j", "alt + ctrl - k"]
+mouse_nextdisplay = ["alt - j", "alt - k"]
+window_resize = "alt - r"
+window_center = "alt - c"
+window_fullwidth = "alt - f"
+
+[windows.all]
+title = ".*"
+horizontal_padding = 4
