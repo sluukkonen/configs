@@ -47,20 +47,22 @@ brew "zsh"
 cask "1password"
 cask "codex-app"
 cask "discord"
-cask "firefox"
 cask "font-cascadia-code-pl"
 cask "ghostty"
+cask "helium-browser"
 cask "intellij-idea"
 cask "keycastr"
 cask "maccy"
-cask "notunes"
 cask "pocket-casts"
-cask "slack"
 cask "spotify"
 cask "whatsapp"
 
-if Socket.gethostname.start_with? "R"
+mdm_enrolled = `profiles status -type enrollment 2>/dev/null`.include?("Yes")
+
+if mdm_enrolled
+  cask "firefox"
   cask "google-chrome"
+  cask "slack"
   cask "viscosity"
 else
   cask "steam"
