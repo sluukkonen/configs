@@ -6,6 +6,7 @@ tap "koekeishiya/formulae"
 tap "nikitabobko/tap"
 
 brew "bat"
+brew "btop"
 brew "colima"
 brew "coreutils"
 brew "docker"
