@@ -1,1 +1,4 @@
 theme = light:Catppuccin Latte, dark:Catppuccin Frappe
+font-family = "Cascadia Code PL"
+font-size = 14
+
