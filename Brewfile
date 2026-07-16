@@ -57,6 +57,7 @@ cask "whatsapp"
 mdm_enrolled = `profiles status -type enrollment 2>/dev/null`.include?("Yes")
 
 if mdm_enrolled
+  cask "1password"
   cask "firefox"
   cask "google-chrome"
   cask "slack"
