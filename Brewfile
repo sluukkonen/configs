@@ -1,7 +1,5 @@
 # vim: ft=ruby
 
-require "socket"
-
 brew "bat"
 brew "btop"
 brew "colima"
