@@ -2,9 +2,6 @@
 
 require "socket"
 
-tap "koekeishiya/formulae"
-tap "nikitabobko/tap"
-
 brew "bat"
 brew "btop"
 brew "colima"
