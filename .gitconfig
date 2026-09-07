@@ -19,12 +19,13 @@
 [core]
 	editor = vim -f
 	pager = delta
+	excludesFile = ~/.gitignore_global
 [interactive]
 	diffFilter = delta --color-only
 [pull]
 	ff = only
 [commit]
-	gpgsign = true
+	gpgsign = false
 [rebase]
 	autosquash = true
 [alias]
