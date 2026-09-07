@@ -2,12 +2,100 @@
 
 set -uo pipefail
 
+usage() {
+  echo "Usage: ntfy <command> [args...]" >&2
+  echo "       ntfy --codex '<notification-json>'" >&2
+  echo "Set NTFY_CODEX_DETAILS=1 to include the project and assistant message." >&2
+}
+
+publish() {
+  local title=$1
+  local body=$2
+  local tags=$3
+  local server_url=${NTFY_URL:-https://ntfy.sh}
+
+  if [ -z "${NTFY_TOPIC:-}" ]; then
+    echo "ntfy: NTFY_TOPIC is not set" >&2
+    return 1
+  fi
+
+  curl --fail --silent --show-error \
+    --output /dev/null \
+    -H "Title: $title" \
+    -H "Tags: $tags" \
+    --data-binary "$body" \
+    "${server_url%/}/${NTFY_TOPIC}"
+}
+
+notify_codex() {
+  local payload=${1:-}
+  local event_type cwd project body max_length
+
+  if [ "$#" -ne 1 ]; then
+    usage
+    return 1
+  fi
+
+  if ! command -v jq >/dev/null 2>&1; then
+    echo "ntfy: jq is required for Codex notifications" >&2
+    return 1
+  fi
+
+  if ! event_type=$(jq -er '.type // empty' <<< "$payload"); then
+    echo "ntfy: invalid Codex notification payload" >&2
+    return 1
+  fi
+
+  # Codex currently only emits this notification type, but silently ignore any
+  # future events so they do not create misleading completion notifications.
+  if [ "$event_type" != "agent-turn-complete" ]; then
+    return 0
+  fi
+
+  # Keep external notifications free of repository and response content unless
+  # the user explicitly opts in to sending those details.
+  if [ "${NTFY_CODEX_DETAILS:-0}" != "1" ]; then
+    publish "Codex finished" "A Codex turn completed." "$(hostname),robot,white_check_mark"
+    return
+  fi
+
+  max_length=${NTFY_CODEX_MAX_LENGTH:-2000}
+  if ! [[ "$max_length" =~ ^[1-9][0-9]*$ ]]; then
+    echo "ntfy: NTFY_CODEX_MAX_LENGTH must be a positive integer" >&2
+    return 1
+  fi
+
+  cwd=$(jq -r '.cwd // empty' <<< "$payload")
+  cwd=${cwd%/}
+  project=${cwd##*/}
+
+  body=$(jq -r --argjson max_length "$max_length" '
+    (."last-assistant-message" // "Turn complete.")
+    | tostring
+    | if length > $max_length then .[:$max_length] + "…" else . end
+  ' <<< "$payload") || {
+    echo "ntfy: invalid Codex notification payload" >&2
+    return 1
+  }
+
+  if [ -n "$project" ]; then
+    publish "Codex finished: $project" "$body" "$(hostname),robot,white_check_mark"
+  else
+    publish "Codex finished" "$body" "$(hostname),robot,white_check_mark"
+  fi
+}
+
+if [ "${1:-}" = "--codex" ]; then
+  shift
+  notify_codex "$@"
+  exit $?
+fi
+
 if [ "$#" -eq 0 ]; then
-  echo "Usage: ntfy <command> [args...]"
+  usage
   exit 1
 fi
 
-topic="$NTFY_TOPIC"
 cmd="$*"
 tags="$(hostname)"
 
@@ -57,11 +145,13 @@ dur_str=$(format_duration "$duration")
 if [ "$rc" -eq 0 ]; then
   body="Command succeeded after $dur_str: $cmd"
   tags+=",white_check_mark"
+  title="Command succeeded"
 else
   body="Command failed after $dur_str: $cmd"
   tags+=",x"
+  title="Command failed"
 fi
 
-curl -s -H "X-Tags: $tags" -d "$body" "https://ntfy.sh/${topic}" > /dev/null
+publish "$title" "$body" "$tags" > /dev/null || true
 
 exit "$rc"

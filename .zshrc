@@ -43,6 +43,7 @@ command -v fnm >/dev/null && eval "$(fnm env)"
 [[ -f ~/.zshrc.local ]] && source ~/.zshrc.local
 
 # Aliases
+command -v codex >/dev/null && alias codex='codex --profile dotfiles'
 command -v eza >/dev/null && alias ls=eza
 command -v batcat >/dev/null && alias bat=batcat
 command -v vim >/dev/null && alias vi=vim
