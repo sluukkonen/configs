@@ -3,155 +3,104 @@
 set -uo pipefail
 
 usage() {
-  echo "Usage: ntfy <command> [args...]" >&2
-  echo "       ntfy --codex '<notification-json>'" >&2
-  echo "Set NTFY_CODEX_DETAILS=1 to include the project and assistant message." >&2
+  echo "Usage: ntfy <title> <body> <tags>" >&2
+  echo "Set NTFY_IDLE_THRESHOLD_SECONDS (default: 120) to control activity suppression." >&2
 }
 
-publish() {
-  local title=$1
-  local body=$2
-  local tags=$3
-  local server_url=${NTFY_URL:-https://ntfy.sh}
-
-  if [ -z "${NTFY_TOPIC:-}" ]; then
-    echo "ntfy: NTFY_TOPIC is not set" >&2
-    return 1
+debug() {
+  if [ "${NTFY_DEBUG:-0}" = "1" ]; then
+    echo "ntfy: $*" >&2
   fi
-
-  curl --fail --silent --show-error \
-    --output /dev/null \
-    -H "Title: $title" \
-    -H "Tags: $tags" \
-    --data-binary "$body" \
-    "${server_url%/}/${NTFY_TOPIC}"
 }
 
-notify_codex() {
-  local payload=${1:-}
-  local event_type cwd project body max_length
-
-  if [ "$#" -ne 1 ]; then
-    usage
-    return 1
+ring_terminal_bell() {
+  # Prefer the controlling terminal so the bell remains audible when stdout is
+  # captured by a caller such as Codex.
+  if [ -e /dev/tty ]; then
+    { printf '\a' > /dev/tty; } 2>/dev/null || true
   fi
+}
 
-  if ! command -v jq >/dev/null 2>&1; then
-    echo "ntfy: jq is required for Codex notifications" >&2
-    return 1
-  fi
+linux_idle_seconds() {
+  local result idle_milliseconds
 
-  if ! event_type=$(jq -er '.type // empty' <<< "$payload"); then
-    echo "ntfy: invalid Codex notification payload" >&2
-    return 1
-  fi
+  command -v gdbus >/dev/null 2>&1 || return 1
+  result=$(gdbus call --session \
+    --dest org.gnome.Mutter.IdleMonitor \
+    --object-path /org/gnome/Mutter/IdleMonitor/Core \
+    --method org.gnome.Mutter.IdleMonitor.GetIdletime 2>/dev/null) || return 1
 
-  # Codex currently only emits this notification type, but silently ignore any
-  # future events so they do not create misleading completion notifications.
-  if [ "$event_type" != "agent-turn-complete" ]; then
+  if [[ "$result" =~ ([0-9]+),?\) ]]; then
+    idle_milliseconds=${BASH_REMATCH[1]}
+    printf '%s\n' "$((idle_milliseconds / 1000))"
     return 0
   fi
 
-  # Keep external notifications free of repository and response content unless
-  # the user explicitly opts in to sending those details.
-  if [ "${NTFY_CODEX_DETAILS:-0}" != "1" ]; then
-    publish "Codex finished" "A Codex turn completed." "$(hostname),robot,white_check_mark"
-    return
-  fi
-
-  max_length=${NTFY_CODEX_MAX_LENGTH:-2000}
-  if ! [[ "$max_length" =~ ^[1-9][0-9]*$ ]]; then
-    echo "ntfy: NTFY_CODEX_MAX_LENGTH must be a positive integer" >&2
-    return 1
-  fi
-
-  cwd=$(jq -r '.cwd // empty' <<< "$payload")
-  cwd=${cwd%/}
-  project=${cwd##*/}
-
-  body=$(jq -r --argjson max_length "$max_length" '
-    (."last-assistant-message" // "Turn complete.")
-    | tostring
-    | if length > $max_length then .[:$max_length] + "…" else . end
-  ' <<< "$payload") || {
-    echo "ntfy: invalid Codex notification payload" >&2
-    return 1
-  }
-
-  if [ -n "$project" ]; then
-    publish "Codex finished: $project" "$body" "$(hostname),robot,white_check_mark"
-  else
-    publish "Codex finished" "$body" "$(hostname),robot,white_check_mark"
-  fi
+  return 1
 }
 
-if [ "${1:-}" = "--codex" ]; then
-  shift
-  notify_codex "$@"
-  exit $?
-fi
+macos_idle_seconds() {
+  local result idle_nanoseconds
 
-if [ "$#" -eq 0 ]; then
+  command -v ioreg >/dev/null 2>&1 || return 1
+  result=$(ioreg -c IOHIDSystem 2>/dev/null) || return 1
+
+  if [[ "$result" =~ \"HIDIdleTime\"[[:space:]]*=[[:space:]]*([0-9]+) ]]; then
+    idle_nanoseconds=${BASH_REMATCH[1]}
+    printf '%s\n' "$((idle_nanoseconds / 1000000000))"
+    return 0
+  fi
+
+  return 1
+}
+
+idle_seconds() {
+  case "$(uname -s)" in
+    Linux) linux_idle_seconds ;;
+    Darwin) macos_idle_seconds ;;
+    *) return 1 ;;
+  esac
+}
+
+if [ "$#" -ne 3 ]; then
   usage
   exit 1
 fi
 
-cmd="$*"
-tags="$(hostname)"
+title=$1
+body=$2
+tags=$3
+server_url=${NTFY_URL:-https://ntfy.sh}
+idle_threshold=${NTFY_IDLE_THRESHOLD_SECONDS:-120}
 
-start_ts=$(date +%s)
-
-run_with_sleep_inhibitor() {
-  case "$(uname -s)" in
-    Darwin)
-      if command -v caffeinate >/dev/null 2>&1; then
-        caffeinate -i -s "$@"
-        return
-      fi
-      ;;
-    Linux)
-      if command -v systemd-inhibit >/dev/null 2>&1; then
-        systemd-inhibit --why="ntfy: $cmd" "$@"
-        return
-      fi
-      ;;
-  esac
-
-  "$@"
-}
-
-run_with_sleep_inhibitor "$@"
-rc=$?
-
-end_ts=$(date +%s)
-duration=$((end_ts - start_ts))
-
-format_duration() {
-  local d=$1
-
-  if [ "$d" -lt 60 ]; then
-    echo "${d}s"
-  elif [ "$d" -lt 3600 ]; then
-    echo "$((d/60))min"
-  elif [ "$d" -lt 86400 ]; then
-    echo "$((d/3600))h"
-  else
-    echo "$((d/86400))d"
-  fi
-}
-
-dur_str=$(format_duration "$duration")
-
-if [ "$rc" -eq 0 ]; then
-  body="Command succeeded after $dur_str: $cmd"
-  tags+=",white_check_mark"
-  title="Command succeeded"
-else
-  body="Command failed after $dur_str: $cmd"
-  tags+=",x"
-  title="Command failed"
+if [ -z "${NTFY_TOPIC:-}" ]; then
+  echo "ntfy: NTFY_TOPIC is not set" >&2
+  exit 1
 fi
 
-publish "$title" "$body" "$tags" > /dev/null || true
+if ! [[ "$idle_threshold" =~ ^[0-9]+$ ]]; then
+  echo "ntfy: NTFY_IDLE_THRESHOLD_SECONDS must be a non-negative integer" >&2
+  exit 1
+fi
 
-exit "$rc"
+ring_terminal_bell
+
+if current_idle_seconds=$(idle_seconds); then
+  if [[ "$current_idle_seconds" =~ ^[0-9]+$ ]] && (( current_idle_seconds < idle_threshold )); then
+    debug "suppressing push after ${current_idle_seconds}s idle (threshold: ${idle_threshold}s)"
+    exit 0
+  fi
+
+  if ! [[ "$current_idle_seconds" =~ ^[0-9]+$ ]]; then
+    debug "idle-time probe returned an invalid value; sending notification"
+  fi
+else
+  debug "idle-time probe unavailable; sending notification"
+fi
+
+curl --fail --silent --show-error \
+  --output /dev/null \
+  -H "Title: $title" \
+  -H "Tags: $tags" \
+  --data-binary "$body" \
+  "${server_url%/}/${NTFY_TOPIC}"

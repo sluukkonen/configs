@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+
+set -uo pipefail
+
+usage() {
+  echo "Usage: ntfy-codex '<notification-json>'" >&2
+  echo "Set NTFY_CODEX_DETAILS=1 to include the project and assistant message." >&2
+}
+
+if [ "$#" -ne 1 ]; then
+  usage
+  exit 1
+fi
+
+if ! command -v jq >/dev/null 2>&1; then
+  echo "ntfy-codex: jq is required for Codex notifications" >&2
+  exit 1
+fi
+
+payload=$1
+if ! event_type=$(jq -er '.type // empty' <<< "$payload"); then
+  echo "ntfy-codex: invalid Codex notification payload" >&2
+  exit 1
+fi
+
+# Ignore unknown events so they cannot create misleading completion alerts.
+if [ "$event_type" != "agent-turn-complete" ]; then
+  exit 0
+fi
+
+script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+tags="$(hostname),robot,white_check_mark"
+
+# Keep repository and response content out of external notifications unless
+# the user explicitly opts in.
+if [ "${NTFY_CODEX_DETAILS:-0}" != "1" ]; then
+  exec "$script_dir/ntfy" "Codex finished" "A Codex turn completed." "$tags"
+fi
+
+max_length=${NTFY_CODEX_MAX_LENGTH:-2000}
+if ! [[ "$max_length" =~ ^[1-9][0-9]*$ ]]; then
+  echo "ntfy-codex: NTFY_CODEX_MAX_LENGTH must be a positive integer" >&2
+  exit 1
+fi
+
+cwd=$(jq -r '.cwd // empty' <<< "$payload")
+cwd=${cwd%/}
+project=${cwd##*/}
+
+body=$(jq -r --argjson max_length "$max_length" '
+  (."last-assistant-message" // "Turn complete.")
+  | tostring
+  | if length > $max_length then .[:$max_length] + "…" else . end
+' <<< "$payload") || {
+  echo "ntfy-codex: invalid Codex notification payload" >&2
+  exit 1
+}
+
+if [ -n "$project" ]; then
+  exec "$script_dir/ntfy" "Codex finished: $project" "$body" "$tags"
+else
+  exec "$script_dir/ntfy" "Codex finished" "$body" "$tags"
+fi

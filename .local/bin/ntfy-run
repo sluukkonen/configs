@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+
+set -uo pipefail
+
+usage() {
+  echo "Usage: ntfy-run <command> [args...]" >&2
+}
+
+if [ "$#" -eq 0 ]; then
+  usage
+  exit 1
+fi
+
+script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+cmd="$*"
+tags="$(hostname)"
+start_ts=$(date +%s)
+
+run_with_sleep_inhibitor() {
+  case "$(uname -s)" in
+    Darwin)
+      if command -v caffeinate >/dev/null 2>&1; then
+        caffeinate -i -s "$@"
+        return
+      fi
+      ;;
+    Linux)
+      if command -v systemd-inhibit >/dev/null 2>&1; then
+        systemd-inhibit --why="ntfy-run: $cmd" "$@"
+        return
+      fi
+      ;;
+  esac
+
+  "$@"
+}
+
+format_duration() {
+  local duration=$1
+
+  if [ "$duration" -lt 60 ]; then
+    echo "${duration}s"
+  elif [ "$duration" -lt 3600 ]; then
+    echo "$((duration / 60))min"
+  elif [ "$duration" -lt 86400 ]; then
+    echo "$((duration / 3600))h"
+  else
+    echo "$((duration / 86400))d"
+  fi
+}
+
+run_with_sleep_inhibitor "$@"
+rc=$?
+
+duration=$(( $(date +%s) - start_ts ))
+duration_text=$(format_duration "$duration")
+
+if [ "$rc" -eq 0 ]; then
+  title="Command succeeded"
+  body="Command succeeded after $duration_text: $cmd"
+  tags+=",white_check_mark"
+else
+  title="Command failed"
+  body="Command failed after $duration_text: $cmd"
+  tags+=",x"
+fi
+
+"$script_dir/ntfy" "$title" "$body" "$tags" > /dev/null || true
+
+exit "$rc"
