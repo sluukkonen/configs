@@ -4,4 +4,23 @@
 # Desktop SSH agents (for example GNOME Keyring) may reject FIDO signatures.
 unset SSH_AUTH_SOCK
 
+if [ "$(uname -s)" = Darwin ]; then
+  if command -v brew >/dev/null 2>&1; then
+    brew_prefix=$(brew --prefix openssh 2>/dev/null || true)
+    if [ -n "$brew_prefix" ] && [ -x "$brew_prefix/bin/ssh-keygen" ]; then
+      exec "$brew_prefix/bin/ssh-keygen" "$@"
+    fi
+  fi
+  for candidate in \
+    /opt/homebrew/opt/openssh/bin/ssh-keygen \
+    /usr/local/opt/openssh/bin/ssh-keygen \
+    /opt/homebrew/bin/ssh-keygen \
+    /usr/local/bin/ssh-keygen
+  do
+    if [ -x "$candidate" ]; then
+      exec "$candidate" "$@"
+    fi
+  done
+fi
+
 exec ssh-keygen "$@"

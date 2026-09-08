@@ -6,6 +6,7 @@ public_key=${RESTORE_SSH_PUBLIC_KEY:-"$HOME/.ssh/id_ed25519_sk_git.pub"}
 private_key=${RESTORE_SSH_PRIVATE_KEY:-"$HOME/.ssh/id_ed25519_sk_git"}
 temporary_file=
 staging_directory=
+ssh_keygen_command=
 
 usage() {
   cat <<'EOF'
@@ -33,7 +34,7 @@ cleanup() {
 fingerprint() {
   local output
 
-  output=$(ssh-keygen -lf "$1") || return 1
+  output=$("$ssh_keygen_command" -lf "$1") || return 1
   awk 'NR == 1 { print $2 }' <<< "$output"
 }
 
@@ -47,12 +48,46 @@ if [[ $# -ne 0 ]]; then
   exit 2
 fi
 
-for command in ssh-keygen awk mktemp; do
+for command in awk mktemp; do
   if ! command -v "$command" >/dev/null 2>&1; then
     echo "restore-git-signing-key: $command is required" >&2
     exit 1
   fi
 done
+
+ssh_keygen_command=$(command -v ssh-keygen || true)
+if [[ -z "$ssh_keygen_command" ]]; then
+  echo "restore-git-signing-key: ssh-keygen is required" >&2
+  exit 1
+fi
+
+# Apple's /usr/bin/ssh-keygen does not include the FIDO provider needed for
+# resident-key downloads. Prefer Homebrew OpenSSH when it is available.
+if [[ $(uname -s) == Darwin ]]; then
+  homebrew_ssh_keygen=
+  if command -v brew >/dev/null 2>&1; then
+    brew_prefix=$(brew --prefix openssh 2>/dev/null || true)
+    if [[ -n "$brew_prefix" && -x "$brew_prefix/bin/ssh-keygen" ]]; then
+      homebrew_ssh_keygen="$brew_prefix/bin/ssh-keygen"
+    fi
+  fi
+  if [[ -z "$homebrew_ssh_keygen" ]]; then
+    for candidate in \
+      /opt/homebrew/opt/openssh/bin/ssh-keygen \
+      /usr/local/opt/openssh/bin/ssh-keygen \
+      /opt/homebrew/bin/ssh-keygen \
+      /usr/local/bin/ssh-keygen
+    do
+      if [[ -x "$candidate" ]]; then
+        homebrew_ssh_keygen=$candidate
+        break
+      fi
+    done
+  fi
+  if [[ -n "$homebrew_ssh_keygen" ]]; then
+    ssh_keygen_command=$homebrew_ssh_keygen
+  fi
+fi
 
 if [[ ! -f "$public_key" ]]; then
   echo "restore-git-signing-key: expected public key not found: $public_key" >&2
@@ -78,8 +113,11 @@ staging_directory=$(mktemp -d "$temporary_root/restore-git-signing-key.XXXXXX")
 trap cleanup EXIT
 
 echo "Downloading resident SSH keys from the attached authenticator..."
-if ! (cd "$staging_directory" && ssh-keygen -K); then
+if ! (cd "$staging_directory" && "$ssh_keygen_command" -K); then
   echo "restore-git-signing-key: unable to download resident SSH keys" >&2
+  if [[ $(uname -s) == Darwin && "$ssh_keygen_command" == /usr/bin/ssh-keygen ]]; then
+    echo "macOS's bundled ssh-keygen lacks FIDO support; install Homebrew OpenSSH with: brew install openssh" >&2
+  fi
   exit 1
 fi
 
