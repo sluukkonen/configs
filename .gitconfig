@@ -5,11 +5,16 @@
 [tag]
     sort = version:refname
 [diff]
-   #  algorithm = histogram
+    algorithm = histogram
 [user]
-	email = sakumatti.luukkonen@gmail.com
+	email = mail@sakumatti.fi
 	name = Sakumatti Luukkonen
-	signingKey = 948E0E41E3389C15BAA83E5B22BE06ED95DCD9AA
+	signingKey = ~/.ssh/id_ed25519_sk_git
+[gpg]
+	format = ssh
+[gpg "ssh"]
+	program = ~/.local/bin/git-ssh-keygen
+	allowedSignersFile = ~/.ssh/allowed_signers
 [push]
 	default = current
 [sequence]
@@ -25,7 +30,7 @@
 [pull]
 	ff = only
 [commit]
-	gpgsign = false
+	gpgsign = true
 [rebase]
 	autosquash = true
 [alias]

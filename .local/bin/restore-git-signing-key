@@ -1,0 +1,129 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+public_key=${RESTORE_SSH_PUBLIC_KEY:-"$HOME/.ssh/id_ed25519_sk_git.pub"}
+private_key=${RESTORE_SSH_PRIVATE_KEY:-"$HOME/.ssh/id_ed25519_sk_git"}
+temporary_file=
+staging_directory=
+
+usage() {
+  cat <<'EOF'
+Usage: restore-git-signing-key
+
+Restore the resident FIDO SSH key matching
+~/.ssh/id_ed25519_sk_git.pub from an attached authenticator.
+
+Environment overrides:
+  RESTORE_SSH_PUBLIC_KEY   Expected public key
+  RESTORE_SSH_PRIVATE_KEY  Destination for the restored key handle
+EOF
+}
+
+cleanup() {
+  if [[ -n "$temporary_file" && "$temporary_file" == "$private_key.restore-"* ]]; then
+    rm -f "$temporary_file"
+  fi
+
+  if [[ -n "$staging_directory" && -d "$staging_directory" ]]; then
+    rm -rf "$staging_directory"
+  fi
+}
+
+fingerprint() {
+  local output
+
+  output=$(ssh-keygen -lf "$1") || return 1
+  awk 'NR == 1 { print $2 }' <<< "$output"
+}
+
+if [[ ${1:-} == "--help" || ${1:-} == "-h" ]]; then
+  usage
+  exit 0
+fi
+
+if [[ $# -ne 0 ]]; then
+  usage >&2
+  exit 2
+fi
+
+for command in ssh-keygen awk mktemp; do
+  if ! command -v "$command" >/dev/null 2>&1; then
+    echo "restore-git-signing-key: $command is required" >&2
+    exit 1
+  fi
+done
+
+if [[ ! -f "$public_key" ]]; then
+  echo "restore-git-signing-key: expected public key not found: $public_key" >&2
+  echo "Run the dotfiles setup before restoring the resident key." >&2
+  exit 1
+fi
+
+if [[ -e "$private_key" || -L "$private_key" ]]; then
+  echo "restore-git-signing-key: destination already exists: $private_key" >&2
+  echo "Nothing was changed." >&2
+  exit 0
+fi
+
+expected_fingerprint=$(fingerprint "$public_key") || {
+  echo "restore-git-signing-key: invalid public key: $public_key" >&2
+  exit 1
+}
+
+temporary_root=${TMPDIR:-/tmp}
+temporary_root=${temporary_root%/}
+[[ -n "$temporary_root" ]] || temporary_root=/tmp
+staging_directory=$(mktemp -d "$temporary_root/restore-git-signing-key.XXXXXX")
+trap cleanup EXIT
+
+echo "Downloading resident SSH keys from the attached authenticator..."
+if ! (cd "$staging_directory" && ssh-keygen -K); then
+  echo "restore-git-signing-key: unable to download resident SSH keys" >&2
+  exit 1
+fi
+
+shopt -s nullglob
+recovered_public_keys=("$staging_directory"/*.pub)
+matching_private_key=
+match_count=0
+
+for recovered_public_key in "${recovered_public_keys[@]}"; do
+  recovered_private_key=${recovered_public_key%.pub}
+  [[ -f "$recovered_private_key" ]] || continue
+
+  recovered_fingerprint=$(fingerprint "$recovered_public_key") || continue
+  if [[ "$recovered_fingerprint" == "$expected_fingerprint" ]]; then
+    matching_private_key=$recovered_private_key
+    match_count=$((match_count + 1))
+  fi
+done
+
+if [[ $match_count -eq 0 ]]; then
+  echo "restore-git-signing-key: the expected resident key was not found" >&2
+  echo "Expected fingerprint: $expected_fingerprint" >&2
+  exit 1
+fi
+
+if [[ $match_count -ne 1 ]]; then
+  echo "restore-git-signing-key: multiple resident keys matched $expected_fingerprint" >&2
+  exit 1
+fi
+
+private_key_directory=${private_key%/*}
+if [[ "$private_key_directory" == "$private_key" ]]; then
+  private_key_directory=.
+fi
+
+mkdir -p "$private_key_directory"
+chmod 700 "$private_key_directory"
+
+temporary_file="$private_key.restore-$$"
+umask 077
+cp "$matching_private_key" "$temporary_file"
+chmod 600 "$temporary_file"
+mv "$temporary_file" "$private_key"
+temporary_file=
+
+echo "Restored resident key handle: $private_key"
+echo "Fingerprint: $expected_fingerprint"
