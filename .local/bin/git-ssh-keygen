@@ -4,6 +4,15 @@
 # Desktop SSH agents (for example GNOME Keyring) may reject FIDO signatures.
 unset SSH_AUTH_SOCK
 
+previous_argument=
+for argument in "$@"; do
+  if [ "$previous_argument" = -Y ] && [ "$argument" = sign ]; then
+    printf '%s\n' 'Git signing with the YubiKey: enter its PIN, then touch the key when it flashes.' >&2
+    break
+  fi
+  previous_argument=$argument
+done
+
 if [ "$(uname -s)" = Darwin ]; then
   if command -v brew >/dev/null 2>&1; then
     brew_prefix=$(brew --prefix openssh 2>/dev/null || true)
