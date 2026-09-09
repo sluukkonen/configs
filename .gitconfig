@@ -36,5 +36,6 @@
 [alias]
     remove-merged = "!git branch --merged | egrep -v '(^\\*|main|master)' | xargs git branch -d"
 	commit-reuse = commit -eF .git/COMMIT_EDITMSG
+	wt = "!f() { git fetch origin && base=$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD) && git worktree add -b \"$1\" \"../${1//\\\\//-}\" \"$base\"; }; f"
 [init]
 	defaultBranch = main
