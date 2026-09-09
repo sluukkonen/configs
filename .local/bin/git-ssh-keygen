@@ -4,14 +4,70 @@
 # Desktop SSH agents (for example GNOME Keyring) may reject FIDO signatures.
 unset SSH_AUTH_SOCK
 
+if [ "${GIT_SSH_KEYGEN_PINENTRY_MODE:-}" = 1 ]; then
+  prompt=${1:-SSH signing request}
+  escaped_prompt=$(printf '%s' "$prompt" | sed 's/%/%25/g')
+
+  if [ "${SSH_ASKPASS_PROMPT:-}" = confirm ]; then
+    {
+      printf '%s\n' 'SETTITLE Git SSH signing'
+      printf 'SETDESC %s\n' "$escaped_prompt"
+      printf '%s\n' CONFIRM BYE
+    } | "$GIT_SSH_KEYGEN_PINENTRY_PROGRAM" |
+      awk '
+        /^OK([[:space:]]|$)/ { ok_count++ }
+        /^ERR / { failed = 1 }
+        END { exit(failed || ok_count < 4) }
+      '
+  else
+    {
+      printf '%s\n' 'SETTITLE Git SSH signing'
+      printf 'SETDESC %s\n' "$escaped_prompt"
+      printf '%s\n' 'SETPROMPT PIN:' GETPIN BYE
+    } | "$GIT_SSH_KEYGEN_PINENTRY_PROGRAM" |
+      awk '
+        /^D / {
+          sub(/^D /, "")
+          print
+          received_pin = 1
+        }
+        /^ERR / { failed = 1 }
+        END { exit(failed || !received_pin) }
+      '
+  fi
+  exit $?
+fi
+
 previous_argument=
+is_signing=false
 for argument in "$@"; do
   if [ "$previous_argument" = -Y ] && [ "$argument" = sign ]; then
-    printf '%s\n' 'Git signing with the YubiKey: enter its PIN, then touch the key when it flashes.' >&2
+    is_signing=true
     break
   fi
   previous_argument=$argument
 done
+
+# ssh-keygen's FIDO signing path does not use GnuPG pinentry directly.  When
+# invoked from a desktop session, adapt an installed graphical pinentry to the
+# SSH askpass protocol.  Otherwise leave ssh-keygen's normal terminal handling
+# unchanged.
+if [ "$is_signing" = true ] && { [ -n "${DISPLAY:-}" ] || [ -n "${WAYLAND_DISPLAY:-}" ]; }; then
+  for pinentry_candidate in \
+    pinentry-gnome3 \
+    pinentry-mac \
+    pinentry-qt \
+    pinentry-gtk-2
+  do
+    if pinentry_program=$(command -v "$pinentry_candidate" 2>/dev/null); then
+      export SSH_ASKPASS="$0"
+      export SSH_ASKPASS_REQUIRE=force
+      export GIT_SSH_KEYGEN_PINENTRY_MODE=1
+      export GIT_SSH_KEYGEN_PINENTRY_PROGRAM="$pinentry_program"
+      break
+    fi
+  done
+fi
 
 if [ "$(uname -s)" = Darwin ]; then
   if command -v brew >/dev/null 2>&1; then
