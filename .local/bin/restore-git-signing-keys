@@ -60,7 +60,20 @@ gpg_primary_fingerprint() {
 }
 
 gpg_card_signing_fingerprint() {
-  awk -F: '$1 == "fpr" { print $10; exit }'
+  # `gpg --with-colons --card-status` does not emit fpr records on all GnuPG
+  # versions.  The regular card-status output does include the signing
+  # fingerprint, so force its stable C locale before parsing it.
+  awk '
+    /^Signature key[[:space:].]*:/ {
+      sub(/^[^:]*:[[:space:]]*/, "")
+      if ($0 == "[none]") {
+        exit
+      }
+      gsub(/[[:space:]]/, "")
+      print toupper($0)
+      exit
+    }
+  '
 }
 
 if [[ ${1:-} == "--help" || ${1:-} == "-h" ]]; then
@@ -144,7 +157,7 @@ echo "Importing work GPG public key..."
 "$gpg_command" --batch --import "$gpg_public_key"
 
 echo "Creating GnuPG card references from the attached YubiKey..."
-if ! card_status=$("$gpg_command" --batch --with-colons --card-status); then
+if ! card_status=$(LC_ALL=C "$gpg_command" --batch --card-status); then
   echo "restore-git-signing-key: unable to access the OpenPGP application on the YubiKey" >&2
   exit 1
 fi
