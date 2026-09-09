@@ -4,20 +4,32 @@ set -euo pipefail
 
 public_key=${RESTORE_SSH_PUBLIC_KEY:-"$HOME/.ssh/id_ed25519_sk_git.pub"}
 private_key=${RESTORE_SSH_PRIVATE_KEY:-"$HOME/.ssh/id_ed25519_sk_git"}
+gpg_public_key=${RESTORE_GPG_PUBLIC_KEY:-"$HOME/.gnupg/work-git-signing-key.asc"}
+gpg_key_fingerprint=${RESTORE_GPG_KEY_FINGERPRINT:-"00940AB35C1932E4AFBACFE81603DAD8C3DD2A0D"}
 temporary_file=
 staging_directory=
 ssh_keygen_command=
+gpg_command=
+restore_ssh_key=true
 
 usage() {
   cat <<'EOF'
 Usage: restore-git-signing-key
 
-Restore the resident FIDO SSH key matching
-~/.ssh/id_ed25519_sk_git.pub from an attached authenticator.
+Restore Git signing keys from an attached YubiKey:
+
+* the OpenPGP work key whose public certificate is stored in this dotfiles repo;
+* the resident FIDO SSH key matching ~/.ssh/id_ed25519_sk_git.pub.
+
+The OpenPGP private key remains on the YubiKey. This command imports only its
+public certificate and creates local GnuPG card references.
 
 Environment overrides:
   RESTORE_SSH_PUBLIC_KEY   Expected public key
   RESTORE_SSH_PRIVATE_KEY  Destination for the restored key handle
+  RESTORE_GPG_PUBLIC_KEY   Work OpenPGP public certificate
+  RESTORE_GPG_KEY_FINGERPRINT
+                           Expected primary OpenPGP key fingerprint
 EOF
 }
 
@@ -31,11 +43,24 @@ cleanup() {
   fi
 }
 
-fingerprint() {
+ssh_fingerprint() {
   local output
 
   output=$("$ssh_keygen_command" -lf "$1") || return 1
   awk 'NR == 1 { print $2 }' <<< "$output"
+}
+
+gpg_primary_fingerprint() {
+  "$gpg_command" --batch --with-colons --show-keys "$1" |
+    awk -F: '$1 == "pub" { expect_fingerprint = 1; next }
+              expect_fingerprint && $1 == "fpr" {
+                print $10
+                expect_fingerprint = 0
+              }'
+}
+
+gpg_card_signing_fingerprint() {
+  awk -F: '$1 == "fpr" { print $10; exit }'
 }
 
 if [[ ${1:-} == "--help" || ${1:-} == "-h" ]]; then
@@ -48,7 +73,7 @@ if [[ $# -ne 0 ]]; then
   exit 2
 fi
 
-for command in awk mktemp; do
+for command in awk mktemp gpg; do
   if ! command -v "$command" >/dev/null 2>&1; then
     echo "restore-git-signing-key: $command is required" >&2
     exit 1
@@ -60,6 +85,8 @@ if [[ -z "$ssh_keygen_command" ]]; then
   echo "restore-git-signing-key: ssh-keygen is required" >&2
   exit 1
 fi
+
+gpg_command=$(command -v gpg)
 
 # Apple's /usr/bin/ssh-keygen does not include the FIDO provider needed for
 # resident-key downloads. Prefer Homebrew OpenSSH when it is available.
@@ -89,19 +116,54 @@ if [[ $(uname -s) == Darwin ]]; then
   fi
 fi
 
-if [[ ! -f "$public_key" ]]; then
+if [[ ! -f "$public_key" && ! -e "$private_key" && ! -L "$private_key" ]]; then
   echo "restore-git-signing-key: expected public key not found: $public_key" >&2
   echo "Run the dotfiles setup before restoring the resident key." >&2
   exit 1
 fi
 
+if [[ ! -f "$gpg_public_key" ]]; then
+  echo "restore-git-signing-key: expected GPG public key not found: $gpg_public_key" >&2
+  echo "Run the dotfiles setup before restoring the work GPG key." >&2
+  exit 1
+fi
+
 if [[ -e "$private_key" || -L "$private_key" ]]; then
-  echo "restore-git-signing-key: destination already exists: $private_key" >&2
-  echo "Nothing was changed." >&2
+  restore_ssh_key=false
+  echo "restore-git-signing-key: destination already exists; skipping resident SSH key restore: $private_key" >&2
+fi
+
+gpg_public_key_fingerprint=$(gpg_primary_fingerprint "$gpg_public_key")
+if [[ "$gpg_public_key_fingerprint" == *$'\n'* || "$gpg_public_key_fingerprint" != "$gpg_key_fingerprint" ]]; then
+  echo "restore-git-signing-key: invalid or unexpected GPG public key: $gpg_public_key" >&2
+  echo "Expected fingerprint: $gpg_key_fingerprint" >&2
+  exit 1
+fi
+
+echo "Importing work GPG public key..."
+"$gpg_command" --batch --import "$gpg_public_key"
+
+echo "Creating GnuPG card references from the attached YubiKey..."
+if ! card_status=$("$gpg_command" --batch --with-colons --card-status); then
+  echo "restore-git-signing-key: unable to access the OpenPGP application on the YubiKey" >&2
+  exit 1
+fi
+
+card_signing_fingerprint=$(gpg_card_signing_fingerprint <<< "$card_status")
+if [[ "$card_signing_fingerprint" != "$gpg_key_fingerprint" ]]; then
+  echo "restore-git-signing-key: the attached YubiKey does not contain the expected GPG signing key" >&2
+  echo "Expected fingerprint: $gpg_key_fingerprint" >&2
+  echo "Card signing fingerprint: ${card_signing_fingerprint:-none}" >&2
+  exit 1
+fi
+
+echo "Restored work GPG key: $gpg_key_fingerprint"
+
+if [[ "$restore_ssh_key" == false ]]; then
   exit 0
 fi
 
-expected_fingerprint=$(fingerprint "$public_key") || {
+expected_fingerprint=$(ssh_fingerprint "$public_key") || {
   echo "restore-git-signing-key: invalid public key: $public_key" >&2
   exit 1
 }
@@ -130,7 +192,7 @@ for recovered_public_key in "${recovered_public_keys[@]}"; do
   recovered_private_key=${recovered_public_key%.pub}
   [[ -f "$recovered_private_key" ]] || continue
 
-  recovered_fingerprint=$(fingerprint "$recovered_public_key") || continue
+  recovered_fingerprint=$(ssh_fingerprint "$recovered_public_key") || continue
   if [[ "$recovered_fingerprint" == "$expected_fingerprint" ]]; then
     matching_private_key=$recovered_private_key
     match_count=$((match_count + 1))
