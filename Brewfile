@@ -41,7 +41,7 @@ brew "ykman"
 brew "zsh"
 
 cask "1password"
-cask "codex-app"
+cask "codex"
 cask "discord"
 cask "font-cascadia-code-pl"
 cask "ghostty"
