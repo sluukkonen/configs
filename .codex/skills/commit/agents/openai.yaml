@@ -1,0 +1,4 @@
+interface:
+  display_name: "Commit Changes"
+  short_description: "Review and create atomic Git commits"
+  default_prompt: "Use $commit to review and commit the current Git changes."
