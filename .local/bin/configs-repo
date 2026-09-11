@@ -1,0 +1,28 @@
+#!/usr/bin/env python3
+"""Print the repository recorded by the dotfiles installer."""
+
+import json
+from pathlib import Path
+import sys
+
+
+def main():
+    try:
+        state = json.loads((Path.home() / ".local/state/configs/state.json").read_text())
+        if (not isinstance(state, dict) or type(state.get("version")) is not int
+                or state["version"] != 1):
+            raise ValueError("unsupported installation state")
+        repository = state.get("repository")
+        if not isinstance(repository, str) or not Path(repository).is_absolute():
+            raise ValueError("invalid repository location")
+        if not (Path(repository) / "sync_configs.py").is_file():
+            raise ValueError("repository moved or installer is missing")
+        print(repository)
+        return 0
+    except (OSError, ValueError) as error:
+        print("configs-repo: {}. Run python3 /path/to/configs/sync_configs.py apply.".format(error), file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

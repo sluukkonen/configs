@@ -1,0 +1,342 @@
+#!/usr/bin/env python3
+"""Install this repository's tracked configuration files without symlinks."""
+
+import argparse
+import contextlib
+import difflib
+import fcntl
+import hashlib
+import json
+import os
+from pathlib import Path, PurePosixPath
+import stat
+import subprocess
+import sys
+import tempfile
+
+
+REPOSITORY_ONLY = {
+    ".gitignore", ".gitattributes", ".gitmodules", ".github",
+    "AGENTS.md", "README.md", "Brewfile", "Brewfile.lock.json",
+    "init.sh", "sync_configs.py", "tests", "docs", "__pycache__",
+    "create_symlink.py",  # Until its deletion is committed.
+}
+STATE_PATH = ".local/state/configs/state.json"
+
+
+class SyncError(Exception):
+    pass
+
+
+def digest(contents):
+    return hashlib.sha256(contents).hexdigest()
+
+
+def valid_relative(path):
+    return (isinstance(path, str) and bool(path)
+            and not PurePosixPath(path).is_absolute()
+            and all(part not in ("", ".", "..") for part in path.split("/")))
+
+
+def check_parents(root, relative):
+    """Never follow a link inside a source or destination tree."""
+    current = root
+    for part in PurePosixPath(relative).parts[:-1]:
+        current = current / part
+        if current.is_symlink():
+            raise SyncError("symlinked parent directory: {}".format(current))
+        if current.exists() and not current.is_dir():
+            raise SyncError("parent is not a directory: {}".format(current))
+
+
+def inspect(root, relative):
+    check_parents(root, relative)
+    path = root / relative
+    try:
+        info = path.lstat()
+    except FileNotFoundError:
+        return {"kind": "missing"}, None
+    if stat.S_ISLNK(info.st_mode):
+        return {"kind": "link", "target": os.readlink(path)}, None
+    if not stat.S_ISREG(info.st_mode):
+        raise SyncError("not a regular file: {}".format(path))
+    mode = stat.S_IMODE(info.st_mode)
+    if mode & 0o7000:
+        raise SyncError("special permission bits are unsupported: {}".format(path))
+    contents = path.read_bytes()
+    return {"kind": "file", "sha256": digest(contents), "mode": mode}, contents
+
+
+def file_record(snapshot):
+    return {key: snapshot[key] for key in ("sha256", "mode")}
+
+
+def load_state(target):
+    snapshot, contents = inspect(target, STATE_PATH)
+    if snapshot["kind"] == "missing":
+        return {"version": 1, "repository": "", "files": {}}
+    if snapshot["kind"] != "file":
+        raise SyncError("installation state must be a regular file")
+    try:
+        state = json.loads(contents)
+        if (not isinstance(state, dict) or type(state.get("version")) is not int or state["version"] != 1
+                or not isinstance(state.get("repository"), str)
+                or not Path(state["repository"]).is_absolute()
+                or not isinstance(state.get("files"), dict)):
+            raise ValueError("invalid schema or unsupported version")
+        for relative, record in state["files"].items():
+            if (not valid_relative(relative) or not isinstance(record, dict)
+                    or set(record) != {"sha256", "mode"}
+                    or not isinstance(record["sha256"], str)
+                    or len(record["sha256"]) != 64
+                    or any(char not in "0123456789abcdef" for char in record["sha256"])
+                    or type(record["mode"]) is not int
+                    or not 0 <= record["mode"] <= 0o777):
+                raise ValueError("invalid file record")
+        return state
+    except (ValueError, TypeError, UnicodeError) as error:
+        raise SyncError("invalid installation state: {}".format(error)) from error
+
+
+def is_installable(relative):
+    """Exclude repository support paths only at the root of the checkout."""
+    return relative.split("/", 1)[0] not in REPOSITORY_ONLY
+
+
+def tracked_sources(repository):
+    result = subprocess.run(
+        ["git", "-C", str(repository), "ls-files", "--stage", "-z"],
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True,
+    )
+    for entry in result.stdout.split(b"\0"):
+        if not entry:
+            continue
+        metadata, raw_path = entry.split(b"\t", 1)
+        mode, _, stage = metadata.split()
+        relative = os.fsdecode(raw_path)
+        if not is_installable(relative):
+            continue
+        if not valid_relative(relative) or stage != b"0" or mode not in (b"100644", b"100755"):
+            raise SyncError("unsupported or unmerged tracked configuration: {}".format(relative))
+        yield relative
+
+
+def owned_link(target, relative, snapshot, source):
+    if snapshot["kind"] != "link":
+        return False
+    link = (target / relative).parent / snapshot["target"]
+    # Require both a direct lexical target and an actual match: normalizing
+    # "symlinked-directory/.." alone can identify the wrong file.
+    if os.path.normpath(link) != str(source):
+        return False
+    try:
+        return link.resolve(strict=True) == source
+    except (OSError, RuntimeError):
+        return False
+
+
+def install_mode(source_mode, current_mode):
+    # Never add read/write access to an existing file. An executable source can
+    # add execute permission only to classes that can already read that file.
+    allowed = current_mode | ((current_mode & 0o444) >> 2)
+    return source_mode & allowed
+
+
+def make_plan(repository, target, state):
+    operations = []
+    conflicts = []
+    destinations = set()
+    sources = list(tracked_sources(repository))
+    if (any(path in sources for path in (".local/bin/update-config", ".local/bin/update-mac"))
+            and ".local/bin/configs-repo" not in sources):
+        raise SyncError("update commands require a tracked .local/bin/configs-repo; "
+                        "run git add .local/bin/configs-repo before applying")
+    for relative in sources:
+        destination = relative
+        if destination in destinations:
+            raise SyncError("multiple sources target {}".format(destination))
+        destination_parts = PurePosixPath(destination)
+        if any(destination_parts in PurePosixPath(other).parents
+               or PurePosixPath(other) in destination_parts.parents for other in destinations):
+            raise SyncError("file and directory destinations overlap: {}".format(destination))
+        destinations.add(destination)
+        try:
+            destination_path = target / destination
+            state_directory = (target / STATE_PATH).parent
+            if (destination_path == state_directory or state_directory in destination_path.parents
+                    or destination_path in state_directory.parents):
+                raise SyncError("destination overlaps installation state: {}".format(destination))
+            if target / destination == repository or repository in (target / destination).parents:
+                raise SyncError("destination overlaps the repository: {}".format(destination))
+            source, contents = inspect(repository, relative)
+            if source["kind"] != "file":
+                raise SyncError("tracked source is missing or symlinked: {}".format(relative))
+            current, old_contents = inspect(target, destination)
+            previous = state["files"].get(destination)
+            mode = source["mode"]
+            if current["kind"] == "file":
+                baseline_mode = previous["mode"] if previous is not None else current["mode"]
+                mode = install_mode(mode, baseline_mode)
+            desired = {"sha256": source["sha256"], "mode": mode}
+
+            if owned_link(target, destination, current, repository / relative):
+                action = "CONVERT"
+            elif current["kind"] == "link":
+                raise SyncError("unrelated symlink: {}".format(destination))
+            elif current["kind"] == "missing":
+                if previous is not None:
+                    raise SyncError("locally deleted: {}".format(destination))
+                action = "INSTALL"
+            elif file_record(current) == desired:
+                action = "KEEP" if previous == desired else "ADOPT"
+            elif previous == file_record(current):
+                action = "UPDATE"
+            else:
+                action = "CONFLICT"
+                conflicts.append("locally edited or unmanaged file differs: {}".format(destination))
+
+            operations.append({
+                "source": relative, "destination": destination, "before": current,
+                "record": desired, "contents": contents, "old_contents": old_contents,
+                "action": action,
+            })
+        except SyncError as error:
+            conflicts.append(str(error))
+    return operations, conflicts, sorted(set(state["files"]) - destinations)
+
+
+def show_plan(operations, conflicts, removed, show_diff):
+    for operation in operations:
+        action, destination = operation["action"], operation["destination"]
+        if action != "KEEP":
+            print("{} {}".format(action, destination))
+        old = operation["old_contents"]
+        new = operation["contents"]
+        if show_diff and action in ("INSTALL", "UPDATE", "CONFLICT") and old != new:
+            try:
+                old_text = (old or b"").decode("utf-8")
+                new_text = new.decode("utf-8")
+                if "\0" in old_text or "\0" in new_text:
+                    raise UnicodeError()
+                for line in difflib.unified_diff(
+                    old_text.splitlines(keepends=True), new_text.splitlines(keepends=True),
+                    fromfile="installed/" + destination, tofile="repository/" + operation["source"],
+                ):
+                    print(line, end="" if line.endswith("\n") else "\n")
+                    if not line.endswith("\n"):
+                        print("\\ No newline at end of file")
+            except UnicodeError:
+                print("  Binary contents differ.")
+        if action in ("UPDATE", "CONFLICT") and operation["before"]["mode"] != operation["record"]["mode"]:
+            print("  mode {:03o} -> {:03o}".format(
+                operation["before"]["mode"], operation["record"]["mode"]))
+    for relative in removed:
+        print("NO LONGER SELECTED (left installed) {}".format(relative))
+    for conflict in conflicts:
+        print("CONFLICT " + conflict)
+
+
+def make_parents(root, relative):
+    check_parents(root, relative)
+    current = root
+    for part in PurePosixPath(relative).parts[:-1]:
+        current = current / part
+        try:
+            current.mkdir(mode=0o700)
+        except FileExistsError:
+            if current.is_symlink() or not current.is_dir():
+                raise SyncError("unsafe parent directory: {}".format(current))
+
+
+def atomic_write(root, relative, contents, mode):
+    make_parents(root, relative)
+    path = root / relative
+    fd, temporary = tempfile.mkstemp(prefix=".configs-", dir=path.parent)
+    try:
+        with os.fdopen(fd, "wb") as stream:
+            stream.write(contents)
+            stream.flush()
+            os.fchmod(stream.fileno(), mode)
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+    finally:
+        if os.path.lexists(temporary):
+            os.unlink(temporary)
+
+
+def save_state(target, state):
+    contents = (json.dumps(state, indent=2, sort_keys=True) + "\n").encode("utf-8")
+    atomic_write(target, STATE_PATH, contents, 0o600)
+
+
+def apply_plan(repository, target, state, operations):
+    if any(operation["action"] == "CONFLICT" for operation in operations):
+        raise SyncError("cannot apply a plan with conflicts")
+    dirty = state["repository"] != str(repository)
+    state["repository"] = str(repository)
+    for operation in operations:
+        destination = operation["destination"]
+        current, _ = inspect(target, destination)
+        if current != operation["before"]:
+            raise SyncError("destination changed during apply: {}".format(destination))
+        if operation["action"] in ("INSTALL", "UPDATE", "CONVERT"):
+            atomic_write(target, destination, operation["contents"], operation["record"]["mode"])
+        dirty = dirty or state["files"].get(destination) != operation["record"]
+        state["files"][destination] = operation["record"]
+        # Record each successful file. A crash before this write is recoverable
+        # by adopting the matching destination on the next run.
+        if dirty:
+            save_state(target, state)
+            dirty = False
+    if dirty:
+        save_state(target, state)
+
+
+@contextlib.contextmanager
+def installation_lock(target):
+    # Lock the existing home directory without creating a lock file, including
+    # for diff. This also excludes installers from other repository checkouts.
+    fd = os.open(target, os.O_RDONLY)
+    try:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError as error:
+            raise SyncError("another installer is using {}".format(target)) from error
+        yield
+    finally:
+        os.close(fd)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("command", choices=("diff", "apply"))
+    parser.add_argument("--target", type=Path, default=Path.home(), help="existing home directory to install into")
+    args = parser.parse_args()
+    repository = Path(__file__).resolve().parent
+    target = Path(os.path.abspath(args.target.expanduser()))
+    try:
+        if target.is_symlink() or not target.is_dir():
+            raise SyncError("target must be an existing, non-symlink directory")
+        target = target.resolve()
+        if target == repository or repository in target.parents:
+            raise SyncError("target must not be inside the repository")
+        if repository in (target / STATE_PATH).parents:
+            raise SyncError("installation state would overlap the repository")
+        with installation_lock(target):
+            state = load_state(target)
+            operations, conflicts, removed = make_plan(repository, target, state)
+            show_plan(operations, conflicts, removed, args.command == "diff")
+            if conflicts:
+                print("Resolve conflicts manually, then rerun. No files were changed.", file=sys.stderr)
+                return 1
+            if args.command == "apply":
+                apply_plan(repository, target, state, operations)
+                print("Configuration applied.")
+        return 0
+    except (SyncError, OSError, subprocess.CalledProcessError) as error:
+        print("sync_configs: {}".format(error), file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

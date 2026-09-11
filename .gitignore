@@ -25,3 +25,4 @@
 /.emacs.d/url/cookies
 bin/lein
 Brewfile.lock.json
+__pycache__/
