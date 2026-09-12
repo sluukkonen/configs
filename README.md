@@ -68,6 +68,12 @@ are pending. Commands return nonzero for conflicts or errors. Text diffs
 can contain the contents of your configuration files. Binary changes are
 reported without printing their contents.
 
+`configs diff` colors additions green, deletions red, and hunk headers cyan when
+stdout is a terminal. Redirected output stays plain. Use `--color always` to
+retain color in a pipe (for example, `configs diff --color always | less -R`),
+or `--color never` to disable it. Automatic color respects a nonempty `NO_COLOR`
+and `TERM=dumb`; an explicit `--color always` overrides those settings.
+
 ## Conflicts and permissions
 
 Installation records each managed file's last installed SHA-256 hash and mode in

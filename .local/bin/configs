@@ -204,7 +204,15 @@ def make_plan(repository, target, state):
     return operations, conflicts, sorted(set(state["files"]) - destinations)
 
 
-def show_plan(operations, conflicts, removed, show_diff):
+def use_color(mode):
+    if mode == "always":
+        return True
+    if mode == "never":
+        return False
+    return sys.stdout.isatty() and not os.environ.get("NO_COLOR") and os.environ.get("TERM") != "dumb"
+
+
+def show_plan(operations, conflicts, removed, show_diff, color=False):
     for operation in operations:
         action, destination = operation["action"], operation["destination"]
         if action != "KEEP":
@@ -217,11 +225,16 @@ def show_plan(operations, conflicts, removed, show_diff):
                 new_text = new.decode("utf-8")
                 if "\0" in old_text or "\0" in new_text:
                     raise UnicodeError()
-                for line in difflib.unified_diff(
+                for index, line in enumerate(difflib.unified_diff(
                     old_text.splitlines(keepends=True), new_text.splitlines(keepends=True),
                     fromfile="installed/" + destination, tofile="repository/" + operation["source"],
-                ):
-                    print(line, end="" if line.endswith("\n") else "\n")
+                )):
+                    style = ("1" if index < 2 else "36" if line.startswith("@@")
+                             else "32" if line.startswith("+") else "31" if line.startswith("-") else None)
+                    rendered = line[:-1] if line.endswith("\n") else line
+                    if color and style:
+                        rendered = "\033[{}m{}\033[0m".format(style, rendered)
+                    print(rendered)
                     if not line.endswith("\n"):
                         print("\\ No newline at end of file")
             except UnicodeError:
@@ -400,10 +413,11 @@ def find_repository(script, target):
     return repository.resolve()
 
 
-def run_checkout(repository, command, target, dry_run=False):
+def run_checkout(repository, command, target, dry_run=False, color=None):
     return subprocess.run(
         [sys.executable, str(repository / COMMAND_PATH), command, "--target", str(target)]
-        + (["--dry-run"] if dry_run else []),
+        + (["--dry-run"] if dry_run else [])
+        + (["--color", color] if color is not None else []),
     ).returncode
 
 
@@ -412,9 +426,13 @@ def main():
     parser.add_argument("command", choices=("diff", "apply", "update", "repo", "prune"))
     parser.add_argument("--target", type=Path, default=Path.home(), help="existing home directory to install into")
     parser.add_argument("--dry-run", action="store_true", help="preview prune without deleting files or changing state")
+    parser.add_argument("--color", choices=("auto", "always", "never"),
+                        help="color diff output (default: auto; respects NO_COLOR and TERM=dumb)")
     args = parser.parse_args()
     if args.dry_run and args.command != "prune":
         parser.error("--dry-run is only supported for prune")
+    if args.color is not None and args.command != "diff":
+        parser.error("--color is only supported for diff")
     script = Path(__file__).resolve()
     target = Path(os.path.abspath(args.target.expanduser()))
     try:
@@ -430,7 +448,7 @@ def main():
         if repository in (target / STATE_PATH).parents:
             raise SyncError("installation state would overlap the repository")
         if script != repository / COMMAND_PATH:
-            return run_checkout(repository, args.command, target, args.dry_run)
+            return run_checkout(repository, args.command, target, args.dry_run, args.color)
         with installation_lock(target):
             state = load_state(target)
             if args.command == "repo":
@@ -450,7 +468,8 @@ def main():
                 subprocess.run(["git", "pull", "--ff-only"], cwd=repository, check=True)
             else:
                 operations, conflicts, removed = make_plan(repository, target, state)
-                show_plan(operations, conflicts, removed, args.command == "diff")
+                show_plan(operations, conflicts, removed, args.command == "diff",
+                          args.command == "diff" and use_color(args.color))
                 if conflicts:
                     print("Resolve conflicts manually, then rerun. No files were changed.", file=sys.stderr)
                     return 1

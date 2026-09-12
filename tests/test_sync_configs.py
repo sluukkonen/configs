@@ -2,6 +2,7 @@ import importlib.util
 from importlib.machinery import SourceFileLoader
 import json
 import os
+import re
 from pathlib import Path
 import shutil
 import stat
@@ -115,6 +116,34 @@ class InstallerTests(InstallerFixture):
         self.assertIn("ADOPT", self.run_sync())
         self.assertEqual(installed.stat().st_mtime_ns, before)
         self.assertEqual(self.state()["files"][".zshrc"]["mode"], 0o600)
+
+    def test_diff_color_preserves_plain_output_and_missing_newline_marker(self):
+        self.source(contents="++repository\n")
+        self.installed(contents="--local")
+        before = self.tree()
+        plain = self.run_sync("diff", 1, "--color", "never")
+        self.assertNotIn("\033[", self.run_sync("diff", expected=1))
+        colored = self.run_sync("diff", 1, "--color", "always")
+        self.assertIn("\033[1m--- installed/.zshrc\033[0m", colored)
+        self.assertIn("\033[36m@@", colored)
+        self.assertIn("\033[31m---local\033[0m", colored)
+        self.assertIn("\033[32m+++repository\033[0m", colored)
+        self.assertEqual(re.sub(r"\x1b\[[0-9;]*m", "", colored), plain)
+        self.assertEqual(before, self.tree())
+
+    def test_diff_color_policy(self):
+        for tty, env, expected in ((True, {}, True), (False, {}, False),
+                                   (True, {"NO_COLOR": "1"}, False),
+                                   (True, {"TERM": "dumb"}, False),
+                                   (True, {"NO_COLOR": ""}, True)):
+            with self.subTest(tty=tty, env=env):
+                with mock.patch.object(sync.sys.stdout, "isatty", return_value=tty), mock.patch.dict(os.environ, env, clear=True):
+                    self.assertEqual(sync.use_color("auto"), expected)
+                    self.assertEqual(sync.use_color(None), expected)
+                    self.assertTrue(sync.use_color("always"))
+                    self.assertFalse(sync.use_color("never"))
+        for command in ("apply", "update", "repo", "prune"):
+            self.assertIn("only supported for diff", self.run_sync(command, 2, "--color", "always"))
 
     def test_conflict_prevents_all_writes(self):
         self.source(".vimrc")
@@ -878,6 +907,11 @@ class ConfigCommandTests(InstallerFixture):
 
     def test_explicit_command_required(self):
         self.assertIn("usage:", self.run_command(expected=2))
+
+    def test_installed_diff_forwards_color_option(self):
+        (self.repository / ".zshrc").write_text("changed\n")
+        self.assertIn("\033[32m+changed\033[0m", self.run_command("diff", "--color", "always"))
+        self.assertNotIn("\033[", self.run_command("diff", "--color", "never"))
 
     def test_installed_prune_forwards_preview_and_alternate_target(self):
         other = self.root / "other home"
