@@ -167,6 +167,22 @@ write failed. Conflicting edits made after a partial failure still require manua
 resolution. Concurrent installer runs against the same home directory are
 rejected; other programs are not locked out from editing their configuration.
 
+## Local Git overrides
+
+The shared Git configuration optionally includes `~/.gitconfig_local` last,
+so machine-local settings override both personal defaults and the conditional
+work configuration. A missing file is ignored. Create this file yourself; it
+is not provided or managed by this repository.
+
+For example, to disable commit signing on one machine:
+
+```gitconfig
+[commit]
+    gpgsign = false
+```
+
+Repository-local settings and command-line options can still take precedence.
+
 ## Git SSH signing
 
 Personal commits use the FIDO security key through `git-ssh-keygen`. The wrapper
