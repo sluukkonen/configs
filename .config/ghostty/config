@@ -1,4 +1,4 @@
 theme = light:Catppuccin Latte, dark:Catppuccin Frappe
 font-family = "Cascadia Code PL"
 font-size = 14
-
+keybind = global:alt+shift+enter=new_window
