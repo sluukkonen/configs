@@ -7,15 +7,6 @@ description: Review current Git changes and create appropriately scoped, atomic 
 
 Use this skill when the user asks to commit current repository changes.
 
-## Model choice
-
-Keep this routine workflow efficient:
-
-- Prefer Luna with `low` or `none` reasoning for ordinary commits.
-- Use Sol with `low` or `medium` reasoning when the diff is broad, ambiguous, or requires more careful review.
-- Use Astra only for unusually complex, high-risk, or difficult-to-validate changes, with `low` or `medium` reasoning. Do not use Astra at `max` for ordinary commits.
-- If the active session model cannot be changed by the skill, continue with it and avoid unnecessary analysis or tool calls.
-
 ## Workflow
 
 1. Inspect `git status --short`, the staged and unstaged diffs, and recent commit messages.
