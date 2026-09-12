@@ -27,6 +27,8 @@
 	excludesFile = ~/.gitignore_global
 [interactive]
 	diffFilter = delta --color-only
+[delta]
+	syntax-theme = ansi
 [pull]
 	ff = only
 [commit]
