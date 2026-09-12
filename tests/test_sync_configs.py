@@ -1,5 +1,6 @@
 import importlib.util
 from importlib.machinery import SourceFileLoader
+import io
 import json
 import os
 import re
@@ -144,6 +145,118 @@ class InstallerTests(InstallerFixture):
                     self.assertFalse(sync.use_color("never"))
         for command in ("apply", "update", "repo", "prune"):
             self.assertIn("only supported for diff", self.run_sync(command, 2, "--color", "always"))
+
+    def test_diff_uses_delta_for_terminal_output_without_changing_target(self):
+        self.source(contents="repository\n", mode=0o755)
+        self.installed(contents="local")
+        self.source(".binary", "\0binary")
+        operations, conflicts, _ = sync.make_plan(self.repository, self.target, sync.load_state(self.target))
+        before = self.tree()
+        output = io.StringIO()
+        with mock.patch.object(sync.sys, "stdout", output), \
+                mock.patch.object(output, "isatty", return_value=True), \
+                mock.patch.object(sync.shutil, "which", return_value="/tools/delta"), \
+                mock.patch.object(sync.subprocess, "run", return_value=subprocess.CompletedProcess([], 0)) as run:
+            sync.show_diff_plan(operations, conflicts, [".obsolete"], True)
+        self.assertEqual(run.call_args.args[0], ["/tools/delta", "--color-only"])
+        report = run.call_args.kwargs["input"]
+        for expected in ("CONFLICT .zshrc", "-local", "+repository", "\\ No newline at end of file",
+                         "mode 644 -> 755", "Binary contents differ", "NO LONGER SELECTED", conflicts[0]):
+            self.assertIn(expected, report)
+        self.assertNotIn("\033[", report)
+        self.assertEqual(output.getvalue(), "")
+        self.assertEqual(before, self.tree())
+
+    def test_diff_delta_fallback_and_output_policy(self):
+        self.source()
+        _, operations = self.plan()
+        for tty, color, available, failure in (
+            (False, True, True, None),
+            (True, False, True, None),
+            (True, True, False, None),
+            (True, True, True, OSError("cannot execute")),
+            (True, True, True, 2),
+        ):
+            with self.subTest(tty=tty, color=color, available=available, failure=failure):
+                output, errors = io.StringIO(), io.StringIO()
+                with mock.patch.object(sync.sys, "stdout", output), \
+                        mock.patch.object(sync.sys, "stderr", errors), \
+                        mock.patch.dict(os.environ, {"PAGER": ""}), \
+                        mock.patch.object(output, "isatty", return_value=tty), \
+                        mock.patch.object(sync.shutil, "which", return_value="/tools/delta" if available else None), \
+                        mock.patch.object(sync.subprocess, "run") as run:
+                    if isinstance(failure, OSError):
+                        run.side_effect = failure
+                    else:
+                        run.return_value = subprocess.CompletedProcess([], failure or 0)
+                    sync.show_diff_plan(operations, [], [], color)
+                self.assertIn("INSTALL .zshrc", output.getvalue())
+                self.assertIn("+original", output.getvalue())
+                self.assertEqual("\033[" in output.getvalue(), color)
+                self.assertEqual(run.called, tty and color and available)
+                self.assertEqual(bool(errors.getvalue()), failure is not None)
+
+    def test_diff_does_not_launch_delta_for_empty_report(self):
+        output = io.StringIO()
+        with mock.patch.object(sync.sys, "stdout", output), \
+                mock.patch.object(output, "isatty", return_value=True), \
+                mock.patch.object(sync.shutil, "which", return_value="/tools/delta"), \
+                mock.patch.object(sync.subprocess, "run") as run:
+            sync.show_diff_plan([], [], [], True)
+        run.assert_not_called()
+        self.assertEqual(output.getvalue(), "")
+
+    def test_builtin_diff_uses_pager_with_and_without_color(self):
+        self.source()
+        _, operations = self.plan()
+        for color in (True, False):
+            for env, expected in (({}, ["less", "-FRX"]),
+                                  ({"PAGER": '"/tools/my pager" --option'}, ["/tools/my pager", "--option"])):
+                with self.subTest(color=color, env=env):
+                    output = io.StringIO()
+                    with mock.patch.object(sync.sys, "stdout", output), \
+                            mock.patch.object(output, "isatty", return_value=True), \
+                            mock.patch.dict(os.environ, env, clear=True), \
+                            mock.patch.object(sync.shutil, "which", side_effect=lambda name: None if name == "delta" else name), \
+                            mock.patch.object(sync.subprocess, "run", return_value=subprocess.CompletedProcess([], 0)) as run:
+                        sync.show_diff_plan(operations, [], [], color)
+                    self.assertEqual(run.call_args.args[0], expected)
+                    report = run.call_args.kwargs["input"]
+                    self.assertIn("+original", report)
+                    self.assertEqual("\033[" in report, color)
+                    self.assertEqual(output.getvalue(), "")
+
+    def test_builtin_pager_fallback_and_output_policy(self):
+        for tty, env, available, failure, warning in (
+            (False, {}, True, None, False),
+            (True, {"TERM": "dumb"}, True, None, False),
+            (True, {"PAGER": ""}, True, None, False),
+            (True, {"PAGER": "missing-pager"}, False, None, False),
+            (True, {"PAGER": "'"}, True, None, True),
+            (True, {}, True, OSError("cannot execute"), True),
+            (True, {}, True, 2, True),
+        ):
+            with self.subTest(tty=tty, env=env, available=available, failure=failure):
+                output, errors = io.StringIO(), io.StringIO()
+                with mock.patch.object(sync.sys, "stdout", output), \
+                        mock.patch.object(sync.sys, "stderr", errors), \
+                        mock.patch.object(output, "isatty", return_value=tty), \
+                        mock.patch.dict(os.environ, env, clear=True), \
+                        mock.patch.object(sync.shutil, "which", return_value="pager" if available else None), \
+                        mock.patch.object(sync.subprocess, "run") as run:
+                    if isinstance(failure, OSError):
+                        run.side_effect = failure
+                    else:
+                        run.return_value = subprocess.CompletedProcess([], failure or 0)
+                    sync.page_report("report\n")
+                self.assertEqual(output.getvalue(), "report\n")
+                self.assertEqual(bool(errors.getvalue()), warning)
+                self.assertEqual(run.called, failure is not None)
+
+    def test_builtin_pager_does_not_launch_for_empty_report(self):
+        with mock.patch.object(sync.subprocess, "run") as run:
+            sync.page_report("")
+        run.assert_not_called()
 
     def test_conflict_prevents_all_writes(self):
         self.source(".vimrc")

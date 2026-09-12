@@ -6,9 +6,12 @@ import contextlib
 import difflib
 import fcntl
 import hashlib
+import io
 import json
 import os
 from pathlib import Path, PurePosixPath
+import shlex
+import shutil
 import stat
 import subprocess
 import sys
@@ -210,6 +213,48 @@ def use_color(mode):
     if mode == "never":
         return False
     return sys.stdout.isatty() and not os.environ.get("NO_COLOR") and os.environ.get("TERM") != "dumb"
+
+
+def page_report(report):
+    if not report:
+        return
+    if sys.stdout.isatty() and os.environ.get("TERM") != "dumb":
+        try:
+            pager = shlex.split(os.environ.get("PAGER", "less -FRX"))
+            if pager and shutil.which(pager[0]):
+                sys.stdout.flush()
+                result = subprocess.run(pager, input=report, text=True)
+                if result.returncode == 0:
+                    return
+                print("Pager failed; printing diff directly.", file=sys.stderr)
+        except (OSError, ValueError):
+            print("Could not start pager; printing diff directly.", file=sys.stderr)
+    print(report, end="")
+
+
+def show_diff_plan(operations, conflicts, removed, color):
+    delta = shutil.which("delta") if color and sys.stdout.isatty() else None
+    if delta:
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            show_plan(operations, conflicts, removed, True)
+        report = output.getvalue()
+        if not report:
+            return
+        sys.stdout.flush()
+        try:
+            result = subprocess.run(
+                [delta, "--color-only"], input=report, text=True,
+            )
+            if result.returncode == 0:
+                return
+        except OSError:
+            pass
+        print("Could not render diff with delta; using built-in output.", file=sys.stderr)
+    output = io.StringIO()
+    with contextlib.redirect_stdout(output):
+        show_plan(operations, conflicts, removed, True, color)
+    page_report(output.getvalue())
 
 
 def show_plan(operations, conflicts, removed, show_diff, color=False):
@@ -468,8 +513,10 @@ def main():
                 subprocess.run(["git", "pull", "--ff-only"], cwd=repository, check=True)
             else:
                 operations, conflicts, removed = make_plan(repository, target, state)
-                show_plan(operations, conflicts, removed, args.command == "diff",
-                          args.command == "diff" and use_color(args.color))
+                if args.command == "diff":
+                    show_diff_plan(operations, conflicts, removed, use_color(args.color))
+                else:
+                    show_plan(operations, conflicts, removed, False)
                 if conflicts:
                     print("Resolve conflicts manually, then rerun. No files were changed.", file=sys.stderr)
                     return 1
