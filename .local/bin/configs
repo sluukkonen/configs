@@ -368,7 +368,55 @@ def check_prune_aliases(destination, active, reserved):
             raise SyncError("obsolete path aliases repository or installation state: {}".format(destination))
 
 
-def make_prune_plan(repository, target, state):
+def discover_prune_links(repository, target, reserved, conflicts):
+    directories = [target]
+    while directories:
+        directory = directories.pop()
+        try:
+            # Recheck queued directories before opening them; never traverse a
+            # parent that has become a symlink since it was discovered.
+            if directory != target:
+                check_parents(target, str(directory.relative_to(target) / "entry"))
+            if any(same_file(directory, path) for path in reserved):
+                continue
+            with os.scandir(directory) as entries:
+                for entry in entries:
+                    try:
+                        if entry.is_symlink():
+                            relative = str(Path(entry.path).relative_to(target))
+                            snapshot = {"kind": "link", "target": os.readlink(entry.path)}
+                            if obsolete_owned_link(target, relative, snapshot, repository):
+                                yield relative
+                        elif entry.is_dir(follow_symlinks=False):
+                            directories.append(Path(entry.path))
+                    except (SyncError, OSError) as error:
+                        conflicts.append("could not inspect {}: {}".format(entry.path, error))
+        except (SyncError, OSError) as error:
+            conflicts.append("could not scan {}: {}".format(directory, error))
+
+
+def obsolete_owned_link(target, relative, snapshot, repository):
+    if snapshot["kind"] != "link":
+        return False
+    link = (target / relative).parent / snapshot["target"]
+    normalized = Path(os.path.normpath(link))
+    if repository not in normalized.parents:
+        return False
+    # Missing targets cannot use owned_link's strict resolution. Still require
+    # resolution to agree with the lexical path, including any '..' traversal.
+    try:
+        if link.resolve(strict=False) != normalized:
+            return False
+    except RuntimeError:
+        return False
+    try:
+        link.stat()
+    except (FileNotFoundError, NotADirectoryError):
+        return True
+    return False
+
+
+def make_prune_plan(repository, target, state, legacy_links=False):
     sources = set(tracked_sources(repository))
     if COMMAND_PATH not in sources:
         raise SyncError("the installer requires a tracked .local/bin/configs; "
@@ -376,7 +424,10 @@ def make_prune_plan(repository, target, state):
     operations, conflicts = [], []
     active = tuple(target / relative for relative in sorted(sources))
     reserved = (repository, (target / STATE_PATH).parent)
-    for relative in sorted(set(state["files"]) - sources):
+    candidates = set(state["files"])
+    if legacy_links:
+        candidates.update(discover_prune_links(repository, target, reserved, conflicts))
+    for relative in sorted(candidates - sources):
         try:
             destination = target / relative
             for path in reserved:
@@ -384,15 +435,18 @@ def make_prune_plan(repository, target, state):
                         or destination in path.parents):
                     raise SyncError("obsolete destination overlaps repository or installation state: {}".format(relative))
             current, _ = inspect(target, relative)
+            owned = obsolete_owned_link(target, relative, current, repository)
+            if relative not in state["files"] and not owned:
+                continue
             check_prune_aliases(destination, active, reserved)
             if current["kind"] == "missing":
                 action = "FORGET"
-            elif current["kind"] == "file" and file_record(current) == state["files"][relative]:
+            elif owned or (current["kind"] == "file" and file_record(current) == state["files"][relative]):
                 action = "REMOVE"
             else:
                 raise SyncError("obsolete file was locally changed: {}".format(relative))
             operations.append({"destination": relative, "before": current, "action": action,
-                               "active": active, "reserved": reserved})
+                               "active": active, "reserved": reserved, "repository": repository})
         except (SyncError, OSError) as error:
             conflicts.append(str(error))
     return operations, conflicts
@@ -406,15 +460,19 @@ def prune_plan(target, state, operations):
             current, _ = inspect(target, relative)
             if current != operation["before"]:
                 raise SyncError("destination changed during prune: {}".format(relative))
+            if current["kind"] == "link" and not obsolete_owned_link(
+                    target, relative, current, operation["repository"]):
+                raise SyncError("symlink is no longer obsolete: {}".format(relative))
             check_prune_aliases(target / relative, operation["active"], operation["reserved"])
         except (SyncError, OSError) as error:
             conflicts.append(str(error))
             continue
         if operation["action"] == "REMOVE":
             (target / relative).unlink()
-        del state["files"][relative]
-        # Delete first: if saving fails, a retry can forget the missing file.
-        save_state(target, state)
+        if relative in state["files"]:
+            del state["files"][relative]
+            # Delete first: if saving fails, a retry can forget the missing file.
+            save_state(target, state)
         print("{} {}".format(operation["action"], relative))
     return conflicts
 
@@ -458,10 +516,11 @@ def find_repository(script, target):
     return repository.resolve()
 
 
-def run_checkout(repository, command, target, dry_run=False, color=None):
+def run_checkout(repository, command, target, dry_run=False, color=None, legacy_links=False):
     return subprocess.run(
         [sys.executable, str(repository / COMMAND_PATH), command, "--target", str(target)]
         + (["--dry-run"] if dry_run else [])
+        + (["--legacy-links"] if legacy_links else [])
         + (["--color", color] if color is not None else []),
     ).returncode
 
@@ -471,11 +530,15 @@ def main():
     parser.add_argument("command", choices=("diff", "apply", "update", "repo", "prune"))
     parser.add_argument("--target", type=Path, default=Path.home(), help="existing home directory to install into")
     parser.add_argument("--dry-run", action="store_true", help="preview prune without deleting files or changing state")
+    parser.add_argument("--legacy-links", action="store_true",
+                        help="also scan the target recursively for obsolete checkout-owned symlinks (prune only; may be slow)")
     parser.add_argument("--color", choices=("auto", "always", "never"),
                         help="color diff output (default: auto; respects NO_COLOR and TERM=dumb)")
     args = parser.parse_args()
     if args.dry_run and args.command != "prune":
         parser.error("--dry-run is only supported for prune")
+    if args.legacy_links and args.command != "prune":
+        parser.error("--legacy-links is only supported for prune")
     if args.color is not None and args.command != "diff":
         parser.error("--color is only supported for diff")
     script = Path(__file__).resolve()
@@ -493,14 +556,14 @@ def main():
         if repository in (target / STATE_PATH).parents:
             raise SyncError("installation state would overlap the repository")
         if script != repository / COMMAND_PATH:
-            return run_checkout(repository, args.command, target, args.dry_run, args.color)
+            return run_checkout(repository, args.command, target, args.dry_run, args.color, args.legacy_links)
         with installation_lock(target):
             state = load_state(target)
             if args.command == "repo":
                 print(repository)
                 return 0
             if args.command == "prune":
-                operations, conflicts = make_prune_plan(repository, target, state)
+                operations, conflicts = make_prune_plan(repository, target, state, args.legacy_links)
                 if args.dry_run:
                     for operation in operations:
                         print("WOULD {} {}".format(operation["action"], operation["destination"]))

@@ -649,11 +649,166 @@ class InstallerTests(InstallerFixture):
 
 
 class PruneTests(InstallerFixture):
+    def legacy_link(self, relative, source=None):
+        link = self.target / relative
+        link.parent.mkdir(parents=True, exist_ok=True)
+        link.symlink_to(source if source is not None else self.repository / relative)
+        return link
+
     def obsolete(self, *paths):
         for path in paths:
             self.source(path)
         self.run_sync()
         self.git("rm", "-f", "--", *paths)
+
+    def test_default_prune_does_not_scan_for_legacy_links(self):
+        self.obsolete("old")
+        link = self.legacy_link("unrecorded")
+        state = self.state()
+        with mock.patch.object(sync.os, "scandir", side_effect=AssertionError("unexpected recursive scan")):
+            operations, conflicts = sync.make_prune_plan(self.repository, self.target, state)
+        self.assertEqual(conflicts, [])
+        self.assertEqual([operation["destination"] for operation in operations], ["old"])
+        self.assertIn("REMOVE old", self.run_sync("prune"))
+        self.assertTrue(link.is_symlink())
+
+    def test_discovers_legacy_links_without_creating_state(self):
+        paths = (".codex/skills/commit/agents/openai.yaml", "old/location", "old/directory")
+        links = [self.legacy_link(paths[0])]
+        destination = self.target / paths[1]
+        links.append(self.legacy_link(paths[1], os.path.relpath(self.repository / paths[1], destination.parent)))
+        directory = self.repository / paths[2]
+        directory.mkdir(parents=True)
+        links.append(self.legacy_link(paths[2], directory))
+        directory.rmdir()
+        before = self.tree()
+        preview = self.run_sync("prune", 0, "--dry-run", "--legacy-links")
+        self.assertEqual(before, self.tree())
+        for path in paths:
+            self.assertIn("WOULD REMOVE " + path, preview)
+        output = self.run_sync("prune", 0, "--legacy-links")
+        for path, link in zip(paths, links):
+            self.assertIn("REMOVE " + path, output)
+            self.assertFalse(link.is_symlink())
+            self.assertTrue(link.parent.is_dir())
+        self.assertFalse((self.target / sync.STATE_PATH).exists())
+        before = self.tree()
+        self.assertEqual(self.run_sync("prune", 0, "--legacy-links"), "")
+        self.assertEqual(before, self.tree())
+
+    def test_legacy_links_with_state_are_removed_once(self):
+        self.obsolete("old")
+        (self.target / "old").unlink()
+        link = self.legacy_link("old")
+        self.assertEqual(self.run_sync("prune", 0, "--legacy-links").count("REMOVE old\n"), 1)
+        self.assertFalse(link.is_symlink())
+        self.assertNotIn("old", self.state()["files"])
+
+    def test_unrecorded_link_cleanup_does_not_rewrite_state(self):
+        self.run_sync()
+        state_path = self.target / sync.STATE_PATH
+        before = (state_path.read_bytes(), state_path.stat().st_mtime_ns)
+        self.legacy_link("old")
+        self.run_sync("prune", 0, "--legacy-links")
+        self.assertEqual(before, (state_path.read_bytes(), state_path.stat().st_mtime_ns))
+
+    def test_preserves_valid_unrelated_and_active_links(self):
+        source = self.source("active")
+        self.legacy_link("valid", self.source("valid-source"))
+        self.legacy_link("unrelated", self.root / "missing")
+        self.legacy_link("prefix", Path(str(self.repository) + "-other") / "missing")
+        self.legacy_link("active")
+        source.unlink()
+        before = self.tree()
+        self.assertEqual(self.run_sync("prune", 0, "--legacy-links"), "")
+        self.assertEqual(before, self.tree())
+
+    def test_does_not_follow_symlinked_directories_or_misleading_targets(self):
+        outside = self.root / "outside"
+        outside.mkdir()
+        (outside / "subdirectory").mkdir()
+        (outside / "dead").symlink_to(self.repository / "missing")
+        self.legacy_link("parent", outside)
+        (self.repository / "detour").symlink_to(outside / "subdirectory", target_is_directory=True)
+        self.legacy_link("misleading", self.repository / "detour/../missing")
+        before = self.tree()
+        self.assertEqual(self.run_sync("prune", 0, "--legacy-links"), "")
+        self.assertEqual(before, self.tree())
+        self.assertTrue((outside / "dead").is_symlink())
+
+    def test_discovery_excludes_repository_and_state_directories(self):
+        nested = self.target / "checkout"
+        self.repository.rename(nested)
+        self.repository = nested
+        self.run_sync()
+        links = [self.legacy_link("checkout/dead"), self.legacy_link(".local/state/configs/dead")]
+        self.assertEqual(self.run_sync("prune", 0, "--legacy-links"), "")
+        self.assertTrue(all(link.is_symlink() for link in links))
+
+    def test_link_changes_and_revived_targets_are_preserved(self):
+        for change in ("retarget", "replace", "revive", "parent"):
+            with self.subTest(change=change):
+                relative = change + "/dead"
+                link = self.legacy_link(relative)
+                state = sync.load_state(self.target)
+                operations, conflicts = sync.make_prune_plan(self.repository, self.target, state, legacy_links=True)
+                self.assertEqual(conflicts, [])
+                if change == "retarget":
+                    link.unlink()
+                    link.symlink_to(self.root / "missing")
+                elif change == "replace":
+                    link.unlink()
+                    link.write_text("local content")
+                elif change == "revive":
+                    source = self.repository / relative
+                    source.parent.mkdir()
+                    source.write_text("restored")
+                else:
+                    moved = self.root / "moved"
+                    link.parent.rename(moved)
+                    link.parent.symlink_to(moved, target_is_directory=True)
+                self.assertEqual(len(sync.prune_plan(self.target, state, operations)), 1)
+                self.assertTrue(link.is_symlink() or link.is_file())
+
+    def test_discovery_errors_are_reported(self):
+        with mock.patch.object(sync.os, "scandir", side_effect=PermissionError("cannot read directory")):
+            operations, conflicts = sync.make_prune_plan(self.repository, self.target, sync.load_state(self.target), legacy_links=True)
+        self.assertEqual(operations, [])
+        self.assertEqual(len(conflicts), 1)
+        self.assertIn("could not scan", conflicts[0])
+
+    def test_unreadable_link_does_not_hide_other_candidates(self):
+        blocked = self.legacy_link("blocked")
+        self.legacy_link("safe")
+        readlink = os.readlink
+
+        def read(path, *args, **kwargs):
+            if Path(path) == blocked:
+                raise PermissionError("cannot read link")
+            return readlink(path, *args, **kwargs)
+
+        with mock.patch.object(sync.os, "readlink", side_effect=read):
+            operations, conflicts = sync.make_prune_plan(self.repository, self.target, sync.load_state(self.target), legacy_links=True)
+        self.assertEqual([operation["destination"] for operation in operations], ["safe"])
+        self.assertEqual(len(conflicts), 1)
+        self.assertIn("cannot read link", conflicts[0])
+
+    def test_target_permission_errors_are_not_treated_as_broken_links(self):
+        link = self.legacy_link("blocked")
+        source = self.repository / "blocked"
+        path_stat = Path.stat
+
+        def inspect_path(path, *args, **kwargs):
+            if path == source:
+                raise PermissionError("cannot inspect target")
+            return path_stat(path, *args, **kwargs)
+
+        with mock.patch.object(Path, "stat", inspect_path):
+            operations, conflicts = sync.make_prune_plan(self.repository, self.target, sync.load_state(self.target), legacy_links=True)
+        self.assertEqual(operations, [])
+        self.assertEqual(len(conflicts), 1)
+        self.assertIn("cannot inspect target", conflicts[0])
+        self.assertTrue(link.is_symlink())
 
     def test_prunes_obsolete_files_and_forgets_missing_files(self):
         self.obsolete("old/file", "missing")
@@ -841,6 +996,7 @@ class PruneTests(InstallerFixture):
             self.assertIn("another installer", self.run_sync("prune", expected=1))
         for command in ("diff", "apply", "update", "repo"):
             self.assertIn("only supported for prune", self.run_sync(command, 2, "--dry-run"))
+            self.assertIn("--legacy-links is only supported for prune", self.run_sync(command, 2, "--legacy-links"))
         self.assertEqual(before, self.tree())
 
 
@@ -1040,6 +1196,23 @@ class ConfigCommandTests(InstallerFixture):
         self.assertEqual((other / sync.STATE_PATH).read_bytes(), state_bytes)
         self.run_command("prune", "--target", str(other))
         self.assertFalse((other / "old").exists())
+        self.assertEqual(before, self.tree())
+
+    def test_installed_prune_forwards_legacy_links_to_alternate_target(self):
+        other = self.root / "other home"
+        other.mkdir()
+        self.run_sync("apply", 0, "--target", str(other))
+        state_bytes = (other / sync.STATE_PATH).read_bytes()
+        link = other / "legacy"
+        link.symlink_to(self.repository / "deleted")
+        before = self.tree()
+        self.assertEqual(self.run_command("prune", "--target", str(other), "--dry-run"), "")
+        self.assertIn("WOULD REMOVE legacy", self.run_command(
+            "prune", "--target", str(other), "--legacy-links", "--dry-run"))
+        self.assertTrue(link.is_symlink())
+        self.run_command("prune", "--target", str(other), "--legacy-links")
+        self.assertFalse(link.is_symlink())
+        self.assertEqual((other / sync.STATE_PATH).read_bytes(), state_bytes)
         self.assertEqual(before, self.tree())
 
     def commit(self, repository, message):
