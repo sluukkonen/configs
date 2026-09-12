@@ -6,7 +6,9 @@ if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]
 fi
 
 # Environment variables
-export BAT_THEME="Catppuccin Frappe"
+export BAT_THEME=auto
+export BAT_THEME_LIGHT="Catppuccin Latte"
+export BAT_THEME_DARK="Catppuccin Frappe"
 export DOCKER_BUILDKIT=1
 export FORCE_COLOR=1
 export EDITOR=vim
