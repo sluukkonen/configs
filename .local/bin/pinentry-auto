@@ -1,0 +1,37 @@
+#!/usr/bin/env python3
+"""Choose the platform's pinentry without changing its Assuan protocol."""
+
+import os
+from pathlib import Path
+import shutil
+import sys
+
+
+def find_pinentry():
+    if sys.platform == "darwin":
+        candidates = (
+            shutil.which("pinentry-mac"),
+            "/opt/homebrew/bin/pinentry-mac",
+            "/usr/local/bin/pinentry-mac",
+        )
+    else:
+        # Preserve the distribution's pinentry choice (often an alternatives link).
+        candidates = ("/usr/bin/pinentry",)
+    for candidate in candidates:
+        if candidate and Path(candidate).is_file() and os.access(candidate, os.X_OK):
+            return candidate
+    raise FileNotFoundError("install pinentry-mac on macOS or pinentry on Linux")
+
+
+def main():
+    try:
+        program = find_pinentry()
+        # Preserve arguments, streams, environment, signals, and exit status.
+        os.execv(program, [program, *sys.argv[1:]])
+    except OSError as error:
+        print("pinentry-auto: {}".format(error), file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

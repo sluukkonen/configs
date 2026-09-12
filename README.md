@@ -175,6 +175,15 @@ on macOS). With `gpg-connect-agent` installed, it requests the FIDO PIN through
 gpg-agent's configured pinentry and caches it under an ID derived from the public
 key fingerprint. No private key material leaves the authenticator.
 
+The shared `~/.gnupg/gpg-agent.conf` selects `~/.local/bin/pinentry-auto`.
+On macOS this uses `pinentry-mac` from PATH or either standard Homebrew prefix;
+on Linux it uses `/usr/bin/pinentry`, preserving the distribution's selection.
+Install `pinentry-mac` on macOS or your distribution's pinentry package on Linux.
+This selection also applies to work OpenPGP prompts. After installing the config,
+run `gpgconf --reload gpg-agent` to pick it up. If you already have a different
+`gpg-agent.conf`, `configs apply` reports a conflict; reconcile the repository
+and home copies while retaining any other settings you need.
+
 The first signature prompts for the PIN; later signatures reuse it until the
 agent's cache expires. GnuPG's defaults are ten minutes of inactivity and a
 maximum lifetime of two hours. This uses `default-cache-ttl` and `max-cache-ttl`,
