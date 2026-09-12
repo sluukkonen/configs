@@ -15,18 +15,35 @@ require their own applications.
 From a checkout, preview and apply configuration changes:
 
 ```sh
-python3 sync_configs.py diff
-python3 sync_configs.py apply
+python3 .local/bin/configs diff
+python3 .local/bin/configs apply
 ```
 
-`./init.sh` applies the configuration and installs zgen if it is missing. It can
+On a new machine, install Python 3.8+ and Git, clone this repository, then run
+`./init.sh`. It applies the configuration and installs zgen if it is missing. It can
 also be invoked by absolute path from another working directory. It stops if
 configuration installation fails.
 
-After installation, `update-config` pulls repository changes, runs `init.sh`,
-and updates zgen and its plugins. `update-mac` runs Homebrew and macOS updates
-from the saved repository directory. These commands require the applications
-they invoke; neither command installs dependencies for the Python installer.
+After installation, start a new login shell to pick up `~/.local/bin` on PATH,
+or run `export PATH="$HOME/.local/bin:$PATH"` in your current shell. Then use:
+
+```sh
+configs diff
+configs apply
+configs update
+```
+
+`configs update` runs `git pull --ff-only` in the saved checkout, then applies
+configuration using the newly pulled installer. Divergent history or another
+pull failure stops the update before application; resolve the Git issue in the
+checkout and retry. Uncommitted tracked edits remain eligible for application if
+Git can pull successfully. If application fails after pulling, the repository
+stays updated; resolve the reported error and rerun `configs apply`.
+Routine updates do not run bootstrap or install/update zgen or its plugins.
+
+`configs repo` prints the checkout path. `update-mac` uses it to run Homebrew and
+macOS updates from that directory. Bootstrap and update commands require the
+applications they invoke; they do not provision Python, Git, or Homebrew.
 
 To edit configuration, change its file in this repository, run `diff`, then
 `apply`. The installer reads working-copy contents, including uncommitted edits
@@ -34,7 +51,7 @@ to tracked files. New files become eligible automatically after `git add`, wheth
 they are dotfiles, configuration directories, or ordinary paths such as
 `bin/new-command`.
 
-`REPOSITORY_ONLY` in `sync_configs.py` excludes repository support files and
+`REPOSITORY_ONLY` in `.local/bin/configs` excludes repository support files and
 directories. Entries match only the first path component: `README.md` and
 `tests/` are excluded, while `.codex/AGENTS.md` and documentation inside skill
 directories remain eligible. Add an exclusion when introducing new repository
@@ -43,12 +60,11 @@ Untracked files and Git's internal metadata are never selected. The installer's
 own state directory is reserved; configurations targeting it or its ancestors
 are rejected before installation.
 
-When using this migration before committing it, first run
-`git add .local/bin/configs-repo`. The installer refuses to deploy update commands
-without their tracked repository-location helper.
+Stage new files and deletions before applying working-copy changes. The installer
+requires `.local/bin/configs` to be tracked and rejects missing tracked sources.
 
 `diff` returns zero when the proposed changes are conflict-free, even if changes
-are pending. Both commands return nonzero for conflicts or errors. Text diffs
+are pending. Commands return nonzero for conflicts or errors. Text diffs
 can contain the contents of your configuration files. Binary changes are
 reported without printing their contents.
 
@@ -95,11 +111,13 @@ are conflicts. Symlinked parent directories inside the home directory are
 rejected: convert those directories to real directories or relocate their
 contents manually before using this installer.
 
-The manifest also records the checkout location, which `configs-repo` reads for
-the update commands. If you move the checkout, run its installer directly:
+The manifest also records the checkout location, which installed `configs`
+commands use regardless of the current working directory. Invoking the script
+directly in a checkout uses that checkout instead. If you move the checkout,
+run its installer directly:
 
 ```sh
-python3 /new/path/to/configs/sync_configs.py apply
+python3 /new/path/to/configs/.local/bin/configs apply
 ```
 
 This refreshes the saved location after a successful preflight. Before the first
@@ -119,11 +137,13 @@ rejected; other programs are not locked out from editing their configuration.
 
 ```sh
 python3 -m unittest discover -s tests -v
-bash -n init.sh .local/bin/update-config .local/bin/update-mac
+bash -n init.sh .local/bin/update-mac
+shellcheck init.sh .local/bin/update-mac
 ```
 
 Tests use temporary Git repositories and home directories, and stub external
-update commands. To inspect an isolated installation manually, create a temporary
-directory and pass it with `--target` to either installer command. The target
+update commands. Git update tests use local remotes without network access.
+To inspect an isolated installation manually, create a temporary
+directory and pass it with `--target` (for example, `configs diff --target /tmp/configs-home`). The target
 must already exist and must not be inside this repository. A preview never
 creates installation state or modifies the target.

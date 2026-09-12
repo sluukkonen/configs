@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Install this repository's tracked configuration files without symlinks."""
+"""Preview, apply, and update this repository's tracked configuration files."""
 
 import argparse
 import contextlib
@@ -18,10 +18,10 @@ import tempfile
 REPOSITORY_ONLY = {
     ".gitignore", ".gitattributes", ".gitmodules", ".github",
     "AGENTS.md", "README.md", "Brewfile", "Brewfile.lock.json",
-    "init.sh", "sync_configs.py", "tests", "docs", "__pycache__",
-    "create_symlink.py",  # Until its deletion is committed.
+    "init.sh", "tests", "docs", "__pycache__",
 }
 STATE_PATH = ".local/state/configs/state.json"
+COMMAND_PATH = ".local/bin/configs"
 
 
 class SyncError(Exception):
@@ -147,10 +147,9 @@ def make_plan(repository, target, state):
     conflicts = []
     destinations = set()
     sources = list(tracked_sources(repository))
-    if (any(path in sources for path in (".local/bin/update-config", ".local/bin/update-mac"))
-            and ".local/bin/configs-repo" not in sources):
-        raise SyncError("update commands require a tracked .local/bin/configs-repo; "
-                        "run git add .local/bin/configs-repo before applying")
+    if COMMAND_PATH not in sources:
+        raise SyncError("the installer requires a tracked .local/bin/configs; "
+                        "run git add .local/bin/configs before applying")
     for relative in sources:
         destination = relative
         if destination in destinations:
@@ -307,34 +306,82 @@ def installation_lock(target):
         os.close(fd)
 
 
+def find_repository(script, target):
+    candidate = script.parents[2]
+    # Installed copies use state even when the home/target is a Git repository.
+    if candidate not in (target, Path.home().resolve()) and (candidate / ".git").exists():
+        repository = candidate
+    else:
+        location = load_state(target)["repository"]
+        if not location:
+            raise SyncError("no saved repository")
+        repository = Path(location)
+    check_parents(repository, COMMAND_PATH)
+    if (not (repository / ".git").exists()
+            or not (repository / COMMAND_PATH).is_file()
+            or (repository / COMMAND_PATH).is_symlink()):
+        raise SyncError("repository moved or configs command is missing")
+    result = subprocess.run(
+        ["git", "-C", str(repository), "rev-parse", "--show-toplevel"],
+        check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+    )
+    if Path(os.fsdecode(result.stdout).rstrip("\n")).resolve() != repository.resolve():
+        raise SyncError("saved location is not a repository root")
+    return repository.resolve()
+
+
+def run_checkout(repository, command, target):
+    return subprocess.run(
+        [sys.executable, str(repository / COMMAND_PATH), command, "--target", str(target)],
+    ).returncode
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("diff", "apply"))
+    parser.add_argument("command", choices=("diff", "apply", "update", "repo"))
     parser.add_argument("--target", type=Path, default=Path.home(), help="existing home directory to install into")
     args = parser.parse_args()
-    repository = Path(__file__).resolve().parent
+    script = Path(__file__).resolve()
     target = Path(os.path.abspath(args.target.expanduser()))
     try:
         if target.is_symlink() or not target.is_dir():
             raise SyncError("target must be an existing, non-symlink directory")
         target = target.resolve()
+        try:
+            repository = find_repository(script, target)
+        except (SyncError, OSError, subprocess.CalledProcessError) as error:
+            raise SyncError("{}. Run python3 /path/to/configs/.local/bin/configs apply.".format(error)) from error
         if target == repository or repository in target.parents:
             raise SyncError("target must not be inside the repository")
         if repository in (target / STATE_PATH).parents:
             raise SyncError("installation state would overlap the repository")
+        if script != repository / COMMAND_PATH:
+            return run_checkout(repository, args.command, target)
         with installation_lock(target):
             state = load_state(target)
-            operations, conflicts, removed = make_plan(repository, target, state)
-            show_plan(operations, conflicts, removed, args.command == "diff")
-            if conflicts:
-                print("Resolve conflicts manually, then rerun. No files were changed.", file=sys.stderr)
-                return 1
-            if args.command == "apply":
-                apply_plan(repository, target, state, operations)
-                print("Configuration applied.")
+            if args.command == "repo":
+                print(repository)
+                return 0
+            if args.command == "update":
+                subprocess.run(["git", "pull", "--ff-only"], cwd=repository, check=True)
+            else:
+                operations, conflicts, removed = make_plan(repository, target, state)
+                show_plan(operations, conflicts, removed, args.command == "diff")
+                if conflicts:
+                    print("Resolve conflicts manually, then rerun. No files were changed.", file=sys.stderr)
+                    return 1
+                if args.command == "apply":
+                    apply_plan(repository, target, state, operations)
+                    print("Configuration applied.")
+        if args.command == "update":
+            result = run_checkout(repository, "apply", target)
+            if result:
+                print("Repository updated, but configuration application failed. Resolve the error and rerun configs apply.",
+                      file=sys.stderr)
+            return result
         return 0
     except (SyncError, OSError, subprocess.CalledProcessError) as error:
-        print("sync_configs: {}".format(error), file=sys.stderr)
+        print("configs: {}".format(error), file=sys.stderr)
         return 1
 
 
