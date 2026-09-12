@@ -3,8 +3,8 @@
 This repository installs regular configuration files into your home directory.
 The repository is the source of truth: edits become active after you apply them.
 Every selected file keeps its repository-relative path under your home directory;
-for example, `.codex/skills/commit/SKILL.md` installs to
-`~/.codex/skills/commit/SKILL.md`. There are no application-specific path mappings
+for example, `.agents/skills/commit/SKILL.md` installs to
+`~/.agents/skills/commit/SKILL.md`. There are no application-specific path mappings
 or cleanup rules.
 The installer requires Python 3.8 or newer and Git, without pip packages. It
 targets Linux and macOS. Individual configuration files and helper commands may

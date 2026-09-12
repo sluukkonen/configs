@@ -16,7 +16,8 @@ Use this skill when the user asks to commit current repository changes.
 5. Partition independent logical changes into a set of atomic commits when applicable. Keep inseparable changes together; do not split one logical change just to increase the commit count.
 6. Run the quickest relevant validation for each affected area. Skip expensive or unrelated checks. If validation indicates the changes should not be committed, report the failure and stop.
 7. Create each commit with a sufficiently detailed message:
-   - Use a concise imperative subject.
+   - Use a concise imperative subject on one line, aiming for 50 characters of summary text, excluding conventional commit or subsystem prefixes (e.g. `feat:`, `fix(scope):`, or `zsh:`). Allow up to 72 characters for the full subject, including any prefix, when useful.
+   - Separate the body with a blank line and wrap body prose at 72 characters, preserving long URLs and code.
    - For non-trivial changes, add a body explaining what changed and, especially, why it is necessary, including relevant constraints or trade-offs.
    - Keep each message accurate to its atomic commit and follow the repository's existing convention when apparent.
 8. Stage only the intended changes for the current commit and create the planned commit(s). Never amend an existing commit, force-push, reset, clean, or discard changes.
