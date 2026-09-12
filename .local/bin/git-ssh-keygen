@@ -1,91 +1,227 @@
-#!/bin/sh
+#!/usr/bin/env python3
+"""Git SSH signing with gpg-agent PIN caching and an SSH askpass adapter."""
 
-# Git's SSH signing path should use the key handle and authenticator directly.
-# Desktop SSH agents (for example GNOME Keyring) may reject FIDO signatures.
-unset SSH_AUTH_SOCK
+import hashlib
+import os
+from pathlib import Path
+import re
+import shutil
+import subprocess
+import sys
+from urllib.parse import quote, unquote_to_bytes
+import uuid
 
-if [ "${GIT_SSH_KEYGEN_PINENTRY_MODE:-}" = 1 ]; then
-  prompt=${1:-SSH signing request}
-  escaped_prompt=$(printf '%s' "$prompt" | sed 's/%/%25/g')
 
-  if [ "${SSH_ASKPASS_PROMPT:-}" = confirm ]; then
-    {
-      printf '%s\n' 'SETTITLE Git SSH signing'
-      printf 'SETDESC %s\n' "$escaped_prompt"
-      printf '%s\n' CONFIRM BYE
-    } | "$GIT_SSH_KEYGEN_PINENTRY_PROGRAM" |
-      awk '
-        /^OK([[:space:]]|$)/ { ok_count++ }
-        /^ERR / { failed = 1 }
-        END { exit(failed || ok_count < 4) }
-      '
-  else
-    {
-      printf '%s\n' 'SETTITLE Git SSH signing'
-      printf 'SETDESC %s\n' "$escaped_prompt"
-      printf '%s\n' 'SETPROMPT PIN:' GETPIN BYE
-    } | "$GIT_SSH_KEYGEN_PINENTRY_PROGRAM" |
-      awk '
-        /^D / {
-          sub(/^D /, "")
-          print
-          received_pin = 1
-        }
-        /^ERR / { failed = 1 }
-        END { exit(failed || !received_pin) }
-      '
-  fi
-  exit $?
-fi
+PREFIX = "GIT_SSH_KEYGEN_"
+PIN_PROMPT = re.compile(r"Enter PIN for (?:ED25519-SK|ECDSA-SK) key:\s*\Z")
+CACHE_ID = re.compile(r"git-ssh-pin:[0-9a-f]{32}\Z")
 
-previous_argument=
-is_signing=false
-for argument in "$@"; do
-  if [ "$previous_argument" = -Y ] && [ "$argument" = sign ]; then
-    is_signing=true
-    break
-  fi
-  previous_argument=$argument
-done
 
-# ssh-keygen's FIDO signing path does not use GnuPG pinentry directly.  When
-# invoked from a desktop session, adapt an installed graphical pinentry to the
-# SSH askpass protocol.  Otherwise leave ssh-keygen's normal terminal handling
-# unchanged.
-if [ "$is_signing" = true ] && { [ -n "${DISPLAY:-}" ] || [ -n "${WAYLAND_DISPLAY:-}" ]; }; then
-  for pinentry_candidate in \
-    pinentry-gnome3 \
-    pinentry-mac \
-    pinentry-qt \
-    pinentry-gtk-2
-  do
-    if pinentry_program=$(command -v "$pinentry_candidate" 2>/dev/null); then
-      export SSH_ASKPASS="$0"
-      export SSH_ASKPASS_REQUIRE=force
-      export GIT_SSH_KEYGEN_PINENTRY_MODE=1
-      export GIT_SSH_KEYGEN_PINENTRY_PROGRAM="$pinentry_program"
-      break
-    fi
-  done
-fi
+class PromptError(Exception):
+    pass
 
-if [ "$(uname -s)" = Darwin ]; then
-  if command -v brew >/dev/null 2>&1; then
-    brew_prefix=$(brew --prefix openssh 2>/dev/null || true)
-    if [ -n "$brew_prefix" ] && [ -x "$brew_prefix/bin/ssh-keygen" ]; then
-      exec "$brew_prefix/bin/ssh-keygen" "$@"
-    fi
-  fi
-  for candidate in \
-    /opt/homebrew/opt/openssh/bin/ssh-keygen \
-    /usr/local/opt/openssh/bin/ssh-keygen \
-    /opt/homebrew/bin/ssh-keygen \
-    /usr/local/bin/ssh-keygen
-  do
-    if [ -x "$candidate" ]; then
-      exec "$candidate" "$@"
-    fi
-  done
-fi
 
-exec ssh-keygen "$@"
+def trace(event):
+    if os.environ.get(PREFIX + "TRACE") == "1":
+        identifier = os.environ.get(PREFIX + "INVOCATION", "")
+        if not re.fullmatch(r"[0-9a-f]{12}", identifier):
+            identifier = "unknown"
+        # Events contain only categories and status, never prompts or responses.
+        print("git-ssh-keygen[{}] {}".format(identifier, event), file=sys.stderr)
+
+
+def escape(text):
+    return quote(text, safe="", encoding="utf-8", errors="replace")
+
+
+def assuan(program, commands, agent=False):
+    """Return data only after every command has completed successfully."""
+    arguments = [program, "--no-history"] if agent else [program]
+    script = "\n".join(commands + (["/bye"] if agent else [])) + "\n"
+    result = subprocess.run(arguments, input=script.encode(), capture_output=True)
+    if result.returncode:
+        raise PromptError("prompt service failed or was cancelled")
+    data = []
+    completed = 0
+    for line in result.stdout.split(b"\n"):
+        if line == b"OK" or line.startswith(b"OK "):
+            completed += 1
+        elif line == b"D" or line.startswith(b"D "):
+            data.append(line[2:])
+        elif not line or line.startswith((b"#", b"S ")):
+            continue
+        else:
+            # Never include raw service output: it may contain a secret.
+            raise PromptError("prompt service failed or returned an invalid response")
+    if completed != len(commands) + (0 if agent else 1):
+        raise PromptError("incomplete prompt service response")
+    encoded = b"".join(data)
+    if re.search(rb"%(?![0-9a-fA-F]{2})", encoded):
+        raise PromptError("invalid prompt response encoding")
+    secret = unquote_to_bytes(encoded)
+    if any(char in secret for char in (b"\0", b"\r", b"\n")) or len(secret) > 1023:
+        raise PromptError("prompt response cannot be represented by SSH askpass")
+    return secret
+
+
+def askpass(prompt):
+    hint = os.environ.get("SSH_ASKPASS_PROMPT", "")
+    kind = ("notification" if hint == "none" else "confirmation" if hint == "confirm"
+            else "pin" if PIN_PROMPT.fullmatch(prompt)
+            else "passphrase" if prompt.startswith("Enter passphrase") else "secret")
+    trace("prompt={} hint={}".format(kind, hint if hint in ("none", "confirm") else "secret"))
+    if kind == "notification":
+        print("Touch your security key to sign.", file=sys.stderr)
+        return 0
+
+    program = os.environ.get(PREFIX + "PROMPT_PROGRAM")
+    backend = os.environ.get(PREFIX + "BACKEND")
+    if not program or backend not in ("agent", "pinentry"):
+        raise PromptError("missing prompt service")
+    label = "PIN:" if kind == "pin" else "Passphrase:" if kind == "passphrase" else "Secret:"
+    if backend == "agent":
+        cache_id = os.environ.get(PREFIX + "CACHE_ID", "")
+        if kind != "pin" or not CACHE_ID.fullmatch(cache_id):
+            cache_id = "X"  # Unknown keys and non-PIN secrets are never cached.
+        if kind == "confirmation":
+            commands = ["GET_CONFIRMATION " + escape(prompt)]
+        else:
+            commands = ["GET_PASSPHRASE --data {} X {} {}".format(cache_id, escape(label), escape(prompt))]
+        secret = assuan(program, commands, agent=True)
+    else:
+        commands = ["SETTITLE Git SSH signing", "SETDESC " + escape(prompt)]
+        if kind == "confirmation":
+            commands.append("CONFIRM")
+        else:
+            commands.extend(["SETPROMPT " + escape(label), "GETPIN"])
+        secret = assuan(program, commands + ["BYE"])
+    if kind != "confirmation":
+        if not secret:
+            raise PromptError("empty secret response")
+        sys.stdout.buffer.write(secret + b"\n")
+        sys.stdout.buffer.flush()
+    trace("prompt-complete={}".format(kind))
+    return 0
+
+
+def executable(path):
+    return Path(path).is_file() and os.access(path, os.X_OK)
+
+
+def find_keygen():
+    if sys.platform == "darwin":
+        brew = shutil.which("brew")
+        if brew:
+            result = subprocess.run([brew, "--prefix", "openssh"], capture_output=True)
+            if result.returncode == 0:
+                candidate = Path(os.fsdecode(result.stdout).strip()) / "bin/ssh-keygen"
+                if executable(candidate):
+                    return str(candidate)
+        for candidate in (
+            "/opt/homebrew/opt/openssh/bin/ssh-keygen", "/usr/local/opt/openssh/bin/ssh-keygen",
+            "/opt/homebrew/bin/ssh-keygen", "/usr/local/bin/ssh-keygen",
+        ):
+            if executable(candidate):
+                return candidate
+    keygen = shutil.which("ssh-keygen")
+    if not keygen:
+        raise PromptError("ssh-keygen is required")
+    return keygen
+
+
+def option_value(arguments, option):
+    for index, argument in enumerate(arguments[:-1]):
+        if argument == option:
+            return arguments[index + 1]
+    return None
+
+
+def key_cache_id(keygen, arguments):
+    filename = option_value(arguments, "-f")
+    if not filename:
+        return ""
+    # -l reads public metadata without requesting a passphrase or a hardware PIN.
+    result = subprocess.run([keygen, "-l", "-E", "sha256", "-f", os.path.expanduser(filename)],
+                            stdin=subprocess.DEVNULL, capture_output=True)
+    fields = result.stdout.split()
+    if (result.returncode or len(fields) < 3
+            or not re.fullmatch(rb"SHA256:[A-Za-z0-9+/]+", fields[1])
+            or fields[-1] not in (b"(ED25519-SK)", b"(ECDSA-SK)")):
+        return ""
+    return "git-ssh-pin:" + hashlib.sha256(fields[1]).hexdigest()[:32]
+
+
+def configure_prompt():
+    agent = shutil.which("gpg-connect-agent")
+    if agent:
+        backend, program = "agent", agent
+    elif sys.platform == "darwin" or os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"):
+        program = next((path for name in ("pinentry-mac", "pinentry-gnome3", "pinentry-qt", "pinentry-gtk-2")
+                        for path in [shutil.which(name)] if path), None)
+        backend = "pinentry"
+    else:
+        program, backend = None, None
+    if program:
+        os.environ.update({
+            "SSH_ASKPASS": str(Path(__file__).resolve()), "SSH_ASKPASS_REQUIRE": "force",
+            PREFIX + "ASKPASS": "1", PREFIX + "BACKEND": backend,
+            PREFIX + "PROMPT_PROGRAM": program,
+        })
+        # Prefer a real terminal path. /dev/tty would refer to the detached
+        # agent's terminal, not ours. When Git pipes every stream, preserve the
+        # shell's GPG_TTY; gpg-connect-agent forwards it and display/locale settings.
+        for fd in (0, 1, 2):
+            try:
+                if os.isatty(fd):
+                    os.environ["GPG_TTY"] = os.ttyname(fd)
+                    break
+            except OSError:
+                pass
+    return agent
+
+
+def main():
+    # Desktop agents may reject FIDO signatures; use the authenticator directly.
+    os.environ.pop("SSH_AUTH_SOCK", None)
+    if os.environ.get(PREFIX + "ASKPASS") == "1":
+        try:
+            return askpass(sys.argv[1] if len(sys.argv) > 1 else "SSH signing request")
+        except (PromptError, OSError):
+            trace("prompt-failed")
+            print("git-ssh-keygen: PIN/passphrase request failed or was cancelled.", file=sys.stderr)
+            return 1
+
+    arguments = sys.argv[1:]
+    keygen = find_keygen()
+    if option_value(arguments, "-Y") != "sign":
+        os.execv(keygen, [keygen, *arguments])
+    os.environ[PREFIX + "INVOCATION"] = uuid.uuid4().hex[:12]
+    trace("sign-start")
+    agent = configure_prompt()
+    cache_id = key_cache_id(keygen, arguments) if agent else ""
+    os.environ[PREFIX + "CACHE_ID"] = cache_id
+    # A hint inherited from another askpass invocation must not reclassify PINs.
+    os.environ.pop("SSH_ASKPASS_PROMPT", None)
+    status = 1
+    try:
+        status = subprocess.run([keygen, *arguments]).returncode
+        return status if status >= 0 else 128 - status
+    finally:
+        trace("sign-exit={}".format(status))
+        if status != 0 and cache_id:
+            try:
+                assuan(agent, ["CLEAR_PASSPHRASE " + cache_id], agent=True)
+                trace("pin-cache-cleared")
+            except (PromptError, OSError):
+                print("git-ssh-keygen: failed to clear cached PIN; it remains subject to agent expiry.", file=sys.stderr)
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except KeyboardInterrupt:
+        sys.exit(130)
+    except (PromptError, OSError) as error:
+        # Do not print subprocess output or arguments containing secret data.
+        print("git-ssh-keygen: {}".format(error), file=sys.stderr)
+        sys.exit(1)

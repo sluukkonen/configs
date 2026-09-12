@@ -167,6 +167,52 @@ write failed. Conflicting edits made after a partial failure still require manua
 resolution. Concurrent installer runs against the same home directory are
 rejected; other programs are not locked out from editing their configuration.
 
+## Git SSH signing
+
+Personal commits use the FIDO security key through `git-ssh-keygen`. The wrapper
+requires Python 3.8+ and OpenSSH with FIDO support (Homebrew OpenSSH is preferred
+on macOS). With `gpg-connect-agent` installed, it requests the FIDO PIN through
+gpg-agent's configured pinentry and caches it under an ID derived from the public
+key fingerprint. No private key material leaves the authenticator.
+
+The first signature prompts for the PIN; later signatures reuse it until the
+agent's cache expires. GnuPG's defaults are ten minutes of inactivity and a
+maximum lifetime of two hours. This uses `default-cache-ttl` and `max-cache-ttl`,
+not their `-ssh` variants. The wrapper does not change these settings or the
+OpenPGP signing configuration used under `~/Work`. The hardware still enforces
+its touch requirement for every signature.
+
+PINs are passed through pipes and held in process/agent memory, never stored in
+files, environment variables, command arguments, or trace output by the wrapper.
+Key-file passphrases and unrecognized secret requests are not cached. If the
+key fingerprint cannot be identified, the PIN is also requested without caching.
+Without GnuPG, graphical pinentry is used when available, otherwise OpenSSH's
+native prompting remains in place. Agent errors or cancellation fail the current
+signing attempt without opening a fallback dialog. Failed signatures clear that
+key's cached PIN and are not automatically retried.
+
+After applying the wrapper, test the hardware flow by running this command twice
+from a terminal (it signs test data without changing Git history):
+
+```sh
+printf 'PIN cache check\n' | ~/.local/bin/git-ssh-keygen -Y sign -n git -f ~/.ssh/id_ed25519_sk_git
+```
+
+Expect one PIN entry on the first run, no PIN entry on the second, and a touch
+for each signature. The dialog is selected by your existing gpg-agent setup; on
+macOS it works without DISPLAY. Linux terminal/display settings are forwarded
+to gpg-agent so it can use the current session.
+
+To investigate repeated prompts, enable metadata-only tracing for a normal
+commit or rebase, for example `GIT_SSH_KEYGEN_TRACE=1 git rebase <upstream>`.
+Each signing call gets an invocation ID. Two `prompt=pin` events with the same
+ID indicate two PIN requests in one signing call; separate `sign-start` IDs
+indicate separate signing calls. `prompt=passphrase` identifies a key-file
+passphrase, while `prompt=notification hint=none` is a touch notification and
+never opens a secret-entry dialog. Traces contain no raw prompts, secrets,
+signing payloads, or complete command arguments. The cause of the reported
+double prompt during rebase still requires a hardware trace to confirm.
+
 ## Test
 
 ```sh
@@ -177,6 +223,9 @@ shellcheck init.sh .local/bin/update-mac
 
 Tests use temporary Git repositories and home directories, and stub external
 update commands. Git update tests use local remotes without network access.
+Signing tests use fake signers and prompt services. When GnuPG is available, an
+additional test runs a separate agent with a fake pinentry in a temporary home
+to verify caching, expiry, and clearing without using your keys or normal cache.
 To inspect an isolated installation manually, create a temporary
 directory and pass it with `--target` (for example, `configs diff --target /tmp/configs-home`). The target
 must already exist and must not be inside this repository. A preview never
