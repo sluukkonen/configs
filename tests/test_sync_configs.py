@@ -52,10 +52,10 @@ class InstallerFixture(unittest.TestCase):
         path.chmod(mode)
         return path
 
-    def run_sync(self, command="apply", expected=0):
+    def run_sync(self, command="apply", expected=0, *options):
         result = subprocess.run(
             [sys.executable, str(self.repository / COMMAND_PATH), command,
-             "--target", str(self.target)],
+             "--target", str(self.target), *options],
             text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
         )
         self.assertEqual(result.returncode, expected, result.stdout + result.stderr)
@@ -506,6 +506,202 @@ class InstallerTests(InstallerFixture):
         self.assertEqual(before, self.tree())
 
 
+class PruneTests(InstallerFixture):
+    def obsolete(self, *paths):
+        for path in paths:
+            self.source(path)
+        self.run_sync()
+        self.git("rm", "-f", "--", *paths)
+
+    def test_prunes_obsolete_files_and_forgets_missing_files(self):
+        self.obsolete("old/file", "missing")
+        (self.target / "missing").unlink()
+        self.installed("unmanaged")
+        before = self.tree()
+        output = self.run_sync("prune", 0, "--dry-run")
+        self.assertIn("WOULD REMOVE old/file", output)
+        self.assertIn("WOULD FORGET missing", output)
+        self.assertEqual(before, self.tree())
+        output = self.run_sync("prune")
+        self.assertIn("REMOVE old/file", output)
+        self.assertIn("FORGET missing", output)
+        self.assertTrue((self.target / "old").is_dir())
+        self.assertTrue((self.target / "unmanaged").exists())
+        self.assertEqual(set(self.state()["files"]), {COMMAND_PATH})
+        self.assertFalse((self.target / "old/file").exists())
+        before = self.tree()
+        self.run_sync("prune")
+        self.assertEqual(before, self.tree())
+        self.assertNotIn("NO LONGER SELECTED", self.run_sync("diff"))
+
+    def test_conflicts_do_not_block_safe_files_or_forget_their_baselines(self):
+        self.obsolete("content", "mode", "safe", "link", "directory")
+        (self.target / "content").write_text("edited\n")
+        (self.target / "mode").chmod(0o600)
+        (self.target / "link").unlink()
+        (self.target / "link").symlink_to(self.target / "content")
+        (self.target / "directory").unlink()
+        (self.target / "directory").mkdir()
+        state = self.state()
+        before = self.tree()
+        self.run_sync("prune", 1, "--dry-run")
+        self.assertEqual(before, self.tree())
+        self.run_sync("prune", expected=1)
+        self.assertFalse((self.target / "safe").exists())
+        for path in ("content", "mode", "link", "directory"):
+            self.assertEqual(before[path], self.tree()[path])
+            self.assertEqual(state["files"][path], self.state()["files"][path])
+
+    def test_case_only_rename_preserves_active_configuration(self):
+        self.source("old")
+        self.run_sync()
+        if not (self.target / "OLD").exists():
+            self.skipTest("requires a case-insensitive filesystem")
+        self.git("mv", "old", "temporary-name")
+        self.git("mv", "temporary-name", "OLD")
+        self.run_sync()
+        before = self.tree()
+        self.assertIn("aliases an active configuration", self.run_sync("prune", 1, "--dry-run"))
+        self.assertEqual(before, self.tree())
+        self.assertIn("aliases an active configuration", self.run_sync("prune", expected=1))
+        self.assertEqual(before, self.tree())
+        self.run_sync()
+        self.assertEqual((self.target / "OLD").read_text(), "original\n")
+
+    def test_filesystem_alias_is_preserved_on_any_filesystem(self):
+        self.obsolete("old", "safe")
+        self.source("active")
+        os.link(self.target / "old", self.target / "active")
+        self.run_sync()
+        self.assertIn("aliases an active configuration", self.run_sync("prune", expected=1))
+        self.assertTrue((self.target / "old").exists())
+        self.assertTrue((self.target / "active").exists())
+        self.assertFalse((self.target / "safe").exists())
+
+    def test_alias_created_after_planning_is_preserved(self):
+        self.obsolete("old")
+        self.source("active")
+        state = self.state()
+        operations, conflicts = sync.make_prune_plan(self.repository, self.target, state)
+        self.assertEqual(conflicts, [])
+        os.link(self.target / "old", self.target / "active")
+        self.assertIn("aliases an active configuration", sync.prune_plan(self.target, state, operations)[0])
+        self.assertTrue((self.target / "old").exists())
+
+    def test_case_alias_of_reserved_directory_is_preserved(self):
+        self.run_sync()
+        if not (self.target / ".LOCAL").exists():
+            self.skipTest("requires a case-insensitive filesystem")
+        path = ".LOCAL/STATE/CONFIGS/obsolete"
+        self.installed(path)
+        state = self.state()
+        snapshot, _ = sync.inspect(self.target, path)
+        state["files"][path] = sync.file_record(snapshot)
+        sync.save_state(self.target, state)
+        before = self.tree()
+        self.assertIn("aliases repository or installation state", self.run_sync("prune", expected=1))
+        self.assertEqual(before, self.tree())
+
+    def test_newly_excluded_file_can_be_pruned_despite_active_conflict(self):
+        self.source("support/file")
+        self.source()
+        self.run_sync()
+        installer = self.repository / COMMAND_PATH
+        installer.write_text(installer.read_text().replace("REPOSITORY_ONLY = {", 'REPOSITORY_ONLY = {"support",', 1))
+        (self.target / ".zshrc").write_text("active local edit\n")
+        self.run_sync("prune")
+        self.assertFalse((self.target / "support/file").exists())
+        self.assertEqual((self.target / ".zshrc").read_text(), "active local edit\n")
+        self.assertIn(".zshrc", self.state()["files"])
+
+    def test_symlinked_parent_is_preserved(self):
+        self.obsolete("old/file")
+        outside = self.root / "outside"
+        (self.target / "old").rename(outside)
+        (self.target / "old").symlink_to(outside, target_is_directory=True)
+        self.assertIn("symlinked parent", self.run_sync("prune", expected=1))
+        self.assertTrue((outside / "file").exists())
+        self.assertIn("old/file", self.state()["files"])
+
+    def test_reserved_paths_are_preserved(self):
+        nested = self.target / "checkout"
+        self.repository.rename(nested)
+        self.repository = nested
+        self.run_sync()
+        state = self.state()
+        for path in ("checkout", "checkout/.git/config", ".local", ".local/state", sync.STATE_PATH):
+            state["files"][path] = {"sha256": "0" * 64, "mode": 0o644}
+        sync.save_state(self.target, state)
+        before = self.tree()
+        self.assertIn("overlaps", self.run_sync("prune", expected=1))
+        self.assertEqual(before, self.tree())
+
+    def test_invalid_selection_and_corrupt_state_abort_before_deleting(self):
+        self.obsolete("old")
+        self.git("rm", "--cached", "--", COMMAND_PATH)
+        before = self.tree()
+        self.assertIn("tracked .local/bin/configs", self.run_sync("prune", expected=1))
+        self.assertEqual(before, self.tree())
+        self.git("add", "--", COMMAND_PATH)
+        (self.target / sync.STATE_PATH).write_text("{")
+        before = self.tree()
+        self.assertIn("invalid installation state", self.run_sync("prune", expected=1))
+        self.assertEqual(before, self.tree())
+
+    def test_missing_state_and_no_candidates_do_not_create_state(self):
+        before = self.tree()
+        self.run_sync("prune")
+        self.assertEqual(before, self.tree())
+
+    def test_prune_rechecks_removed_and_missing_destinations(self):
+        self.obsolete("changed", "missing", "safe")
+        (self.target / "missing").unlink()
+        state = self.state()
+        operations, conflicts = sync.make_prune_plan(self.repository, self.target, state)
+        self.assertEqual(conflicts, [])
+        (self.target / "changed").write_text("new edit\n")
+        (self.target / "missing").write_text("new file\n")
+        conflicts = sync.prune_plan(self.target, state, operations)
+        self.assertEqual(len(conflicts), 2)
+        self.assertFalse((self.target / "safe").exists())
+        self.assertEqual((self.target / "changed").read_text(), "new edit\n")
+        self.assertEqual((self.target / "missing").read_text(), "new file\n")
+        self.assertIn("changed", self.state()["files"])
+        self.assertIn("missing", self.state()["files"])
+
+    def test_deletion_failure_retains_baseline(self):
+        self.obsolete("old")
+        state = self.state()
+        operations, _ = sync.make_prune_plan(self.repository, self.target, state)
+        before = self.tree()
+        with mock.patch.object(Path, "unlink", side_effect=OSError("disk error")):
+            with self.assertRaises(OSError):
+                sync.prune_plan(self.target, state, operations)
+        self.assertEqual(before, self.tree())
+
+    def test_failed_state_write_after_deletion_is_recoverable(self):
+        self.obsolete("a", "b")
+        state = self.state()
+        operations, _ = sync.make_prune_plan(self.repository, self.target, state)
+        with mock.patch.object(sync, "save_state", side_effect=OSError("disk error")):
+            with self.assertRaises(OSError):
+                sync.prune_plan(self.target, state, operations)
+        self.assertFalse((self.target / "a").exists())
+        self.assertTrue((self.target / "b").exists())
+        self.assertIn("a", self.state()["files"])
+        self.assertIn("FORGET a", self.run_sync("prune"))
+        self.assertEqual(set(self.state()["files"]), {COMMAND_PATH})
+
+    def test_lock_and_dry_run_argument_validation(self):
+        self.obsolete("old")
+        before = self.tree()
+        with sync.installation_lock(self.target):
+            self.assertIn("another installer", self.run_sync("prune", expected=1))
+        for command in ("diff", "apply", "update", "repo"):
+            self.assertIn("only supported for prune", self.run_sync(command, 2, "--dry-run"))
+        self.assertEqual(before, self.tree())
+
+
 class UpdateCommandTests(InstallerFixture):
     def install_commands(self):
         for name in ("configs", "update-mac"):
@@ -682,6 +878,22 @@ class ConfigCommandTests(InstallerFixture):
 
     def test_explicit_command_required(self):
         self.assertIn("usage:", self.run_command(expected=2))
+
+    def test_installed_prune_forwards_preview_and_alternate_target(self):
+        other = self.root / "other home"
+        other.mkdir()
+        self.source("old")
+        subprocess.run([sys.executable, str(self.repository / COMMAND_PATH), "apply", "--target", str(other)],
+                       check=True, capture_output=True)
+        self.git("rm", "-f", "--", "old")
+        before = self.tree()
+        state_bytes = (other / sync.STATE_PATH).read_bytes()
+        self.assertIn("WOULD REMOVE old", self.run_command("prune", "--target", str(other), "--dry-run"))
+        self.assertTrue((other / "old").exists())
+        self.assertEqual((other / sync.STATE_PATH).read_bytes(), state_bytes)
+        self.run_command("prune", "--target", str(other))
+        self.assertFalse((other / "old").exists())
+        self.assertEqual(before, self.tree())
 
     def commit(self, repository, message):
         subprocess.run(

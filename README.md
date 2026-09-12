@@ -97,11 +97,39 @@ directory permissions are not changed. Special file types and special permission
 bits are unsupported.
 
 Files removed from the repository or newly excluded are reported as no longer
-selected and left installed, with their manifest entries retained. Review and
-remove obsolete installed files yourself.
-If the same path is later reintroduced, its previous baseline still protects
-local changes. No automatic deletion, templating, imports, or background sync is
-provided.
+selected and left installed by `apply` and `update`. To clean them up explicitly:
+
+```sh
+configs prune --dry-run
+configs prune
+```
+
+Prune deletes obsolete regular files only when their contents and permissions
+still match the recorded baseline. It forgets state entries for successfully
+deleted or already-missing files, so they stop appearing in subsequent reports.
+Directories and unmanaged files are left untouched; empty directories are not
+removed. Deletions are permanent, without a backup or confirmation prompt.
+
+Locally changed obsolete files, symlinks, and unsafe paths are preserved and
+reported as conflicts. Safe candidates are still pruned, but the command returns
+nonzero when anything needs attention. Filesystem aliases of active configurations
+are also preserved, including case-only renames on case-insensitive filesystems
+and hard links. Their obsolete state entries remain; do not move or delete an
+alias to resolve the report, since it may refer to the active file itself.
+For locally edited obsolete files, resolve conflicts manually: restore the
+recorded file to allow deletion, or move it aside and rerun prune to forget it.
+Active configuration conflicts do not prevent obsolete-file cleanup.
+
+`--dry-run` reports proposed deletions, forgotten entries, and conflicts without
+changing files or state. It is supported only for `prune`; `--target` selects an
+alternate installation as with the other commands. Prune saves progress after
+each removal and stops on deletion or state-write errors. If a file was deleted
+before saving its state failed, rerunning prune forgets the missing file.
+
+Preserved obsolete files retain their baselines, protecting local changes if
+their paths are reintroduced. After pruning, a reintroduced path is treated as
+a new installation. No automatic pruning, templating, imports, or background
+sync is provided.
 
 ## Symlink migration and recovery
 

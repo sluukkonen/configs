@@ -231,6 +231,8 @@ def show_plan(operations, conflicts, removed, show_diff):
                 operation["before"]["mode"], operation["record"]["mode"]))
     for relative in removed:
         print("NO LONGER SELECTED (left installed) {}".format(relative))
+    if removed:
+        print("Run configs prune --dry-run to preview obsolete-file cleanup.")
     for conflict in conflicts:
         print("CONFLICT " + conflict)
 
@@ -291,6 +293,74 @@ def apply_plan(repository, target, state, operations):
         save_state(target, state)
 
 
+def same_file(left, right):
+    try:
+        return left.samefile(right)
+    except (FileNotFoundError, NotADirectoryError):
+        return False
+
+
+def check_prune_aliases(destination, active, reserved):
+    for path in active:
+        if same_file(destination, path):
+            raise SyncError("obsolete path aliases an active configuration: {}".format(destination))
+    # Parent aliases can also hide a destination inside a protected directory.
+    for parent in (destination, *destination.parents):
+        if any(same_file(parent, path) for path in reserved):
+            raise SyncError("obsolete path aliases repository or installation state: {}".format(destination))
+
+
+def make_prune_plan(repository, target, state):
+    sources = set(tracked_sources(repository))
+    if COMMAND_PATH not in sources:
+        raise SyncError("the installer requires a tracked .local/bin/configs; "
+                        "run git add .local/bin/configs before pruning")
+    operations, conflicts = [], []
+    active = tuple(target / relative for relative in sorted(sources))
+    reserved = (repository, (target / STATE_PATH).parent)
+    for relative in sorted(set(state["files"]) - sources):
+        try:
+            destination = target / relative
+            for path in reserved:
+                if (destination == path or path in destination.parents
+                        or destination in path.parents):
+                    raise SyncError("obsolete destination overlaps repository or installation state: {}".format(relative))
+            current, _ = inspect(target, relative)
+            check_prune_aliases(destination, active, reserved)
+            if current["kind"] == "missing":
+                action = "FORGET"
+            elif current["kind"] == "file" and file_record(current) == state["files"][relative]:
+                action = "REMOVE"
+            else:
+                raise SyncError("obsolete file was locally changed: {}".format(relative))
+            operations.append({"destination": relative, "before": current, "action": action,
+                               "active": active, "reserved": reserved})
+        except (SyncError, OSError) as error:
+            conflicts.append(str(error))
+    return operations, conflicts
+
+
+def prune_plan(target, state, operations):
+    conflicts = []
+    for operation in operations:
+        relative = operation["destination"]
+        try:
+            current, _ = inspect(target, relative)
+            if current != operation["before"]:
+                raise SyncError("destination changed during prune: {}".format(relative))
+            check_prune_aliases(target / relative, operation["active"], operation["reserved"])
+        except (SyncError, OSError) as error:
+            conflicts.append(str(error))
+            continue
+        if operation["action"] == "REMOVE":
+            (target / relative).unlink()
+        del state["files"][relative]
+        # Delete first: if saving fails, a retry can forget the missing file.
+        save_state(target, state)
+        print("{} {}".format(operation["action"], relative))
+    return conflicts
+
+
 @contextlib.contextmanager
 def installation_lock(target):
     # Lock the existing home directory without creating a lock file, including
@@ -330,17 +400,21 @@ def find_repository(script, target):
     return repository.resolve()
 
 
-def run_checkout(repository, command, target):
+def run_checkout(repository, command, target, dry_run=False):
     return subprocess.run(
-        [sys.executable, str(repository / COMMAND_PATH), command, "--target", str(target)],
+        [sys.executable, str(repository / COMMAND_PATH), command, "--target", str(target)]
+        + (["--dry-run"] if dry_run else []),
     ).returncode
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("diff", "apply", "update", "repo"))
+    parser.add_argument("command", choices=("diff", "apply", "update", "repo", "prune"))
     parser.add_argument("--target", type=Path, default=Path.home(), help="existing home directory to install into")
+    parser.add_argument("--dry-run", action="store_true", help="preview prune without deleting files or changing state")
     args = parser.parse_args()
+    if args.dry_run and args.command != "prune":
+        parser.error("--dry-run is only supported for prune")
     script = Path(__file__).resolve()
     target = Path(os.path.abspath(args.target.expanduser()))
     try:
@@ -356,12 +430,22 @@ def main():
         if repository in (target / STATE_PATH).parents:
             raise SyncError("installation state would overlap the repository")
         if script != repository / COMMAND_PATH:
-            return run_checkout(repository, args.command, target)
+            return run_checkout(repository, args.command, target, args.dry_run)
         with installation_lock(target):
             state = load_state(target)
             if args.command == "repo":
                 print(repository)
                 return 0
+            if args.command == "prune":
+                operations, conflicts = make_prune_plan(repository, target, state)
+                if args.dry_run:
+                    for operation in operations:
+                        print("WOULD {} {}".format(operation["action"], operation["destination"]))
+                else:
+                    conflicts.extend(prune_plan(target, state, operations))
+                for conflict in conflicts:
+                    print("CONFLICT " + conflict)
+                return 1 if conflicts else 0
             if args.command == "update":
                 subprocess.run(["git", "pull", "--ff-only"], cwd=repository, check=True)
             else:
