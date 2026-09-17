@@ -1,6 +1,6 @@
 ---
 name: commit
-description: Review current Git changes and create appropriately scoped, atomic commits with detailed rationale-rich messages.
+description: Review current Git changes and create appropriately scoped, atomic commits.
 ---
 
 # Commit Changes
