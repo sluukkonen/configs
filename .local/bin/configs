@@ -106,7 +106,7 @@ def is_installable(relative):
     return relative.split("/", 1)[0] not in REPOSITORY_ONLY
 
 
-def tracked_sources(repository):
+def tracked_sources(repository, include_deleted=False):
     result = subprocess.run(
         ["git", "-C", str(repository), "ls-files", "--stage", "-z"],
         stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True,
@@ -121,7 +121,24 @@ def tracked_sources(repository):
             continue
         if not valid_relative(relative) or stage != b"0" or mode not in (b"100644", b"100755"):
             raise SyncError("unsupported or unmerged tracked configuration: {}".format(relative))
-        yield relative
+        check_parents(repository, relative)
+        if include_deleted or os.path.lexists(repository / relative):
+            yield relative
+
+
+def show_checkout_changes(repository):
+    for relative in tracked_sources(repository, include_deleted=True):
+        if not os.path.lexists(repository / relative):
+            print("CHECKOUT DELETED {} (excluded from installation)".format(relative))
+    result = subprocess.run(
+        ["git", "-C", str(repository), "ls-files", "--others", "--exclude-standard", "-z"],
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True,
+    )
+    for raw_path in result.stdout.split(b"\0"):
+        relative = os.fsdecode(raw_path)
+        if (relative and is_installable(relative)
+                and not (repository / relative).is_symlink() and (repository / relative).is_file()):
+            print("UNTRACKED {} (not installed); run git add -- {}".format(relative, shlex.quote(relative)))
 
 
 def owned_link(target, relative, snapshot, source):
@@ -150,7 +167,7 @@ def make_plan(repository, target, state):
     conflicts = []
     destinations = set()
     sources = list(tracked_sources(repository))
-    if COMMAND_PATH not in sources:
+    if COMMAND_PATH not in sources or not (repository / COMMAND_PATH).is_file() or (repository / COMMAND_PATH).is_symlink():
         raise SyncError("the installer requires a tracked .local/bin/configs; "
                         "run git add .local/bin/configs before applying")
     for relative in sources:
@@ -199,6 +216,7 @@ def make_plan(repository, target, state):
 
             operations.append({
                 "source": relative, "destination": destination, "before": current,
+                "source_before": source,
                 "record": desired, "contents": contents, "old_contents": old_contents,
                 "action": action,
             })
@@ -291,8 +309,11 @@ def show_plan(operations, conflicts, removed, show_diff, color=False):
         print("NO LONGER SELECTED (left installed) {}".format(relative))
     if removed:
         print("Run configs prune --dry-run to preview obsolete-file cleanup.")
+    content_conflicts = {"locally edited or unmanaged file differs: " + operation["destination"]
+                         for operation in operations if operation["action"] == "CONFLICT"}
     for conflict in conflicts:
-        print("CONFLICT " + conflict)
+        if conflict not in content_conflicts:
+            print("CONFLICT " + conflict)
 
 
 def make_parents(root, relative):
@@ -349,6 +370,116 @@ def apply_plan(repository, target, state, operations):
             dirty = False
     if dirty:
         save_state(target, state)
+
+
+MERGE_MARKERS = (b"<<<<<<< configs installed", b"======= configs separator",
+                 b">>>>>>> configs repository")
+
+
+def merge_contents(operation):
+    old, new = operation["old_contents"], operation["contents"]
+    try:
+        old.decode("utf-8")
+        new.decode("utf-8")
+        if b"\0" in old or b"\0" in new:
+            raise UnicodeError()
+    except UnicodeError as error:
+        raise SyncError("binary contents cannot be merged; choose a side") from error
+    editor = shlex.split(os.environ.get("VISUAL") or os.environ.get("EDITOR") or "vi")
+    if not editor:
+        raise SyncError("editor command is empty")
+    with tempfile.TemporaryDirectory(prefix="configs-merge-") as directory:
+        root = Path(directory)
+        relative = Path(operation["destination"]).name
+        contents = (MERGE_MARKERS[0] + b"\n" + old + (b"" if old.endswith(b"\n") else b"\n")
+                    + MERGE_MARKERS[1] + b"\n" + new + (b"" if new.endswith(b"\n") else b"\n")
+                    + MERGE_MARKERS[2] + b"\n")
+        atomic_write(root, relative, contents, 0o600)
+        subprocess.run(editor + [str(root / relative)], check=True)
+        snapshot, contents = inspect(root, relative)
+        if snapshot["kind"] != "file":
+            raise SyncError("merge result must be a regular file")
+        try:
+            contents.decode("utf-8")
+            if b"\0" in contents:
+                raise UnicodeError()
+        except UnicodeError as error:
+            raise SyncError("merge result must be UTF-8 text") from error
+        if any(marker in contents for marker in MERGE_MARKERS):
+            raise SyncError("merge markers remain; resolution was not saved")
+        if input("Save merged contents to repository and installed file? [y/N] ").strip().lower() != "y":
+            return None
+        return contents
+
+
+def save_resolution(repository, target, state, operation, contents, mode, keep_installed_mode=False):
+    relative = operation["destination"]
+    source, _ = inspect(repository, operation["source"])
+    current, _ = inspect(target, relative)
+    if source != operation["source_before"] or current != operation["before"]:
+        raise SyncError("file changed during resolution: {}".format(relative))
+    # Write the checkout first. If the installed write or state save fails, a
+    # retry can detect the conflict or adopt the already matching contents.
+    source_mode = source["mode"]
+    if keep_installed_mode:
+        # Reflect explicitly chosen execute bits in the checkout so the next
+        # apply does not undo them. Preserve the checkout's read/write access.
+        source_mode = install_mode((source_mode & 0o666) | (mode & 0o111), source_mode)
+        mode = install_mode(source_mode, mode)
+    if contents != operation["contents"] or source_mode != source["mode"]:
+        atomic_write(repository, operation["source"], contents, source_mode)
+    if contents != operation["old_contents"] or mode != current["mode"]:
+        atomic_write(target, relative, contents, mode)
+    state["repository"] = str(repository)
+    state["files"][relative] = {"sha256": digest(contents), "mode": mode}
+    save_state(target, state)
+
+
+def resolve_plan(repository, target, state, operations, conflicts, paths):
+    if not sys.stdin.isatty() or not sys.stdout.isatty():
+        raise SyncError("configs resolve requires an interactive terminal")
+    choices = {operation["destination"]: operation for operation in operations
+               if operation["action"] == "CONFLICT"}
+    for relative in paths:
+        if not valid_relative(relative) or relative not in choices:
+            raise SyncError("not a resolvable conflict: {}".format(relative))
+    selected = list(dict.fromkeys(paths)) if paths else list(choices)
+    unresolved = set(choices)
+    structural = [conflict for conflict in conflicts
+                  if conflict not in {"locally edited or unmanaged file differs: " + path for path in choices}]
+    for conflict in structural:
+        print("CONFLICT " + conflict)
+    for relative in selected:
+        operation = choices[relative]
+        show_plan([operation], [], [], True, use_color(None))
+        try:
+            while True:
+                choice = input("Choose [r]epository, [i]nstalled, [m]erge, [s]kip, or [q]uit: ").strip().lower()
+                if choice in ("q", "quit"):
+                    return 1
+                if choice in ("s", "skip", ""):
+                    break
+                if choice in ("r", "repository"):
+                    contents, mode = operation["contents"], operation["record"]["mode"]
+                elif choice in ("i", "installed"):
+                    contents, mode = operation["old_contents"], operation["before"]["mode"]
+                elif choice in ("m", "merge"):
+                    contents, mode = merge_contents(operation), operation["record"]["mode"]
+                    if contents is None:
+                        break
+                else:
+                    print("Choose repository, installed, merge, skip, or quit.")
+                    continue
+                save_resolution(repository, target, state, operation, contents, mode,
+                                keep_installed_mode=choice in ("i", "installed"))
+                unresolved.remove(relative)
+                print("RESOLVED " + relative)
+                break
+        except (SyncError, OSError, ValueError, subprocess.CalledProcessError) as error:
+            print("CONFLICT {}: {}".format(relative, error), file=sys.stderr)
+        except EOFError:
+            return 1
+    return 1 if unresolved or structural else 0
 
 
 def same_file(left, right):
@@ -516,9 +647,9 @@ def find_repository(script, target):
     return repository.resolve()
 
 
-def run_checkout(repository, command, target, dry_run=False, color=None, legacy_links=False):
+def run_checkout(repository, command, target, dry_run=False, color=None, legacy_links=False, paths=()):
     return subprocess.run(
-        [sys.executable, str(repository / COMMAND_PATH), command, "--target", str(target)]
+        [sys.executable, str(repository / COMMAND_PATH), command, *paths, "--target", str(target)]
         + (["--dry-run"] if dry_run else [])
         + (["--legacy-links"] if legacy_links else [])
         + (["--color", color] if color is not None else []),
@@ -527,14 +658,17 @@ def run_checkout(repository, command, target, dry_run=False, color=None, legacy_
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("diff", "apply", "update", "repo", "prune"))
+    parser.add_argument("command", choices=("diff", "apply", "update", "repo", "prune", "resolve"))
+    parser.add_argument("paths", nargs="*", help="repository-relative conflicts to resolve (resolve only)")
     parser.add_argument("--target", type=Path, default=Path.home(), help="existing home directory to install into")
     parser.add_argument("--dry-run", action="store_true", help="preview prune without deleting files or changing state")
     parser.add_argument("--legacy-links", action="store_true",
                         help="also scan the target recursively for obsolete checkout-owned symlinks (prune only; may be slow)")
     parser.add_argument("--color", choices=("auto", "always", "never"),
                         help="color diff output (default: auto; respects NO_COLOR and TERM=dumb)")
-    args = parser.parse_args()
+    args = parser.parse_intermixed_args()
+    if args.paths and args.command != "resolve":
+        parser.error("paths are only supported for resolve")
     if args.dry_run and args.command != "prune":
         parser.error("--dry-run is only supported for prune")
     if args.legacy_links and args.command != "prune":
@@ -556,13 +690,14 @@ def main():
         if repository in (target / STATE_PATH).parents:
             raise SyncError("installation state would overlap the repository")
         if script != repository / COMMAND_PATH:
-            return run_checkout(repository, args.command, target, args.dry_run, args.color, args.legacy_links)
+            return run_checkout(repository, args.command, target, args.dry_run, args.color, args.legacy_links, args.paths)
         with installation_lock(target):
             state = load_state(target)
             if args.command == "repo":
                 print(repository)
                 return 0
             if args.command == "prune":
+                show_checkout_changes(repository)
                 operations, conflicts = make_prune_plan(repository, target, state, args.legacy_links)
                 if args.dry_run:
                     for operation in operations:
@@ -575,13 +710,17 @@ def main():
             if args.command == "update":
                 subprocess.run(["git", "pull", "--ff-only"], cwd=repository, check=True)
             else:
+                show_checkout_changes(repository)
                 operations, conflicts, removed = make_plan(repository, target, state)
+                if args.command == "resolve":
+                    return resolve_plan(repository, target, state, operations, conflicts, args.paths)
                 if args.command == "diff":
                     show_diff_plan(operations, conflicts, removed, use_color(args.color))
                 else:
                     show_plan(operations, conflicts, removed, False)
                 if conflicts:
-                    print("Resolve conflicts manually, then rerun. No files were changed.", file=sys.stderr)
+                    print("Run configs resolve to choose or merge conflicting files; fix structural errors manually. "
+                          "No files were changed.", file=sys.stderr)
                     return 1
                 if args.command == "apply":
                     apply_plan(repository, target, state, operations)
@@ -596,6 +735,9 @@ def main():
     except (SyncError, OSError, subprocess.CalledProcessError) as error:
         print("configs: {}".format(error), file=sys.stderr)
         return 1
+    except KeyboardInterrupt:
+        print("\nResolution interrupted.", file=sys.stderr)
+        return 130
 
 
 if __name__ == "__main__":
