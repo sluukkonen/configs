@@ -1,0 +1,215 @@
+#!/usr/bin/env python3
+"""Download landscape photographs from Wallhaven (Python 3.11+, no API key)."""
+
+import argparse
+import fcntl
+import hashlib
+from http.client import HTTPException
+import json
+import os
+from pathlib import Path
+import random
+import subprocess
+import sys
+import tempfile
+import time
+from urllib.error import HTTPError, URLError
+from urllib.parse import urlencode, urlparse
+from urllib.request import Request, urlopen
+
+
+THEMES = ("landscape", "forest", "mountains", "coast")
+MAX_BYTES = 30 * 1024 * 1024
+
+
+def request(url, limit):
+    req = Request(url, headers={"User-Agent": "nature-wallpapers/1.0"})
+    with urlopen(req, timeout=30) as response:
+        data = response.read(limit + 1)
+        if len(data) > limit:
+            raise ValueError("response exceeds size limit")
+        length = response.headers.get("Content-Length")
+        if length is not None and len(data) != int(length):
+            raise ValueError("incomplete download")
+        return data
+
+
+def search(theme, minimum, page=1):
+    # Explicit filters also apply when running without a Wallhaven account.
+    params = {
+        "q": f"+photography +{theme} -anime -illustration -painting -render -AI",
+        "categories": "100",
+        "purity": "100",
+        "atleast": minimum,
+        "sorting": "favorites",
+        "order": "desc",
+        "page": page,
+    }
+    time.sleep(1.5)
+    return json.loads(request(
+        "https://wallhaven.cc/api/v1/search?" + urlencode(params), 2 * 1024 * 1024
+    ))
+
+
+def atomic_write(path, data):
+    with tempfile.NamedTemporaryFile(dir=path.parent, suffix=".part", delete=False) as stream:
+        temporary = Path(stream.name)
+        try:
+            stream.write(data)
+            stream.close()
+            temporary.replace(path)
+        finally:
+            temporary.unlink(missing_ok=True)
+
+
+def download(args):
+    directory = args.directory.expanduser().resolve()
+    directory.mkdir(parents=True, exist_ok=True)
+    with (directory / ".nature-wallpapers.lock").open("a") as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            print("Another wallpaper download is already running.")
+            return
+        fetch(args, directory)
+
+
+def fetch(args, directory):
+    state_path = directory / ".nature-wallpapers.json"
+    history = json.loads(state_path.read_text()) if state_path.exists() else {}
+    if not isinstance(history, dict) or any(
+        not isinstance(record, dict) or not isinstance(record.get("sha256"), str)
+        for record in history.values()
+    ):
+        raise ValueError(f"invalid download history: {state_path}")
+    hashes = {record["sha256"] for record in history.values()}
+    candidates = []
+    themes = list(THEMES)
+    random.shuffle(themes)
+    for theme in themes:
+        result = search(theme, args.min_resolution)
+        if not result["data"]:
+            continue
+        # Sample from the first ten pages of popular photos, rather than always
+        # exhausting page one. The first request tells us which pages exist.
+        page = random.randint(1, min(10, result["meta"]["last_page"]))
+        if page != 1:
+            result = search(theme, args.min_resolution, page)
+        candidates.extend(result["data"])
+    random.shuffle(candidates)
+
+    width, height = map(int, args.min_resolution.split("x"))
+    downloaded = 0
+    failed = False
+    for image in candidates:
+        if downloaded >= args.count:
+            break
+        identifier = image["id"]
+        if identifier in history:
+            continue
+        if (image["purity"] != "sfw" or image["category"] != "general"
+                or image["dimension_x"] < width or image["dimension_y"] < height
+                or image["dimension_x"] <= image["dimension_y"]):
+            continue
+        extension = {"image/jpeg": ".jpg", "image/png": ".png"}.get(image["file_type"])
+        if not extension or image["file_size"] > MAX_BYTES:
+            continue
+        url = image["path"]
+        if urlparse(url).scheme != "https" or urlparse(url).hostname != "w.wallhaven.cc":
+            raise ValueError("unexpected image download URL")
+        if len(identifier) != 6 or not identifier.isascii() or not identifier.isalnum():
+            raise ValueError("invalid wallpaper ID")
+        destination = directory / f"wallhaven-{identifier}{extension}"
+        try:
+            data = request(url, MAX_BYTES)
+            if extension == ".jpg":
+                valid = data.startswith(b"\xff\xd8\xff") and data.endswith(b"\xff\xd9")
+            else:
+                valid = data.startswith(b"\x89PNG\r\n\x1a\n") and data.endswith(b"IEND\xaeB`\x82")
+            if not valid:
+                raise ValueError("invalid or incomplete image")
+        except HTTPError as error:
+            if error.code == 429:
+                raise
+            print(f"Skipping {identifier}: {error}", file=sys.stderr)
+            failed = True
+            continue
+        except (URLError, HTTPException, OSError, ValueError) as error:
+            print(f"Skipping {identifier}: {error}", file=sys.stderr)
+            failed = True
+            continue
+        digest = hashlib.sha256(data).hexdigest()
+        if digest not in hashes:
+            if destination.exists():
+                if hashlib.sha256(destination.read_bytes()).hexdigest() != digest:
+                    raise ValueError(f"refusing to overwrite an untracked image: {destination}")
+            else:
+                atomic_write(destination, data)
+                downloaded += 1
+                print(f"Downloaded {destination}")
+        history[identifier] = {"sha256": digest, "url": image["url"], "downloaded_at": int(time.time())}
+        hashes.add(digest)
+        atomic_write(state_path, (json.dumps(history, indent=2) + "\n").encode())
+    print(f"Downloaded {downloaded}/{args.count} new wallpapers into {directory}.")
+    if failed:
+        raise ValueError("some image downloads failed; see messages above")
+
+
+def unit_quote(value):
+    # systemd parses ExecStart itself, without a shell; escape its substitutions.
+    value = str(value).replace("\\", "\\\\").replace('"', '\\"')
+    value = value.replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
+    return '"' + value.replace("%", "%%").replace("$", "$$") + '"'
+
+
+def install_systemd(args):
+    if sys.platform != "linux":
+        raise ValueError("--install-systemd is only supported on Linux")
+    config_home = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
+    units = config_home / "systemd/user"
+    units.mkdir(parents=True, exist_ok=True)
+    command = " ".join(unit_quote(value) for value in (
+        sys.executable, Path(__file__).resolve(), "--directory",
+        args.directory.expanduser().resolve(), "--count", args.count,
+        "--min-resolution", args.min_resolution,
+    ))
+    (units / "nature-wallpapers.service").write_text(
+        "[Unit]\nDescription=Download nature wallpapers\n\n"
+        f"[Service]\nType=oneshot\nExecStart={command}\nTimeoutStartSec=15min\n"
+    )
+    (units / "nature-wallpapers.timer").write_text(
+        "[Unit]\nDescription=Download nature wallpapers daily\n\n"
+        "[Timer]\nOnCalendar=daily\nPersistent=true\n\n"
+        "[Install]\nWantedBy=timers.target\n"
+    )
+    subprocess.run(["systemctl", "--user", "daemon-reload"], check=True)
+    subprocess.run(["systemctl", "--user", "enable", "--now", "nature-wallpapers.timer"], check=True)
+    print("Daily timer enabled; missed runs catch up when the user manager starts.")
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--count", type=int, default=3, help="maximum new images per run (default: 3)")
+    parser.add_argument("--directory", type=Path, default=Path.home() / "Pictures/Wallpapers")
+    parser.add_argument("--min-resolution", default="3840x2160", help="minimum WIDTHxHEIGHT (default: 3840x2160)")
+    parser.add_argument("--install-systemd", action="store_true", help="install and enable a daily Linux user timer using these options")
+    args = parser.parse_args()
+    try:
+        width, height = map(int, args.min_resolution.split("x"))
+        if width < 1 or height < 1 or args.count < 1:
+            raise ValueError
+    except ValueError:
+        parser.error("count and resolution dimensions must be positive integers")
+    try:
+        if args.install_systemd:
+            install_systemd(args)
+        else:
+            download(args)
+    except (OSError, ValueError, KeyError, TypeError, URLError, HTTPException, subprocess.CalledProcessError) as error:
+        print(f"nature-wallpapers: {error}", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
