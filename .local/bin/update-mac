@@ -8,7 +8,9 @@ CONFIG_REPOSITORY="$(python3 "$SCRIPT_DIR/configs" repo)"
 cd "$CONFIG_REPOSITORY"
 
 brew upgrade
-brew bundle --upgrade
+# brew upgrade already covered outdated packages; only install new Brewfile entries.
+brew bundle install --no-upgrade
+brew cleanup
 
 softwareupdate_list_output="$(softwareupdate --list 2>&1)"
 should_restart=false
