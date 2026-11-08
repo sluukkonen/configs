@@ -23,9 +23,7 @@ typeset -a optional_bin_paths
 optional_bin_paths=()
 for bin_path in \
   "$HOME/.local/bin" \
-  "$HOME/bin" \
   "$HOME/.cargo/bin" \
-  "$HOME/.cabal/bin" \
   "$HOME/.ghcup/bin"
 do
   [[ -d "$bin_path" ]] && optional_bin_paths+=("$bin_path")
