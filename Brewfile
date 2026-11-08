@@ -41,7 +41,6 @@ brew "wget"
 brew "ykman"
 brew "zsh"
 
-cask "1password"
 cask "claude-code"
 cask "codex"
 cask "discord"
