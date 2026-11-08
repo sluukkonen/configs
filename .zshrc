@@ -21,18 +21,18 @@ plugins=(
   fzf
 )
 
-# Initialize zgen
-source ~/.zgen/zgen.zsh
+# Initialize zgenom
+source ~/.zgenom/zgenom.zsh
 
-if ! zgen saved; then
-    zgen oh-my-zsh
+if ! zgenom saved; then
+    zgenom ohmyzsh
 
-    zgen load agkozak/zsh-z
-    zgen load romkatv/powerlevel10k powerlevel10k
-    zgen load zsh-users/zsh-autosuggestions
-    zgen load zsh-users/zsh-completions
+    zgenom load agkozak/zsh-z
+    zgenom load romkatv/powerlevel10k powerlevel10k
+    zgenom load zsh-users/zsh-autosuggestions
+    zgenom load zsh-users/zsh-completions
 
-	zgen save
+    zgenom save
 fi
 
 # FNM
