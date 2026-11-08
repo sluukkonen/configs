@@ -755,7 +755,10 @@ class PruneTests(InstallerFixture):
         self.assertEqual(conflicts, [])
         (self.target / "changed").write_text("new edit\n")
         (self.target / "missing").write_text("new file\n")
-        conflicts = sync.prune_plan(self.target, state, operations)
+        output = io.StringIO()
+        with mock.patch.object(sync.sys, "stdout", output):
+            conflicts = sync.prune_plan(self.target, state, operations)
+        self.assertEqual(output.getvalue(), "REMOVE safe\n")
         self.assertEqual(len(conflicts), 2)
         self.assertFalse((self.target / "safe").exists())
         self.assertEqual((self.target / "changed").read_text(), "new edit\n")
