@@ -40,6 +40,14 @@ class InstallerFixture(unittest.TestCase):
             check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
         )
 
+    def commit(self, repository, message):
+        subprocess.run(
+            ["git", "-C", str(repository), "-c", "user.name=Configs Tests",
+             "-c", "user.email=configs@example.invalid", "-c", "commit.gpgsign=false",
+             "-c", "core.hooksPath=/dev/null", "commit", "-qm", message],
+            check=True, capture_output=True,
+        )
+
     def source(self, relative=".zshrc", contents="original\n", mode=0o644):
         path = self.repository / relative
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -997,14 +1005,6 @@ class ConfigCommandTests(InstallerFixture):
         self.run_command("prune", "--target", str(other))
         self.assertFalse((other / "old").exists())
         self.assertEqual(before, self.tree())
-
-    def commit(self, repository, message):
-        subprocess.run(
-            ["git", "-C", str(repository), "-c", "user.name=Configs Tests",
-             "-c", "user.email=configs@example.invalid", "-c", "commit.gpgsign=false",
-             "-c", "core.hooksPath=/dev/null", "commit", "-qm", message],
-            check=True, capture_output=True,
-        )
 
     def setup_remote(self):
         self.commit(self.repository, "Initial configs")

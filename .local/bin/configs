@@ -312,13 +312,12 @@ def make_parents(root, relative):
                 raise SyncError("unsafe parent directory: {}".format(current))
 
 
-def atomic_write(root, relative, contents, mode):
-    make_parents(root, relative)
-    path = root / relative
+@contextlib.contextmanager
+def atomic_file(path, mode):
     fd, temporary = tempfile.mkstemp(prefix=".configs-", dir=path.parent)
     try:
         with os.fdopen(fd, "wb") as stream:
-            stream.write(contents)
+            yield stream
             stream.flush()
             os.fchmod(stream.fileno(), mode)
             os.fsync(stream.fileno())
@@ -326,6 +325,12 @@ def atomic_write(root, relative, contents, mode):
     finally:
         if os.path.lexists(temporary):
             os.unlink(temporary)
+
+
+def atomic_write(root, relative, contents, mode):
+    make_parents(root, relative)
+    with atomic_file(root / relative, mode) as stream:
+        stream.write(contents)
 
 
 def save_state(target, state):
@@ -574,12 +579,10 @@ def find_repository(script, target):
     return repository.resolve()
 
 
-def run_checkout(repository, command, target, dry_run=False, color=None, paths=()):
-    return subprocess.run(
-        [sys.executable, str(repository / COMMAND_PATH), command, *paths, "--target", str(target)]
-        + (["--dry-run"] if dry_run else [])
-        + (["--color", color] if color is not None else []),
-    ).returncode
+def run_checkout(repository, *arguments):
+    # Keep our buffered output ahead of the child's when stdout is a pipe.
+    sys.stdout.flush()
+    return subprocess.run([sys.executable, str(repository / COMMAND_PATH), *arguments]).returncode
 
 
 def update_zgenom(target):
@@ -624,7 +627,8 @@ def main():
         if repository in (target / STATE_PATH).parents:
             raise SyncError("installation state would overlap the repository")
         if script != repository / COMMAND_PATH:
-            return run_checkout(repository, args.command, target, args.dry_run, args.color, args.paths)
+            # The checkout runs with the same working directory, so relative paths still resolve.
+            return run_checkout(repository, *sys.argv[1:])
         with installation_lock(target):
             state = load_state(target)
             if args.command == "repo":
@@ -660,7 +664,7 @@ def main():
                     apply_plan(repository, target, state, operations)
                     print("Configuration applied.")
         if args.command == "update":
-            result = run_checkout(repository, "apply", target)
+            result = run_checkout(repository, "apply", "--target", str(target))
             if result:
                 print("Repository updated, but configuration application failed. Resolve the error and rerun configs apply.",
                       file=sys.stderr)
