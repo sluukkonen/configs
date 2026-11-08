@@ -1,6 +1,42 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# Generate passphrases from Finnish words.
 
-read -d '' SANALISTA <<'_EOF_'
+set -euo pipefail
+
+usage() {
+  cat <<EOF
+Usage: ${0##*/} [-n words] [-t passphrases]
+
+  -n  number of words per passphrase (default: 4)
+  -t  number of passphrases to generate (default: 20)
+EOF
+}
+
+words=4
+passphrases=20
+
+while getopts ":n:t:h" option; do
+  case $option in
+    n) words=$OPTARG ;;
+    t) passphrases=$OPTARG ;;
+    h) usage; exit 0 ;;
+    *) usage >&2; exit 2 ;;
+  esac
+done
+
+if ! [[ "$words" =~ ^[1-9][0-9]*$ && "$passphrases" =~ ^[1-9][0-9]*$ ]]; then
+  echo "${0##*/}: -n and -t must be positive integers" >&2
+  exit 2
+fi
+
+if command -v gshuf >/dev/null 2>&1; then
+  shuffle=gshuf
+else
+  shuffle=shuf
+fi
+
+# Words contain only a-z, å, ä and ö, so passphrases are easy to type.
+wordlist=$(cat <<'_EOF_'
 aakkonen
 aakkostaa
 aakkosto
@@ -193,7 +229,6 @@ ahtauttaa
 ahtautua
 ahtautuma
 ahteri
-Ahti
 ahti
 ahtoilma
 ahtojää
@@ -208,7 +243,6 @@ aidas
 aidata
 aidoittaa
 aidosti
-AIDS
 aie
 aiemmin
 aiempi
@@ -1543,7 +1577,6 @@ baudi
 bavaroise
 beagle
 beat
-bébé
 bebee
 bebop
 becquerel
@@ -1653,7 +1686,6 @@ bordeaux
 bordelli
 bordyyri
 borssi
-borštš
 bosoni
 botanisti
 botuliini
@@ -1719,7 +1751,6 @@ bunkkeri
 burnout
 business
 busmanni
-bušmanni
 bussi
 butaani
 buuata
@@ -1745,7 +1776,6 @@ canasta
 cancan
 casanova
 catering
-CD
 cembalo
 cesium
 chanson
@@ -1772,14 +1802,11 @@ copy
 copyright
 coulombi
 country
-coupé
 couscous
 cowboy
 crack
-crêpe
 crescendo
 croissant
-csárdás
 cumulus
 cup
 curry
@@ -1797,7 +1824,6 @@ datanomi
 dateerata
 dateeraus
 datiivi
-datša
 deadline
 dealer
 debatti
@@ -1910,7 +1936,6 @@ diureetti
 divaani
 divari
 dixieland
-DNA
 dogmi
 dokata
 dokaus
@@ -1972,7 +1997,6 @@ dynamo
 dynastia
 dysfasia
 dyyni
-džonkki
 dödö
 dösä
 eboniitti
@@ -2376,7 +2400,6 @@ entisyys
 entisöidä
 entrata
 entraus
-entrecôte
 entropia
 entsyymi
 entä
@@ -2762,7 +2785,6 @@ etäämmäs
 etäämpänä
 etäämpää
 etääntyä
-EU
 eufemismi
 euforia
 euforinen
@@ -3076,7 +3098,6 @@ geeli
 geeni
 geenistö
 geimit
-geiša
 geisir
 gelatiini
 gemmologi
@@ -3171,7 +3192,6 @@ grilli
 grogi
 grogilasi
 groteski
-gruyère
 gryndata
 gryndaus
 grynderi
@@ -4451,7 +4471,6 @@ hiusöljy
 hiutale
 hiutua
 hiutuma
-HIV
 hivauttaa
 hivellä
 hiveltää
@@ -6212,7 +6231,6 @@ isäpappa
 isäpuoli
 isätön
 isäukko
-IT
 italia
 italiaano
 itara
@@ -6515,7 +6533,6 @@ jesuiitta
 jetsetti
 jetti
 jiddi
-jiddiš
 jiirata
 jiiri
 jippo
@@ -6577,7 +6594,6 @@ joiunta
 jojo
 joka
 jokainen
-jok'ainoa
 jokamies
 jokaöinen
 jokellus
@@ -6905,7 +6921,6 @@ jurrata
 jurri
 jurrikka
 jury
-Jussi
 just
 justeeri
 justiin
@@ -8243,8 +8258,6 @@ kaskimaa
 kasko
 kasku
 kasleri
-kašmir
-kašmiri
 kassa
 kassakone
 kassapää
@@ -10332,7 +10345,6 @@ koputtaa
 koputtelu
 koputus
 koraali
-Koraani
 korahdus
 korahtaa
 koralli
@@ -10469,7 +10481,6 @@ korvis
 korvissa
 korvo
 korvus
-košer
 kosia
 kosija
 kosini
@@ -12804,7 +12815,6 @@ lavitsa
 lavuaari
 layout
 leasing
-LED
 ledi
 leegio
 leffa
@@ -13680,8 +13690,6 @@ liuotus
 liuska
 liuske
 liuta
-liu'unta
-liu'uttaa
 livahtaa
 livauttaa
 live
@@ -14345,7 +14353,6 @@ lyhentymä
 lyhentyä
 lyhentää
 lyhetä
-LYHKI
 lyhkäinen
 lyhty
 lyhyeen
@@ -14904,7 +14911,6 @@ mahaneste
 mahanpuru
 mahansuu
 mahapuoli
-maharadža
 mahasyöpä
 mahatauti
 mahatma
@@ -15311,7 +15317,6 @@ mauste
 maustevoi
 maustua
 mauton
-mau'unta
 maya
 me
 media
@@ -15841,7 +15846,6 @@ moike
 moikina
 moikua
 moinen
-moiré
 moisio
 moiskaus
 moite
@@ -16944,7 +16948,6 @@ nautinta
 nautinto
 nauttia
 nauttija
-nau'unta
 navaho
 navajo
 navakasti
@@ -18054,7 +18057,6 @@ ojolleen
 ojoon
 ojossa
 ojuke
-OK
 oka
 okainen
 okakuusi
@@ -18562,7 +18564,6 @@ paarit
 paarma
 paasata
 paasi
-paaši
 paasto
 paastota
 paatos
@@ -19728,7 +19729,6 @@ peuhata
 peukalo
 peukku
 peura
-pH
 phui
 phyi
 piakkoin
@@ -20352,9 +20352,6 @@ pohjuste
 pohjustus
 pohtia
 poies
-poi'inta
-poi'ittaa
-poi'itus
 poiju
 poijuttaa
 poijutus
@@ -20698,7 +20695,6 @@ povauttaa
 poveton
 povi
 povitasku
-PR
 prakata
 praksis
 praktikko
@@ -21988,7 +21984,6 @@ quenelle
 quiche
 quickstep
 quisling
-raa'asti
 raadanta
 raadella
 raaentaa
@@ -22017,7 +22012,6 @@ raakku
 raakkua
 raakua
 raakuus
-Raamattu
 raami
 raamikas
 raamisaha
@@ -22077,7 +22071,6 @@ radioääni
 radisti
 radium
 radon
-radža
 rae
 raejuusto
 raekoko
@@ -22086,7 +22079,6 @@ raesokeri
 rafla
 raflaava
 raggari
-ragoût
 ragtime
 raguu
 raha
@@ -22609,11 +22601,6 @@ rehustus
 rehuvilja
 rehvakas
 rehvakka
-rei'ikäs
-rei'ite
-rei'itin
-rei'ittää
-rei'itys
 reikeli
 reiki
 reikä
@@ -22955,7 +22942,6 @@ rikkuri
 rikos
 rikosasia
 riksa
-rikša
 riksahtaa
 riksi
 rillipää
@@ -23270,10 +23256,8 @@ ropsaus
 ropse
 ropsia
 roquefort
-rosé
 rosee
 rosetti
-roséviini
 roska
 roskaaja
 roskainen
@@ -24068,7 +24052,6 @@ sa
 saada
 saaga
 saago
-šaahi
 saaja
 saakeli
 saakka
@@ -24223,7 +24206,6 @@ sakariini
 sakaristo
 sakasti
 sakata
-šakata
 sake
 sakea
 sakemanni
@@ -24236,13 +24218,10 @@ sakka
 sakkaridi
 sakkauma
 sakkaus
-šakkaus
 sakkautua
 sakkautus
 sakkeli
 sakki
-šakki
-šakkipeli
 sakko
 sakokaivo
 sakoluku
@@ -24338,16 +24317,13 @@ salvoin
 salvos
 sama
 samaani
-šamaani
 samaanne
 samainen
 samaistaa
 samaistua
 samalla
 samanismi
-šamanismi
 samanne
-šamanoida
 samassa
 samastaa
 samastua
@@ -24474,7 +24450,6 @@ santarmi
 santsari
 santsata
 santsaus
-šantung
 sanue
 saos
 saostaa
@@ -24524,7 +24499,6 @@ sarkasmi
 sarkaus
 sarkofagi
 sarkooma
-šarmööri
 sarpio
 sarvekas
 sarveke
@@ -24705,7 +24679,6 @@ segmentti
 sei
 seikka
 seikkailu
-šeikki
 seilailla
 seilata
 seili
@@ -24790,7 +24763,6 @@ sekavuus
 sekeli
 sekka
 sekki
-šekki
 sekkitili
 sekoilija
 sekoilla
@@ -24810,7 +24782,6 @@ seksologi
 sekstetti
 sekstetto
 seksti
-šektaus
 sektio
 sektori
 sekulaari
@@ -24825,7 +24796,6 @@ selata
 selaus
 seleeni
 selektio
-šelfi
 selikkäin
 selin
 selite
@@ -25225,7 +25195,6 @@ sijoittaa
 sijoittua
 sijoitus
 sika
-šikaani
 sikaeläin
 sikahalpa
 sikailla
@@ -25300,7 +25269,6 @@ sillanpää
 silleen
 silli
 sillikala
-šillinki
 silloin
 silloinen
 silloitus
@@ -25436,7 +25404,6 @@ sinologia
 sinooberi
 sinooperi
 sinsilla
-šinto
 sintrata
 sintraus
 sintsi
@@ -25880,7 +25847,6 @@ sokea
 sokeasti
 sokeentua
 sokeerata
-šokeerata
 sokellus
 sokeltaa
 sokeri
@@ -25895,7 +25861,6 @@ sokka
 sokkeli
 sokkelo
 sokki
-šokki
 sokkitila
 sokko
 sokkokoe
@@ -29242,17 +29207,14 @@ truutta
 tryffeli
 tsaari
 tsaaritar
-tšador
 tsarismi
 tsasouna
 tsatsiki
 tse
 tsekata
 tsekkaus
-tšekki
 tsempata
 tsemppi
-tšetšeeni
 tsiikata
 tsinuski
 tsuhna
@@ -31858,7 +31820,6 @@ vavahdus
 vavahtaa
 vavista
 vavistus
-WC
 weber
 vedekkyys
 vedekäs
@@ -32799,7 +32760,6 @@ vioittuma
 viola
 violetti
 violisti
-VIP
 vipajaa
 vipata
 vipattaa
@@ -33171,7 +33131,6 @@ vuota
 vuotaa
 vuoto
 vuotuinen
-WWW
 vyyhdetä
 vyyhti
 vyyhtiä
@@ -33856,7 +33815,6 @@ yskös
 ystävyys
 ystävä
 ystävätär
-YT
 ytimekäs
 yty
 yö
@@ -34072,7 +34030,6 @@ zulu
 änkyttää
 änkytys
 änkätä
-ÄO
 äpäre
 äpärikkö
 äpärä
@@ -34256,46 +34213,8 @@ zulu
 öykkäri
 öylätti
 _EOF_
+)
 
-NUMBER_OF_WORDS=4
-NUMBER_OF_PASSWORDS=20
-
-usage() {
-    cat <<EOF
-    Usage: $(basename $0) [OPTIONS]
-
-    OPTIONS:
-        -n  number of words to generate
-        -t  number of passwords to generate
-EOF
-}
-
-shuffle() {
-    if hash gshuf 2>/dev/null; then
-        gshuf "$@"
-    else
-        shuf "$@"
-    fi
-}
-
-
-while getopts ":n:t:" OPTION
-do
-    case $OPTION in
-        n)
-            NUMBER_OF_WORDS="$OPTARG"
-            ;;
-        t)
-            NUMBER_OF_PASSWORDS="$OPTARG"
-            ;;
-        ?)
-            usage
-            exit
-            ;;
-    esac
-done
-
-for i in $(seq 1 "$NUMBER_OF_PASSWORDS")
-do
-    echo "$SANALISTA" | shuffle -n "$NUMBER_OF_WORDS" | awk '{ printf "%s ", $0 } END { printf "\n" }'
+for ((i = 0; i < passphrases; i++)); do
+  "$shuffle" -n "$words" <<< "$wordlist" | paste -sd ' ' -
 done
