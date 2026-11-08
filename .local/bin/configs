@@ -141,20 +141,6 @@ def show_checkout_changes(repository):
             print("UNTRACKED {} (not installed); run git add -- {}".format(relative, shlex.quote(relative)))
 
 
-def owned_link(target, relative, snapshot, source):
-    if snapshot["kind"] != "link":
-        return False
-    link = (target / relative).parent / snapshot["target"]
-    # Require both a direct lexical target and an actual match: normalizing
-    # "symlinked-directory/.." alone can identify the wrong file.
-    if os.path.normpath(link) != str(source):
-        return False
-    try:
-        return link.resolve(strict=True) == source
-    except (OSError, RuntimeError):
-        return False
-
-
 def install_mode(source_mode, current_mode):
     # Never add read/write access to an existing file. An executable source can
     # add execute permission only to classes that can already read that file.
@@ -198,10 +184,8 @@ def make_plan(repository, target, state):
                 mode = install_mode(mode, baseline_mode)
             desired = {"sha256": source["sha256"], "mode": mode}
 
-            if owned_link(target, destination, current, repository / relative):
-                action = "CONVERT"
-            elif current["kind"] == "link":
-                raise SyncError("unrelated symlink: {}".format(destination))
+            if current["kind"] == "link":
+                raise SyncError("destination is a symlink: {}".format(destination))
             elif current["kind"] == "missing":
                 if previous is not None:
                     raise SyncError("locally deleted: {}".format(destination))
@@ -359,7 +343,7 @@ def apply_plan(repository, target, state, operations):
         current, _ = inspect(target, destination)
         if current != operation["before"]:
             raise SyncError("destination changed during apply: {}".format(destination))
-        if operation["action"] in ("INSTALL", "UPDATE", "CONVERT"):
+        if operation["action"] in ("INSTALL", "UPDATE"):
             atomic_write(target, destination, operation["contents"], operation["record"]["mode"])
         dirty = dirty or state["files"].get(destination) != operation["record"]
         state["files"][destination] = operation["record"]

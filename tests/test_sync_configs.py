@@ -322,40 +322,18 @@ class InstallerTests(InstallerFixture):
         self.assertEqual(stat.S_IMODE((self.target / ".ssh/config").stat().st_mode), 0o600)
         self.assertEqual(stat.S_IMODE((self.target / sync.STATE_PATH).stat().st_mode), 0o600)
 
-    def test_owned_relative_symlink_is_replaced_without_changing_source(self):
+    def test_symlinked_destinations_conflict(self):
         source = self.source()
-        destination = self.target / ".zshrc"
-        destination.symlink_to(os.path.relpath(source, destination.parent))
-        before = source.read_bytes()
-        self.assertIn("CONVERT", self.run_sync())
-        self.assertFalse(destination.is_symlink())
-        self.assertEqual(source.read_bytes(), before)
-
-    def test_unrelated_and_broken_symlinks_conflict(self):
-        self.source()
         destination = self.target / ".zshrc"
         outside = self.root / "unrelated"
         outside.write_text("original\n")
-        for link in (outside, self.root / "missing"):
+        for link in (source, outside, self.root / "missing"):
             with self.subTest(link=link):
                 destination.symlink_to(link)
                 before = self.tree()
-                self.assertIn("unrelated symlink", self.run_sync(expected=1))
+                self.assertIn("destination is a symlink", self.run_sync(expected=1))
                 self.assertEqual(before, self.tree())
                 destination.unlink()
-
-    def test_symlink_parent_traversal_cannot_masquerade_as_owned_link(self):
-        self.source()
-        outside = self.root / "outside"
-        (outside / "subdirectory").mkdir(parents=True)
-        (outside / ".zshrc").write_text("unrelated\n")
-        (self.repository / "detour").symlink_to(outside / "subdirectory", target_is_directory=True)
-        destination = self.target / ".zshrc"
-        destination.symlink_to(self.repository / "detour/../.zshrc")
-        self.assertEqual(destination.read_text(), "unrelated\n")
-        before = self.tree()
-        self.assertIn("unrelated symlink", self.run_sync(expected=1))
-        self.assertEqual(before, self.tree())
 
     def test_destination_directories_and_symlinked_parents_conflict(self):
         self.source(".config/tool/config")
@@ -501,54 +479,26 @@ class InstallerTests(InstallerFixture):
         self.assertEqual((self.target / ".zshrc").read_text(), "original\n")
         self.assertIn(".zshrc", self.state()["files"])
 
-    def test_skill_files_and_metadata_convert_in_place(self):
-        skill = ".codex/skills/commit/SKILL.md"
-        metadata = ".codex/skills/commit/agents/openai.yaml"
-        for relative in (skill, metadata):
-            source = self.source(relative)
-            legacy = self.target / relative
-            legacy.parent.mkdir(parents=True, exist_ok=True)
-            legacy.symlink_to(source)
-        extra = self.installed(".codex/skills/commit/notes.txt", "keep\n")
-        before = self.tree()
-        self.assertIn("CONVERT .codex/skills/commit/SKILL.md", self.run_sync("diff"))
-        self.assertEqual(before, self.tree())
-        self.run_sync()
-        for relative in (skill, metadata):
-            self.assertFalse((self.target / relative).is_symlink())
-            destination = self.target / relative
-            self.assertTrue(destination.is_file())
-            self.assertFalse(destination.is_symlink())
-            self.assertEqual(destination.read_text(), "original\n")
-        self.assertEqual(set(self.state()["files"]), {skill, metadata, COMMAND_PATH})
-        self.assertFalse((self.target / ".agents").exists())
-        self.assertEqual(extra.read_text(), "keep\n")
-        self.run_sync()
-
     def test_skill_directory_symlinks_use_normal_parent_checks(self):
         self.source(".codex/skills/commit/SKILL.md")
         unrelated = self.root / "other skills"
         unrelated.mkdir()
-        legacy = self.target / ".codex/skills"
-        legacy.parent.mkdir()
-        legacy.symlink_to(unrelated, target_is_directory=True)
+        link = self.target / ".codex/skills"
+        link.parent.mkdir()
+        link.symlink_to(unrelated, target_is_directory=True)
         before = self.tree()
         self.assertIn("symlinked parent", self.run_sync(expected=1))
         self.assertEqual(before, self.tree())
-        self.assertTrue(legacy.is_symlink())
+        self.assertTrue(link.is_symlink())
         self.assertEqual(list(unrelated.iterdir()), [])
 
     def test_unselected_skills_directory_is_untouched(self):
         relative = ".codex/skills/commit/SKILL.md"
-        source = self.source(relative)
-        legacy = self.target / relative
-        legacy.parent.mkdir(parents=True)
-        legacy.symlink_to(source)
+        self.source(relative)
         other = self.installed(".agents/skills/commit/SKILL.md", "unrelated\n")
         before = other.stat().st_mtime_ns
         self.run_sync()
-        self.assertFalse(legacy.is_symlink())
-        self.assertEqual(legacy.read_text(), "original\n")
+        self.assertEqual((self.target / relative).read_text(), "original\n")
         self.assertEqual(other.read_text(), "unrelated\n")
         self.assertEqual(other.stat().st_mtime_ns, before)
         self.assertEqual(set(self.state()["files"]), {relative, COMMAND_PATH})
@@ -1128,8 +1078,8 @@ class ConfigCommandTests(InstallerFixture):
         self.assertEqual(head, self.git("rev-parse", "HEAD").stdout)
 
 
-class RepositoryMigrationTests(InstallerFixture):
-    def test_complete_repository_payload_migrates_and_reapplies(self):
+class RepositoryPayloadTests(InstallerFixture):
+    def test_complete_repository_payload_installs_and_reapplies(self):
         result = subprocess.run(
             ["git", "-C", str(REPOSITORY), "ls-files", "--cached", "--others", "--exclude-standard", "-z"],
             check=True, stdout=subprocess.PIPE,
@@ -1147,9 +1097,6 @@ class RepositoryMigrationTests(InstallerFixture):
             shutil.copyfile(source, copied)
             copied.chmod(stat.S_IMODE(source.stat().st_mode))
             self.git("add", "--", relative)
-            legacy = self.target / relative
-            legacy.parent.mkdir(parents=True, exist_ok=True)
-            legacy.symlink_to(copied)
             payload[relative] = copied.read_bytes()
 
         self.assertIn(COMMAND_PATH, payload)
@@ -1159,9 +1106,7 @@ class RepositoryMigrationTests(InstallerFixture):
         self.run_sync()
         self.assertEqual(set(self.state()["files"]), set(payload))
         for relative, contents in payload.items():
-            installed = self.target / relative
-            self.assertFalse(installed.is_symlink(), relative)
-            self.assertEqual(installed.read_bytes(), contents)
+            self.assertEqual((self.target / relative).read_bytes(), contents)
             self.assertEqual((self.repository / relative).read_bytes(), contents)
         before = self.tree()
         self.run_sync()
