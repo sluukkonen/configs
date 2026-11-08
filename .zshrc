@@ -50,7 +50,6 @@ fi
 command -v eza >/dev/null && alias ls=eza
 command -v batcat >/dev/null && alias bat=batcat
 command -v vim >/dev/null && alias vi=vim
-command -v ssh >/dev/null && alias ssh='TERM=xterm ssh'
 
 # Let ctrl-enter run a command in Ghostty
 bindkey '^[[27;5;13~' accept-line
