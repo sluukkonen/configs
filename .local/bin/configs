@@ -1,21 +1,29 @@
 #!/usr/bin/env python3
-"""Preview, apply, and update this repository's tracked configuration files."""
+"""Preview, apply, update, export, and import this repository's tracked configuration files."""
 
 import argparse
 import contextlib
 import difflib
 import fcntl
+import fnmatch
+import gzip
 import hashlib
 import io
 import json
 import os
 from pathlib import Path, PurePosixPath
+import posixpath
+import re
 import shlex
 import shutil
 import stat
 import subprocess
 import sys
+import tarfile
 import tempfile
+import urllib.parse
+import urllib.request
+import zlib
 
 
 REPOSITORY_ONLY = {
@@ -25,6 +33,11 @@ REPOSITORY_ONLY = {
 }
 STATE_PATH = ".local/state/configs/state.json"
 COMMAND_PATH = ".local/bin/configs"
+EXPORT_ROOT = "configs-export"
+EXPORT_FORMAT = 1
+DEFAULT_ARCHIVE = "configs-export.tar.gz"
+DEFAULT_PLATFORMS = ("linux-x86_64", "linux-aarch64", "darwin-arm64", "darwin-x86_64")
+GITSTATUS_URL = "https://github.com/romkatv/gitstatus/releases/download/{version}/{file}.tar.gz"
 
 
 class SyncError(Exception):
@@ -597,27 +610,371 @@ def update_zgenom(target):
     return result.returncode
 
 
+def git_output(repository, *arguments, check=True):
+    result = subprocess.run(["git", "-C", str(repository), *arguments],
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=check)
+    return os.fsdecode(result.stdout).strip() if result.returncode == 0 else None
+
+
+def download(url):
+    limit = 64 * 1024 * 1024
+    with urllib.request.urlopen(url, timeout=60) as response:
+        data = response.read(limit + 1)
+    if len(data) > limit:
+        raise SyncError("download exceeds {} bytes: {}".format(limit, url))
+    return data
+
+
+def gitstatus_release(install_info, platform):
+    """Select a gitstatusd release the way gitstatus/install matches uname."""
+    kernel, machine = platform.split("-", 1)
+    for line in install_info.splitlines():
+        if line.lstrip().startswith("#"):
+            continue
+        fields = dict(re.findall(r'(\w+)="([^"]*)"', line))
+        if not fields:
+            continue
+        if not {"uname_s_glob", "uname_m_glob", "file", "version", "sha256"} <= set(fields):
+            raise SyncError("invalid gitstatus install.info line: {}".format(line))
+        if (fnmatch.fnmatchcase(kernel, fields["uname_s_glob"])
+                and fnmatch.fnmatchcase(machine, fields["uname_m_glob"])):
+            name = fields["file"].replace("${uname_s}", kernel).replace("${uname_m}", machine)
+            if (not re.fullmatch(r"gitstatusd-[a-z0-9_.-]+", name)
+                    or not re.fullmatch(r"v[0-9][0-9.]*", fields["version"])
+                    or not re.fullmatch(r"[0-9a-f]{64}", fields["sha256"])):
+                raise SyncError("invalid gitstatus install.info line: {}".format(line))
+            return name, fields["version"], fields["sha256"]
+    raise SyncError("no gitstatusd release for {}".format(platform))
+
+
+def add_gitstatus(zgenom, platforms):
+    """Bundle gitstatusd where powerlevel10k looks before trying to download it."""
+    directories = sorted(path.parent for path in (zgenom / "sources").rglob("install.info")
+                         if path.parent.name == "gitstatus" and path.is_file() and not path.is_symlink())
+    if not directories:
+        print("NOTE no gitstatus found in zgenom plugins; skipping gitstatusd", file=sys.stderr)
+        return
+    downloads = {}
+    for directory in directories:
+        install_info = (directory / "install.info").read_text(encoding="utf-8")
+        for platform in platforms:
+            name, version, sha256 = gitstatus_release(install_info, platform)
+            url = GITSTATUS_URL.format(version=version, file=name)
+            if url not in downloads:
+                try:
+                    data = download(url)
+                except OSError as error:
+                    raise SyncError("could not download gitstatusd for {}: {}".format(platform, error)) from error
+                if digest(data) != sha256:
+                    raise SyncError("gitstatusd checksum mismatch for {}: {}".format(platform, url))
+                try:
+                    with tarfile.open(fileobj=io.BytesIO(data), mode="r:gz") as archive:
+                        member = archive.getmember(name)
+                        if not member.isfile():
+                            raise SyncError("gitstatusd archive entry is not a file: {}".format(url))
+                        downloads[url] = archive.extractfile(member).read()
+                except (tarfile.TarError, KeyError) as error:
+                    raise SyncError("invalid gitstatusd archive {}: {}".format(url, error)) from error
+                print("EXPORT gitstatusd {} {}".format(platform, version))
+            usrbin = directory / "usrbin"
+            usrbin.mkdir(exist_ok=True)
+            (usrbin / name).write_bytes(downloads[url])
+            (usrbin / name).chmod(0o755)
+
+
+def without_credentials(url):
+    """Keep a remote URL usable elsewhere without copying passwords or tokens."""
+    parts = urllib.parse.urlsplit(url)
+    if "@" not in parts.netloc:
+        return url
+    userinfo, host = parts.netloc.rsplit("@", 1)
+    if parts.scheme in ("http", "https"):
+        netloc = host
+    elif ":" in userinfo:
+        netloc = userinfo.split(":", 1)[0] + "@" + host
+    else:
+        return url
+    return urllib.parse.urlunsplit(parts._replace(netloc=netloc))
+
+
+def write_archive(root, archive):
+    def normalize(info):
+        info.uid = info.gid = 0
+        info.uname = info.gname = ""
+        return info
+
+    archive = Path(os.path.abspath(archive))
+    with atomic_file(archive, 0o600) as stream:
+        with tarfile.open(fileobj=stream, mode="w:gz") as output:
+            output.add(str(root), arcname=EXPORT_ROOT, filter=normalize)
+    return archive
+
+
+def export_archive(repository, target, archive, platforms):
+    branch = git_output(repository, "symbolic-ref", "--quiet", "--short", "HEAD", check=False)
+    if not branch:
+        raise SyncError("export requires a checked-out branch")
+    commit = git_output(repository, "rev-parse", "HEAD")
+    if git_output(repository, "status", "--porcelain", "--untracked-files=no"):
+        print("WARNING uncommitted changes are not exported; commit them first to include them", file=sys.stderr)
+    try:
+        relative = repository.relative_to(target).as_posix()
+    except ValueError:
+        relative = None
+    with tempfile.TemporaryDirectory(prefix="configs-export-") as directory:
+        root = Path(directory) / EXPORT_ROOT
+        root.mkdir()
+        git_output(repository, "bundle", "create", "--quiet", str(root / "repository.bundle"), "refs/heads/" + branch)
+        print("EXPORT repository {} {}".format(branch, commit[:12]))
+        # Match the bundle rather than any uncommitted edits to the installer.
+        (root / "configs").write_bytes(subprocess.run(
+            ["git", "-C", str(repository), "show", "{}:{}".format(commit, COMMAND_PATH)],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True).stdout)
+        (root / "configs").chmod(0o755)
+        zgenom = target / ".zgenom"
+
+        def ignore(directory, names):
+            # init.zsh holds absolute paths and .zwc files are compiled for one zsh;
+            # zgenom regenerates both offline because every plugin is present.
+            ignored = {name for name in names if name.endswith(".zwc")}
+            if Path(directory) == zgenom / "sources":
+                ignored.update(name for name in names if name == "init.zsh" or name.startswith("zcompdump"))
+            return ignored
+
+        if zgenom.is_dir() and not zgenom.is_symlink():
+            shutil.copytree(zgenom, root / "zgenom", symlinks=True, ignore=ignore)
+            print("EXPORT zgenom")
+            add_gitstatus(root / "zgenom", platforms)
+        else:
+            print("NOTE {} not found; exporting without zsh plugins".format(zgenom), file=sys.stderr)
+        origin = git_output(repository, "config", "--get", "remote.origin.url", check=False)
+        manifest = {
+            "format": EXPORT_FORMAT, "branch": branch, "repository": relative,
+            "origin": without_credentials(origin) if origin else None,
+        }
+        (root / "manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        try:
+            check_entries(staged_entries(root))
+        except SyncError as error:
+            raise SyncError("cannot export an archive that import would reject: {}".format(error)) from error
+        archive = write_archive(root, archive)
+    print("Wrote {}".format(archive))
+    print("On the other machine: tar xzf {} && python3 {}/configs import".format(
+        shlex.quote(archive.name), EXPORT_ROOT))
+
+
+def through_link(path, links):
+    """Whether a lexical path walks through one of the archive's own links."""
+    current = ""
+    for part in PurePosixPath(path).parts[:-1]:
+        current = posixpath.normpath(posixpath.join(current, part))
+        if current in links:
+            return True
+    return False
+
+
+def check_entries(entries):
+    """Accept only files, directories, and links that stay inside their part of the export.
+
+    Links must stay within their top-level directory (e.g. zgenom/), which is
+    installed on its own. They are checked lexically, so nothing may be written
+    or resolved through another link: extraction without tarfile's data filter
+    would follow it.
+    """
+    entries = list(entries)
+    names = [name for name, _, _ in entries]
+    if len(set(names)) != len(names):
+        raise SyncError("duplicate archive entry")
+    links = {name for name, kind, _ in entries if kind == "link"}
+    for name, kind, link in entries:
+        if (not valid_relative(name) or name.split("/", 1)[0] != EXPORT_ROOT
+                or through_link(name, links)):
+            raise SyncError("unsafe archive entry: {}".format(name))
+        if kind == "link":
+            target = posixpath.join(posixpath.dirname(name), link)
+            scope = "/".join(name.split("/")[:2]) + "/"
+            if not posixpath.normpath(target).startswith(scope) or through_link(target, links):
+                raise SyncError("unsafe archive link: {} -> {}".format(name, link))
+        elif kind not in ("file", "dir"):
+            raise SyncError("unsupported archive entry: {}".format(name))
+
+
+def member_entry(member):
+    kind = "link" if member.issym() else "dir" if member.isdir() else "file" if member.isfile() else "other"
+    return member.name, kind, member.linkname if kind == "link" else None
+
+
+def staged_entries(root):
+    for directory, directories, files in os.walk(str(root)):
+        for name in directories + files:
+            path = os.path.join(directory, name)
+            mode = os.lstat(path).st_mode
+            kind = ("link" if stat.S_ISLNK(mode) else "dir" if stat.S_ISDIR(mode)
+                    else "file" if stat.S_ISREG(mode) else "other")
+            relative = posixpath.join(EXPORT_ROOT, *Path(os.path.relpath(path, str(root))).parts)
+            yield relative, kind, os.readlink(path) if kind == "link" else None
+
+
+def extract_archive(archive, directory):
+    # tarfile stops at the end-of-archive marker before gzip's trailing CRC, so
+    # read the stream once to detect a truncated or corrupted transfer.
+    try:
+        with gzip.open(str(archive)) as stream:
+            while stream.read(1024 * 1024):
+                pass
+    except (OSError, EOFError, zlib.error) as error:
+        raise SyncError("invalid export archive {} (incomplete or corrupted transfer?): {}".format(
+            archive, error)) from error
+    try:
+        with tarfile.open(str(archive), mode="r:gz") as source:
+            members = source.getmembers()
+            check_entries(member_entry(member) for member in members)
+            if hasattr(tarfile, "data_filter"):
+                source.extractall(directory, members=members, filter="data")
+            else:
+                source.extractall(directory, members=members)
+    except tarfile.TarError as error:
+        raise SyncError("invalid export archive {}: {}".format(archive, error)) from error
+    return Path(directory) / EXPORT_ROOT
+
+
+def load_manifest(export):
+    try:
+        manifest = json.loads((export / "manifest.json").read_text(encoding="utf-8"))
+        if not isinstance(manifest, dict) or manifest.get("format") != EXPORT_FORMAT:
+            raise ValueError("unsupported export format; export again with this configs version")
+        branch = manifest.get("branch")
+        if not isinstance(branch, str) or not branch or branch.startswith("-"):
+            raise ValueError("invalid branch")
+        if manifest.get("repository") is not None and not valid_relative(manifest["repository"]):
+            raise ValueError("invalid repository location")
+        if manifest.get("origin") is not None and not isinstance(manifest["origin"], str):
+            raise ValueError("invalid origin")
+        if not (export / "repository.bundle").is_file():
+            raise ValueError("repository bundle is missing")
+        return manifest
+    except (OSError, ValueError, UnicodeError) as error:
+        raise SyncError("invalid export {}: {}".format(export, error)) from error
+
+
+def import_repository(export, manifest, destination):
+    bundle, branch = str(export / "repository.bundle"), manifest["branch"]
+    if os.path.lexists(destination):
+        if not (destination / ".git").exists():
+            raise SyncError("repository destination exists but is not a Git checkout: {}".format(destination))
+        current = git_output(destination, "symbolic-ref", "--quiet", "--short", "HEAD", check=False)
+        if current != branch:
+            raise SyncError("checkout {} is on {}, but the export is from {}".format(destination, current, branch))
+        subprocess.run(["git", "-C", str(destination), "pull", "--ff-only", "--quiet", bundle, branch], check=True)
+    else:
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        subprocess.run(["git", "clone", "--quiet", "--branch", branch, bundle, str(destination)], check=True)
+        # Keep the original remote so git pull works if the machine is ever online.
+        if manifest.get("origin"):
+            subprocess.run(["git", "-C", str(destination), "remote", "set-url", "origin", manifest["origin"]], check=True)
+        else:
+            subprocess.run(["git", "-C", str(destination), "remote", "remove", "origin"], check=True)
+    print("IMPORT repository {} {} into {}".format(
+        branch, git_output(destination, "rev-parse", "--short=12", "HEAD"), destination))
+
+
+def remove_tree(path):
+    if path.is_symlink() or not path.is_dir():
+        path.unlink()
+    else:
+        shutil.rmtree(path)
+
+
+def import_zgenom(source, target):
+    destination = target / ".zgenom"
+    if destination.is_symlink() or (destination.exists() and not destination.is_dir()):
+        raise SyncError("not a directory: {}".format(destination))
+    staging, previous = target / ".zgenom.import", target / ".zgenom.previous"
+    if os.path.lexists(staging):
+        remove_tree(staging)
+    shutil.copytree(source, staging, symlinks=True)
+    # The old copy stays in place until the new one is complete.
+    if os.path.lexists(previous):
+        remove_tree(previous)
+    if destination.exists():
+        os.rename(destination, previous)
+    os.rename(staging, destination)
+    if os.path.lexists(previous):
+        remove_tree(previous)
+    print("IMPORT zgenom into {}".format(destination))
+    if os.path.lexists(target / ".zgen"):
+        print("WARNING zgenom keeps plugins in {} while it exists; remove it to use the imported plugins".format(
+            target / ".zgen"), file=sys.stderr)
+
+
+def import_archive(script, target, source, repository):
+    with tempfile.TemporaryDirectory(prefix="configs-import-") as directory:
+        if source is None:
+            export = script.parent
+            if not (export / "manifest.json").is_file():
+                raise SyncError("pass the export archive or its extracted {} directory".format(EXPORT_ROOT))
+        elif source.is_dir():
+            export = source if (source / "manifest.json").exists() else source / EXPORT_ROOT
+        else:
+            export = extract_archive(source, directory)
+        manifest = load_manifest(export)
+        if repository is not None:
+            destination = Path(os.path.abspath(repository.expanduser()))
+        elif manifest.get("repository") is not None:
+            destination = target / manifest["repository"]
+        else:
+            raise SyncError("the exported repository was outside the home directory; pass --repository")
+        import_repository(export, manifest, destination)
+        result = run_checkout(destination, "apply", "--target", str(target))
+        if result:
+            print("Repository imported, but configuration application failed. Resolve the error, "
+                  "rerun configs apply, then import again to install zsh plugins.", file=sys.stderr)
+            return result
+        if (export / "zgenom").is_dir():
+            with installation_lock(target):
+                import_zgenom(export / "zgenom", target)
+    print("Configuration imported. Start a new shell to load it.")
+    return 0
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("diff", "apply", "update", "repo", "prune", "resolve"))
-    parser.add_argument("paths", nargs="*", help="repository-relative conflicts to resolve (resolve only)")
+    parser.add_argument("command", choices=("diff", "apply", "update", "repo", "prune", "resolve", "export", "import"))
+    parser.add_argument("paths", nargs="*",
+                        help="repository-relative conflicts to resolve, or the archive to export or import")
     parser.add_argument("--target", type=Path, default=Path.home(), help="existing home directory to install into")
     parser.add_argument("--dry-run", action="store_true", help="preview prune without deleting files or changing state")
     parser.add_argument("--color", choices=("auto", "always", "never"),
                         help="color diff output (default: auto; respects NO_COLOR and TERM=dumb)")
+    parser.add_argument("--platform", action="append",
+                        help="OS-ARCH to bundle gitstatusd for, repeatable (export only; default: {})".format(
+                            ", ".join(DEFAULT_PLATFORMS)))
+    parser.add_argument("--repository", type=Path,
+                        help="checkout location (import only; default: the exported location under the target)")
     args = parser.parse_intermixed_args()
-    if args.paths and args.command != "resolve":
-        parser.error("paths are only supported for resolve")
+    if args.paths and args.command not in ("resolve", "export", "import"):
+        parser.error("paths are only supported for resolve, export, and import")
+    if len(args.paths) > 1 and args.command in ("export", "import"):
+        parser.error("{} takes at most one archive".format(args.command))
     if args.dry_run and args.command != "prune":
         parser.error("--dry-run is only supported for prune")
     if args.color is not None and args.command != "diff":
         parser.error("--color is only supported for diff")
+    if args.platform is not None and args.command != "export":
+        parser.error("--platform is only supported for export")
+    if any(not re.fullmatch(r"[a-z0-9_]+-[a-z0-9_]+", platform) for platform in args.platform or ()):
+        parser.error("--platform must look like linux-x86_64")
+    if args.repository is not None and args.command != "import":
+        parser.error("--repository is only supported for import")
     script = Path(__file__).resolve()
     target = Path(os.path.abspath(args.target.expanduser()))
     try:
         if target.is_symlink() or not target.is_dir():
             raise SyncError("target must be an existing, non-symlink directory")
         target = target.resolve()
+        if args.command == "import":
+            # Import runs before any checkout or state exists on a new machine.
+            return import_archive(script, target, Path(args.paths[0]) if args.paths else None, args.repository)
         try:
             repository = find_repository(script, target)
         except (SyncError, OSError, subprocess.CalledProcessError) as error:
@@ -629,6 +986,10 @@ def main():
         if script != repository / COMMAND_PATH:
             # The checkout runs with the same working directory, so relative paths still resolve.
             return run_checkout(repository, *sys.argv[1:])
+        if args.command == "export":
+            export_archive(repository, target, Path(args.paths[0]) if args.paths else Path(DEFAULT_ARCHIVE),
+                           args.platform or DEFAULT_PLATFORMS)
+            return 0
         with installation_lock(target):
             state = load_state(target)
             if args.command == "repo":

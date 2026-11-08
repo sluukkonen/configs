@@ -10,6 +10,7 @@ import shutil
 import stat
 import subprocess
 import sys
+import tarfile
 import tempfile
 import unittest
 from unittest import mock
@@ -1118,6 +1119,312 @@ class ConfigCommandTests(InstallerFixture):
         with sync.installation_lock(self.target):
             self.assertIn("another installer", self.run_command("update", expected=1))
         self.assertEqual(head, self.git("rev-parse", "HEAD").stdout)
+
+
+class ExportImportTests(InstallerFixture):
+    def setUp(self):
+        super().setUp()
+        # Keep the checkout under the home directory, like ~/Code/configs.
+        nested = self.target / "Code/configs"
+        nested.parent.mkdir()
+        self.repository.rename(nested)
+        self.repository = nested
+        self.source()
+        self.commit(self.repository, "Initial configs")
+        self.run_sync()
+        self.releases = {platform: self.release(platform) for platform in sync.DEFAULT_PLATFORMS}
+        self.zgenom = self.target / ".zgenom"
+        self.gitstatus = self.zgenom / "sources/romkatv/powerlevel10k/___/gitstatus"
+        self.install_zgenom()
+        self.archive = self.root / "export.tar.gz"
+        self.other = self.root / "other home"
+        self.other.mkdir()
+
+    def release(self, platform):
+        name = "gitstatusd-" + platform
+        contents = ("binary " + platform).encode()
+        output = io.BytesIO()
+        with tarfile.open(fileobj=output, mode="w:gz") as archive:
+            info = tarfile.TarInfo(name)
+            info.size = len(contents)
+            archive.addfile(info, io.BytesIO(contents))
+        return output.getvalue()
+
+    def install_info(self):
+        lines = ["# uname_s_glob=\"ignored\"; uname_m_glob=\"*\"; file=\"x\"; version=\"v0\"; sha256=\"0\";"]
+        for platform, data in self.releases.items():
+            kernel, machine = platform.split("-")
+            lines.append('uname_s_glob="{}"; uname_m_glob="{}"; file="gitstatusd-${{uname_s}}-${{uname_m}}"; '
+                         'version="v1.5.4"; sha256="{}";'.format(kernel, machine, sync.digest(data)))
+        return "\n".join(lines) + "\n"
+
+    def install_zgenom(self):
+        files = {
+            "zgenom.zsh": "zgenom\n",
+            "sources/init.zsh": "source /absolute/exporting/path\n",
+            "sources/zcompdump_5.9": "dump\n",
+            "sources/zcompdump_5.9.zwc": "compiled\n",
+            "sources/romkatv/powerlevel10k/___/powerlevel10k.zsh-theme": "theme\n",
+            "sources/romkatv/powerlevel10k/___/powerlevel10k.zsh-theme.zwc": "compiled\n",
+            "sources/romkatv/powerlevel10k/___/gitstatus/install.info": self.install_info(),
+        }
+        for relative, contents in files.items():
+            path = self.zgenom / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(contents)
+        (self.zgenom / "sources/theme-link").symlink_to("romkatv/powerlevel10k/___/powerlevel10k.zsh-theme")
+
+    def export(self, platforms=sync.DEFAULT_PLATFORMS):
+        downloads = []
+        self.stderr = io.StringIO()
+
+        def download(url):
+            downloads.append(url)
+            platform = re.search(r"gitstatusd-(.+)\.tar\.gz$", url).group(1)
+            return self.releases[platform]
+
+        with mock.patch.object(sync, "download", side_effect=download), \
+                mock.patch.object(sync.sys, "stdout", io.StringIO()), \
+                mock.patch.object(sync.sys, "stderr", self.stderr):
+            sync.export_archive(self.repository, self.target, self.archive, platforms)
+        return downloads
+
+    def members(self):
+        with tarfile.open(str(self.archive)) as archive:
+            return {member.name: member for member in archive.getmembers()}
+
+    def read(self, name):
+        with tarfile.open(str(self.archive)) as archive:
+            return archive.extractfile(name).read()
+
+    def run_import(self, command, *options, expected=0):
+        result = subprocess.run(
+            [sys.executable, str(command), "import", *options, "--target", str(self.other)],
+            cwd=self.root, env=dict(os.environ, HOME=str(self.other)), capture_output=True, text=True,
+        )
+        self.assertEqual(result.returncode, expected, result.stdout + result.stderr)
+        return result.stdout + result.stderr
+
+    def extract(self):
+        directory = self.root / "transfer"
+        directory.mkdir(exist_ok=True)
+        subprocess.run(["tar", "-xzf", str(self.archive), "-C", str(directory)], check=True)
+        return directory / sync.EXPORT_ROOT
+
+    def test_export_bundles_repository_plugins_and_gitstatusd(self):
+        downloads = self.export(("linux-x86_64", "darwin-arm64"))
+        self.assertEqual(downloads, [sync.GITSTATUS_URL.format(version="v1.5.4", file="gitstatusd-" + platform)
+                                     for platform in ("linux-x86_64", "darwin-arm64")])
+        members = self.members()
+        root = sync.EXPORT_ROOT + "/"
+        manifest = json.loads(self.read(root + "manifest.json"))
+        self.assertEqual(manifest["branch"], self.git("symbolic-ref", "--short", "HEAD").stdout.decode().strip())
+        self.assertEqual(manifest["repository"], "Code/configs")
+        self.assertEqual(self.read(root + "configs"), (self.repository / COMMAND_PATH).read_bytes())
+        self.assertEqual(stat.S_IMODE(members[root + "configs"].mode), 0o755)
+        self.assertIn(root + "repository.bundle", members)
+        self.assertIn(root + "zgenom/sources/romkatv/powerlevel10k/___/powerlevel10k.zsh-theme", members)
+        self.assertEqual(members[root + "zgenom/sources/theme-link"].linkname,
+                         "romkatv/powerlevel10k/___/powerlevel10k.zsh-theme")
+        for excluded in ("sources/init.zsh", "sources/zcompdump_5.9", "sources/zcompdump_5.9.zwc",
+                         "sources/romkatv/powerlevel10k/___/powerlevel10k.zsh-theme.zwc"):
+            self.assertNotIn(root + "zgenom/" + excluded, members)
+        usrbin = root + "zgenom/sources/romkatv/powerlevel10k/___/gitstatus/usrbin/"
+        for platform in ("linux-x86_64", "darwin-arm64"):
+            self.assertEqual(self.read(usrbin + "gitstatusd-" + platform), ("binary " + platform).encode())
+            self.assertEqual(stat.S_IMODE(members[usrbin + "gitstatusd-" + platform].mode), 0o755)
+        self.assertNotIn(usrbin + "gitstatusd-linux-aarch64", members)
+        self.assertTrue(all(member.uid == 0 and member.uname == "" for member in members.values()))
+        self.assertFalse(self.gitstatus.joinpath("usrbin").exists())
+
+    def test_export_warns_about_and_omits_uncommitted_changes(self):
+        committed = (self.repository / COMMAND_PATH).read_bytes()
+        (self.repository / COMMAND_PATH).write_bytes(committed + b"# uncommitted\n")
+        self.export(("linux-x86_64",))
+        self.assertIn("uncommitted changes are not exported", self.stderr.getvalue())
+        self.assertEqual(self.read(sync.EXPORT_ROOT + "/configs"), committed)
+
+    def test_checksum_mismatch_and_unknown_platform_abort_without_archive(self):
+        self.releases["linux-x86_64"] = self.release("tampered")
+        with self.assertRaisesRegex(sync.SyncError, "checksum mismatch"):
+            self.export(("linux-x86_64",))
+        with self.assertRaisesRegex(sync.SyncError, "no gitstatusd release for plan9-mips"):
+            self.export(("plan9-mips",))
+        self.assertFalse(self.archive.exists())
+        self.assertEqual([path.name for path in self.root.iterdir() if path.name.startswith(".configs-")], [])
+
+    def test_gitstatus_release_follows_install_globs(self):
+        install_info = ('uname_s_glob="linux"; uname_m_glob="armv8l"; file="gitstatusd-${uname_s}-aarch64"; '
+                        'version="v1.5.4"; sha256="' + "a" * 64 + '";\n')
+        self.assertEqual(sync.gitstatus_release(install_info, "linux-armv8l"),
+                         ("gitstatusd-linux-aarch64", "v1.5.4", "a" * 64))
+        with self.assertRaisesRegex(sync.SyncError, "invalid gitstatus"):
+            sync.gitstatus_release(install_info.replace("v1.5.4", "$(touch x)"), "linux-armv8l")
+        commented = '  # uname_s_glob="linux"; an indented note\n' + install_info
+        self.assertEqual(sync.gitstatus_release(commented, "linux-armv8l")[0], "gitstatusd-linux-aarch64")
+
+    def test_import_into_new_home_from_extracted_archive(self):
+        self.export()
+        export = self.extract()
+        output = self.run_import(export / "configs")
+        self.assertIn("Configuration imported.", output)
+        checkout = self.other / "Code/configs"
+        self.assertEqual((checkout / ".zshrc").read_text(), "original\n")
+        self.assertEqual((self.other / ".zshrc").read_text(), "original\n")
+        state = json.loads((self.other / sync.STATE_PATH).read_text())
+        self.assertEqual(state["repository"], str(checkout.resolve()))
+        self.assertEqual(subprocess.run(["git", "-C", str(checkout), "remote"], capture_output=True,
+                                        text=True, check=True).stdout, "")
+        usrbin = self.other / ".zgenom/sources/romkatv/powerlevel10k/___/gitstatus/usrbin"
+        self.assertEqual(sorted(path.name for path in usrbin.iterdir()),
+                         sorted("gitstatusd-" + platform for platform in sync.DEFAULT_PLATFORMS))
+        self.assertTrue(os.access(usrbin / "gitstatusd-linux-x86_64", os.X_OK))
+        self.assertFalse((self.other / ".zgenom/sources/init.zsh").exists())
+        self.assertTrue((self.other / ".zgenom/sources/theme-link").is_symlink())
+        self.assertFalse(os.path.lexists(self.other / ".zgenom.import"))
+        self.assertFalse(os.path.lexists(self.other / ".zgenom.previous"))
+
+    def test_reimport_fast_forwards_checkout_and_replaces_plugins(self):
+        self.git("remote", "add", "origin", "https://example.invalid/configs.git")
+        self.export()
+        self.run_import(self.extract() / "configs")
+        checkout = self.other / "Code/configs"
+        self.assertEqual(subprocess.run(["git", "-C", str(checkout), "remote", "get-url", "origin"],
+                                        capture_output=True, text=True, check=True).stdout.strip(),
+                         "https://example.invalid/configs.git")
+        self.source(contents="second version\n")
+        self.commit(self.repository, "Second version")
+        (self.zgenom / "zgenom.zsh").unlink()
+        (self.zgenom / "new-plugin.zsh").write_text("new\n")
+        self.export(("linux-x86_64",))
+        self.assertIn("Configuration imported.", self.run_import(self.other / COMMAND_PATH, str(self.archive)))
+        self.assertEqual((self.other / ".zshrc").read_text(), "second version\n")
+        self.assertEqual((self.other / ".zgenom/new-plugin.zsh").read_text(), "new\n")
+        self.assertFalse((self.other / ".zgenom/zgenom.zsh").exists())
+
+    def test_apply_conflict_stops_before_replacing_plugins(self):
+        self.export()
+        self.run_import(self.extract() / "configs")
+        marker = self.other / ".zgenom/local-marker"
+        marker.write_text("keep\n")
+        (self.other / ".zshrc").write_text("local edit\n")
+        self.source(contents="second version\n")
+        self.commit(self.repository, "Second version")
+        self.export(("linux-x86_64",))
+        self.assertIn("then import again", self.run_import(self.other / COMMAND_PATH, str(self.archive), expected=1))
+        self.assertEqual((self.other / ".zshrc").read_text(), "local edit\n")
+        self.assertTrue(marker.exists())
+
+    def test_checkout_on_another_branch_is_not_changed(self):
+        self.export()
+        self.run_import(self.extract() / "configs")
+        checkout = self.other / "Code/configs"
+        subprocess.run(["git", "-C", str(checkout), "switch", "-q", "-c", "other"], check=True)
+        self.assertIn("is on other", self.run_import(self.other / COMMAND_PATH, str(self.archive), expected=1))
+
+    def test_repository_outside_home_needs_explicit_location(self):
+        self.export()
+        export = self.extract()
+        manifest = json.loads((export / "manifest.json").read_text())
+        manifest["repository"] = None
+        (export / "manifest.json").write_text(json.dumps(manifest))
+        self.assertIn("pass --repository", self.run_import(export / "configs", expected=1))
+        location = self.root / "elsewhere/configs"
+        self.run_import(export / "configs", str(export), "--repository", str(location))
+        self.assertEqual((location / ".zshrc").read_text(), "original\n")
+        self.assertEqual((self.other / ".zshrc").read_text(), "original\n")
+
+    def test_unsafe_archives_are_rejected_before_extracting(self):
+        root = sync.EXPORT_ROOT + "/"
+        directory, file, link = tarfile.DIRTYPE, tarfile.REGTYPE, tarfile.SYMTYPE
+        cases = {
+            "parent": [(root + "../escaped", file, "")],
+            "absolute link": [(root + "link", link, "/etc/passwd")],
+            "escaping link": [(root + "link", link, "../../escaped")],
+            "device": [(root + "device", tarfile.CHRTYPE, "")],
+            "outside its directory": [(root + "zgenom/link", link, "../configs")],
+            # These stay inside zgenom/ lexically, so only the link-walk and
+            # duplicate checks can catch them.
+            "write through link": [(root + "zgenom/a", directory, ""), (root + "zgenom/a/up", link, "../b"),
+                                   (root + "zgenom/a/up/file", file, "")],
+            "link through link": [(root + "zgenom/a/b", directory, ""), (root + "zgenom/a/b/up", link, "../../c"),
+                                  (root + "zgenom/escape", link, "a/b/up/../../../escaped")],
+            "duplicate": [(root + "zgenom/same", link, "other"), (root + "zgenom/same", file, "")],
+        }
+        for case, entries in cases.items():
+            with self.subTest(case=case):
+                with tarfile.open(str(self.archive), "w:gz") as archive:
+                    for name, kind, target in entries:
+                        info = tarfile.TarInfo(name)
+                        info.type, info.linkname = kind, target
+                        archive.addfile(info, io.BytesIO(b""))
+                output = self.run_import(self.repository / COMMAND_PATH, str(self.archive), expected=1)
+                self.assertRegex(output, "unsafe archive|unsupported archive entry|duplicate archive entry")
+                self.assertFalse(os.path.lexists(self.root / "escaped"))
+                self.assertFalse(os.path.lexists(self.other / "Code"))
+
+    def test_truncated_or_corrupted_archives_report_cleanly(self):
+        self.export(("linux-x86_64",))
+        data = self.archive.read_bytes()
+        corrupted = bytearray(data)
+        corrupted[len(data) // 2:len(data) // 2 + 64] = bytes(64)
+        for case, contents in (("truncated", data[:len(data) // 2]), ("corrupted", bytes(corrupted)),
+                               ("not gzip", b"not an archive")):
+            with self.subTest(case=case):
+                self.archive.write_bytes(contents)
+                output = self.run_import(self.repository / COMMAND_PATH, str(self.archive), expected=1)
+                self.assertIn("invalid export archive", output)
+                self.assertNotIn("Traceback", output)
+                self.assertFalse(os.path.lexists(self.other / "Code"))
+
+    def test_export_rejects_links_that_import_would_refuse(self):
+        for target in ("/usr/share/outside", "../../outside"):
+            with self.subTest(target=target):
+                link = self.zgenom / "sources/outside-link"
+                link.symlink_to(target)
+                with self.assertRaisesRegex(sync.SyncError, "import would reject.*outside-link"):
+                    self.export(("linux-x86_64",))
+                self.assertFalse(self.archive.exists())
+                link.unlink()
+
+    def test_origin_credentials_are_not_exported(self):
+        self.git("remote", "add", "origin", "https://user:secret-token@example.invalid/configs.git")
+        self.export(("linux-x86_64",))
+        manifest = json.loads(self.read(sync.EXPORT_ROOT + "/manifest.json"))
+        self.assertEqual(manifest["origin"], "https://example.invalid/configs.git")
+        self.assertNotIn(b"secret-token", self.read(sync.EXPORT_ROOT + "/manifest.json"))
+        for url, expected in (("ssh://git:secret@host/configs.git", "ssh://git@host/configs.git"),
+                              ("ssh://git@host/configs.git", "ssh://git@host/configs.git"),
+                              ("git@github.com:owner/configs.git", "git@github.com:owner/configs.git")):
+            self.assertEqual(sync.without_credentials(url), expected)
+
+    def test_installed_export_forwards_archive_and_platforms(self):
+        def run(*options):
+            return subprocess.run([sys.executable, str(self.target / COMMAND_PATH), "export", *options],
+                                  cwd=self.root, env=dict(os.environ, HOME=str(self.target)),
+                                  capture_output=True, text=True)
+
+        # Only the forwarded platform can produce this error, without any download.
+        result = run("out.tar.gz", "--platform", "plan9-mips")
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("no gitstatusd release for plan9-mips", result.stderr)
+        shutil.rmtree(self.gitstatus)
+        result = run("out.tar.gz")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertTrue((self.root / "out.tar.gz").is_file())
+
+    def test_export_and_import_argument_validation(self):
+        for options, message in (
+            (("apply", "--platform", "linux-x86_64"), "--platform is only supported for export"),
+            (("export", "--platform", "Linux x86"), "--platform must look like"),
+            (("export", "--repository", "elsewhere"), "--repository is only supported for import"),
+            (("export", "one.tar.gz", "two.tar.gz"), "at most one archive"),
+            (("import", "one.tar.gz", "two.tar.gz"), "at most one archive"),
+            (("apply", "archive.tar.gz"), "paths are only supported"),
+        ):
+            with self.subTest(options=options):
+                self.assertIn(message, self.run_sync(options[0], 2, *options[1:]))
+        self.assertIn("pass the export archive", self.run_sync("import", 1))
 
 
 class RepositoryPayloadTests(InstallerFixture):
