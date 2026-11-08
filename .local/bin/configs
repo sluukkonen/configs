@@ -582,6 +582,18 @@ def run_checkout(repository, command, target, dry_run=False, color=None, paths=(
     ).returncode
 
 
+def update_zgenom(target):
+    """Update zgenom and its plugins when it is installed in the target."""
+    script = target / ".zgenom/zgenom.zsh"
+    zsh = shutil.which("zsh")
+    if zsh is None or not script.is_file():
+        return 0
+    result = subprocess.run([zsh, "-c", 'source "$1" && zgenom selfupdate && zgenom update', "zsh", str(script)])
+    if result.returncode:
+        print("Configuration applied, but updating zgenom plugins failed. Rerun configs update.", file=sys.stderr)
+    return result.returncode
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=("diff", "apply", "update", "repo", "prune", "resolve"))
@@ -652,7 +664,8 @@ def main():
             if result:
                 print("Repository updated, but configuration application failed. Resolve the error and rerun configs apply.",
                       file=sys.stderr)
-            return result
+                return result
+            return update_zgenom(target)
         return 0
     except (SyncError, OSError, subprocess.CalledProcessError) as error:
         print("configs: {}".format(error), file=sys.stderr)

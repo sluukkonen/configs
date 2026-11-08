@@ -5,6 +5,7 @@ import json
 import os
 import re
 from pathlib import Path
+import shlex
 import shutil
 import stat
 import subprocess
@@ -1029,6 +1030,43 @@ class ConfigCommandTests(InstallerFixture):
         self.assertEqual((self.target / ".zshrc").read_text(), "upstream config\n")
         self.assertEqual((self.target / COMMAND_PATH).read_bytes(), installer.read_bytes())
         self.assertFalse((self.target / ".zgenom").exists())
+
+    def install_zgenom(self, status=0):
+        log = self.root / "zgenom calls"
+        script = self.target / ".zgenom/zgenom.zsh"
+        script.parent.mkdir()
+        # Record the installed .zshrc to show plugins update after applying.
+        script.write_text(
+            'zgenom() {{ print -r -- "$1 $(<{zshrc})" >> {log}; return {status}; }}\n'.format(
+                zshrc=shlex.quote(str(self.target / ".zshrc")), log=shlex.quote(str(log)), status=status))
+        return log
+
+    def test_update_refreshes_zgenom_after_applying(self):
+        if shutil.which("zsh") is None:
+            self.skipTest("requires zsh")
+        log = self.install_zgenom()
+        self.setup_remote()
+        self.publish()
+        self.run_command("update")
+        self.assertEqual(log.read_text(), "selfupdate upstream config\nupdate upstream config\n")
+
+    def test_zgenom_failure_is_reported_after_applying(self):
+        if shutil.which("zsh") is None:
+            self.skipTest("requires zsh")
+        log = self.install_zgenom(status=1)
+        self.setup_remote()
+        self.publish()
+        self.assertIn("updating zgenom plugins failed", self.run_command("update", expected=1))
+        self.assertEqual((self.target / ".zshrc").read_text(), "upstream config\n")
+        self.assertEqual(log.read_text(), "selfupdate upstream config\n")
+
+    def test_zgenom_is_not_updated_when_applying_fails(self):
+        log = self.install_zgenom()
+        self.setup_remote()
+        self.publish()
+        (self.target / ".zshrc").write_text("local conflict\n")
+        self.run_command("update", expected=1)
+        self.assertFalse(log.exists())
 
     def test_update_preserves_uncommitted_tracked_edits(self):
         self.source(".vimrc", "base\n")
