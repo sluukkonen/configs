@@ -1,11 +1,11 @@
 [column]
-    ui = auto
+	ui = auto
 [branch]
-    sort = -committerdate
+	sort = -committerdate
 [tag]
-    sort = version:refname
+	sort = version:refname
 [diff]
-    algorithm = histogram
+	algorithm = histogram
 [user]
 	email = mail@sakumatti.fi
 	name = Sakumatti Luukkonen
