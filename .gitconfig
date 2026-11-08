@@ -6,6 +6,7 @@
 	sort = version:refname
 [diff]
 	algorithm = histogram
+	colorMoved = default
 [user]
 	email = mail@sakumatti.fi
 	name = Sakumatti Luukkonen
@@ -17,6 +18,7 @@
 	allowedSignersFile = ~/.ssh/allowed_signers
 [push]
 	default = current
+	autoSetupRemote = true
 [sequence]
 	editor = interactive-rebase-tool
 [includeIf "gitdir:~/Work/**"]
@@ -29,16 +31,25 @@
 	diffFilter = delta --color-only
 [delta]
 	syntax-theme = ansi
+	navigate = true
 [pull]
 	ff = only
 [commit]
 	gpgsign = true
 [rebase]
 	autosquash = true
+	updateRefs = true
+	autoStash = true
 [alias]
 	commit-reuse = commit -eF .git/COMMIT_EDITMSG
 	wt = "!f() { git fetch origin && base=$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD) && git worktree add -b \"$1\" \"../${1//\\//-}\" \"$base\"; }; f"
 [init]
 	defaultBranch = main
+[fetch]
+	prune = true
+[merge]
+	conflictStyle = zdiff3
+[rerere]
+	enabled = true
 [include]
 	path = ~/.gitconfig_local
