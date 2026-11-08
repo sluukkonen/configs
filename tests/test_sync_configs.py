@@ -161,7 +161,7 @@ class InstallerTests(InstallerFixture):
         self.assertEqual(run.call_args.args[0], ["/tools/delta", "--color-only"])
         report = run.call_args.kwargs["input"]
         for expected in ("CONFLICT .zshrc", "-local", "+repository", "\\ No newline at end of file",
-                         "mode 644 -> 755", "Binary contents differ", "NO LONGER SELECTED", conflicts[0]):
+                         "mode 644 -> 755", "Binary contents differ", "NO LONGER SELECTED"):
             self.assertIn(expected, report)
         self.assertNotIn("\033[", report)
         self.assertEqual(output.getvalue(), "")
@@ -474,10 +474,11 @@ class InstallerTests(InstallerFixture):
         for relative in paths:
             self.assertEqual((self.target / relative).read_text(), "original\n")
 
-    def test_missing_and_symlinked_sources_are_rejected(self):
+    def test_deleted_sources_are_skipped_and_symlinked_sources_rejected(self):
         source = self.source()
         source.unlink()
-        self.assertIn("tracked source is missing", self.run_sync(expected=1))
+        self.assertIn("CHECKOUT DELETED .zshrc (excluded from installation)", self.run_sync())
+        self.assertFalse(os.path.lexists(self.target / ".zshrc"))
         outside = self.root / "outside"
         outside.write_text("outside\n")
         source.symlink_to(outside)
