@@ -819,7 +819,8 @@ class UpdateCommandTests(InstallerFixture):
                                 cwd=self.root, env=self.env, capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         calls = self.log.read_text()
-        self.assertIn("brew:{}:bundle --upgrade".format(self.repository), calls)
+        self.assertIn("brew:{}:bundle install --no-upgrade".format(self.repository), calls)
+        self.assertIn("brew:{}:cleanup".format(self.repository), calls)
 
     def test_missing_or_invalid_locator_stops_before_external_commands(self):
         self.install_commands()
@@ -840,7 +841,7 @@ class UpdateCommandTests(InstallerFixture):
     def test_init_works_from_another_directory_and_stops_on_conflicts(self):
         shutil.copyfile(REPOSITORY / "init.sh", self.repository / "init.sh")
         self.source()
-        (self.target / ".zgen").mkdir()
+        (self.target / ".zgenom").mkdir()
         env = dict(os.environ, HOME=str(self.target))
         result = subprocess.run(["bash", str(self.repository / "init.sh")], cwd=self.root,
                                 env=env, capture_output=True, text=True)
@@ -851,7 +852,7 @@ class UpdateCommandTests(InstallerFixture):
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual((self.target / ".zshrc").read_text(), "local\n")
 
-    def test_init_installs_missing_zgen_once_and_only_after_successful_apply(self):
+    def test_init_installs_missing_zgenom_once_and_only_after_successful_apply(self):
         shutil.copyfile(REPOSITORY / "init.sh", self.repository / "init.sh")
         self.source()
         commands = self.root / "commands"
@@ -878,14 +879,14 @@ class UpdateCommandTests(InstallerFixture):
         self.assertTrue((self.target / COMMAND_PATH).is_file())
         calls = log.read_text()
         self.assertEqual(len(calls.splitlines()), 1)
-        self.assertIn("https://github.com/tarjoilija/zgen", calls)
-        (self.target / ".zgen").rmdir()
+        self.assertIn("https://github.com/jandamm/zgenom.git", calls)
+        (self.target / ".zgenom").rmdir()
         (self.target / ".zshrc").write_text("local conflict\n")
         result = subprocess.run(["bash", str(self.repository / "init.sh")], cwd=self.root,
                                 env=env, capture_output=True, text=True)
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(log.read_text(), calls)
-        self.assertFalse((self.target / ".zgen").exists())
+        self.assertFalse((self.target / ".zgenom").exists())
 
 
 class ConfigCommandTests(InstallerFixture):
@@ -1027,7 +1028,7 @@ class ConfigCommandTests(InstallerFixture):
         self.assertIn("Updated installer applied.", self.run_command("update"))
         self.assertEqual((self.target / ".zshrc").read_text(), "upstream config\n")
         self.assertEqual((self.target / COMMAND_PATH).read_bytes(), installer.read_bytes())
-        self.assertFalse((self.target / ".zgen").exists())
+        self.assertFalse((self.target / ".zgenom").exists())
 
     def test_update_preserves_uncommitted_tracked_edits(self):
         self.source(".vimrc", "base\n")
