@@ -4,6 +4,7 @@ set -uo pipefail
 
 usage() {
   echo "Usage: ntfy <title> <body> <tags>" >&2
+  echo "The topic is read from \$XDG_CONFIG_HOME/ntfy/topic (or NTFY_TOPIC, if set)." >&2
   echo "Set NTFY_IDLE_THRESHOLD_SECONDS (default: 120) to control activity suppression." >&2
 }
 
@@ -72,9 +73,19 @@ body=$2
 tags=$3
 server_url=${NTFY_URL:-https://ntfy.sh}
 idle_threshold=${NTFY_IDLE_THRESHOLD_SECONDS:-120}
+topic_file=${XDG_CONFIG_HOME:-$HOME/.config}/ntfy/topic
+topic=${NTFY_TOPIC:-}
 
-if [ -z "${NTFY_TOPIC:-}" ]; then
-  echo "ntfy: NTFY_TOPIC is not set" >&2
+if [ -z "$topic" ] && [ -r "$topic_file" ]; then
+  if [ -n "$(find "$topic_file" \( -perm -0040 -o -perm -0004 \) 2>/dev/null)" ]; then
+    echo "ntfy: warning: $topic_file is readable by other users; run: chmod 600 $topic_file" >&2
+  fi
+  topic=$(<"$topic_file")
+  topic=${topic//[[:space:]]/}
+fi
+
+if [ -z "$topic" ]; then
+  echo "ntfy: no topic configured; write it to $topic_file or set NTFY_TOPIC" >&2
   exit 1
 fi
 
@@ -103,4 +114,4 @@ curl --fail --silent --show-error \
   -H "Title: $title" \
   -H "Tags: $tags" \
   --data-binary "$body" \
-  "${server_url%/}/${NTFY_TOPIC}"
+  "${server_url%/}/${topic}"
