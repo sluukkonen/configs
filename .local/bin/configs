@@ -37,6 +37,9 @@ EXPORT_ROOT = "configs-export"
 EXPORT_FORMAT = 1
 DEFAULT_ARCHIVE = "configs-export.tar.gz"
 DEFAULT_PLATFORMS = ("linux-x86_64", "linux-aarch64", "darwin-arm64", "darwin-x86_64")
+# apply exits with this when it applied everything except conflicting files,
+# so callers can still run steps that do not depend on those files.
+CONFLICTS_EXIT = 3
 GITSTATUS_URL = "https://github.com/romkatv/gitstatus/releases/download/{version}/{file}.tar.gz"
 
 
@@ -352,11 +355,12 @@ def save_state(target, state):
 
 
 def apply_plan(repository, target, state, operations):
-    if any(operation["action"] == "CONFLICT" for operation in operations):
-        raise SyncError("cannot apply a plan with conflicts")
     dirty = state["repository"] != str(repository)
     state["repository"] = str(repository)
     for operation in operations:
+        if operation["action"] == "CONFLICT":
+            # Leave conflicting files and their baselines for configs resolve.
+            continue
         destination = operation["destination"]
         current, _ = inspect(target, destination)
         if current != operation["before"]:
@@ -929,13 +933,17 @@ def import_archive(script, target, source, repository):
             raise SyncError("the exported repository was outside the home directory; pass --repository")
         import_repository(export, manifest, destination)
         result = run_checkout(destination, "apply", "--target", str(target))
-        if result:
+        if result not in (0, CONFLICTS_EXIT):
             print("Repository imported, but configuration application failed. Resolve the error, "
                   "rerun configs apply, then import again to install zsh plugins.", file=sys.stderr)
             return result
         if (export / "zgenom").is_dir():
             with installation_lock(target):
                 import_zgenom(export / "zgenom", target)
+    if result:
+        print("Configuration imported, but conflicts remain. Run configs resolve, then start a new shell.",
+              file=sys.stderr)
+        return result
     print("Configuration imported. Start a new shell to load it.")
     return 0
 
@@ -1020,20 +1028,29 @@ def main():
                     show_diff_plan(operations, conflicts, removed, use_color(args.color))
                 else:
                     show_plan(operations, conflicts, removed, False)
-                if conflicts:
-                    print("Run configs resolve to choose or merge conflicting files; fix structural errors manually. "
-                          "No files were changed.", file=sys.stderr)
-                    return 1
                 if args.command == "apply":
                     apply_plan(repository, target, state, operations)
-                    print("Configuration applied.")
+                    if not conflicts:
+                        print("Configuration applied.")
+                        return 0
+                    changed = sum(operation["action"] in ("INSTALL", "UPDATE") for operation in operations)
+                    print("Applied {} change{}; {} conflict{} remain{}.".format(
+                        changed, "s" * (changed != 1), len(conflicts), "s" * (len(conflicts) != 1),
+                        "s" * (len(conflicts) == 1)), file=sys.stderr)
+                if conflicts:
+                    print("Run configs resolve to choose or merge conflicting files; fix structural errors manually.",
+                          file=sys.stderr)
+                    return CONFLICTS_EXIT if args.command == "apply" else 1
         if args.command == "update":
             result = run_checkout(repository, "apply", "--target", str(target))
-            if result:
-                print("Repository updated, but configuration application failed. Resolve the error and rerun configs apply.",
-                      file=sys.stderr)
+            if result not in (0, CONFLICTS_EXIT):
+                print("Repository updated, but configuration application failed. Resolve the error and rerun "
+                      "configs apply.", file=sys.stderr)
                 return result
-            return update_zgenom(target)
+            zgenom = update_zgenom(target)
+            if result:
+                print("Repository updated, but conflicts remain. Run configs resolve.", file=sys.stderr)
+            return result or zgenom
         return 0
     except (SyncError, OSError, subprocess.CalledProcessError) as error:
         print("configs: {}".format(error), file=sys.stderr)

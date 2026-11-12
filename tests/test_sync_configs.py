@@ -268,14 +268,17 @@ class InstallerTests(InstallerFixture):
             sync.page_report("")
         run.assert_not_called()
 
-    def test_conflict_prevents_all_writes(self):
+    def test_conflict_does_not_block_other_files(self):
         self.source(".vimrc")
         self.source(".zshrc")
         self.installed(contents="local\n")
-        before = self.tree()
-        self.assertIn("CONFLICT", self.run_sync(expected=1))
-        self.assertEqual(before, self.tree())
-        self.assertFalse((self.target / ".vimrc").exists())
+        output = self.run_sync(expected=sync.CONFLICTS_EXIT)
+        self.assertIn("CONFLICT", output)
+        self.assertIn("INSTALL .vimrc", output)
+        self.assertEqual((self.target / ".zshrc").read_text(), "local\n")
+        self.assertEqual((self.target / ".vimrc").read_text(), "original\n")
+        self.assertIn(".vimrc", self.state()["files"])
+        self.assertNotIn(".zshrc", self.state()["files"])
 
     def test_diff_shows_conflicting_contents_and_missing_newline(self):
         self.source(contents="repository\n")
@@ -293,11 +296,11 @@ class InstallerTests(InstallerFixture):
         installed = self.target / ".zshrc"
         installed.write_text("local\n")
         before = self.tree()
-        self.assertIn("CONFLICT", self.run_sync(expected=1))
+        self.assertIn("CONFLICT", self.run_sync(expected=sync.CONFLICTS_EXIT))
         self.assertEqual(before, self.tree())
         installed.unlink()
         before = self.tree()
-        self.assertIn("locally deleted", self.run_sync(expected=1))
+        self.assertIn("locally deleted", self.run_sync(expected=sync.CONFLICTS_EXIT))
         self.assertEqual(before, self.tree())
 
     def test_matching_source_resolves_local_content_edit(self):
@@ -314,7 +317,7 @@ class InstallerTests(InstallerFixture):
         self.run_sync()
         (self.target / ".zshrc").chmod(0o600)
         before = self.tree()
-        self.assertIn("CONFLICT", self.run_sync(expected=1))
+        self.assertIn("CONFLICT", self.run_sync(expected=sync.CONFLICTS_EXIT))
         self.assertEqual(before, self.tree())
 
     def test_executable_and_restrictive_permissions(self):
@@ -333,6 +336,8 @@ class InstallerTests(InstallerFixture):
         self.assertEqual(stat.S_IMODE((self.target / sync.STATE_PATH).stat().st_mode), 0o600)
 
     def test_symlinked_destinations_conflict(self):
+        # Install the installer first so the conflict is the only pending change.
+        self.run_sync()
         source = self.source()
         destination = self.target / ".zshrc"
         outside = self.root / "unrelated"
@@ -341,7 +346,7 @@ class InstallerTests(InstallerFixture):
             with self.subTest(link=link):
                 destination.symlink_to(link)
                 before = self.tree()
-                self.assertIn("destination is a symlink", self.run_sync(expected=1))
+                self.assertIn("destination is a symlink", self.run_sync(expected=sync.CONFLICTS_EXIT))
                 self.assertEqual(before, self.tree())
                 destination.unlink()
 
@@ -350,11 +355,11 @@ class InstallerTests(InstallerFixture):
         outside = self.root / "outside"
         outside.mkdir()
         (self.target / ".config").symlink_to(outside, target_is_directory=True)
-        self.assertIn("symlinked parent", self.run_sync(expected=1))
+        self.assertIn("symlinked parent", self.run_sync(expected=sync.CONFLICTS_EXIT))
         self.assertEqual(list(outside.iterdir()), [])
         (self.target / ".config").unlink()
         (self.target / ".config/tool/config").mkdir(parents=True)
-        self.assertIn("not a regular file", self.run_sync(expected=1))
+        self.assertIn("not a regular file", self.run_sync(expected=sync.CONFLICTS_EXIT))
 
     def test_state_symlinks_and_corruption_prevent_installation(self):
         self.source()
@@ -435,11 +440,12 @@ class InstallerTests(InstallerFixture):
             self.assertEqual(baseline, self.state()["files"]["support/new-file"])
 
     def test_configuration_cannot_target_installer_state(self):
+        self.run_sync()
         for relative in (sync.STATE_PATH, ".local/state/configs/other", ".local/state/configs", ".local/state"):
             with self.subTest(relative=relative):
                 self.source(relative)
                 before = self.tree()
-                self.assertIn("overlaps installation state", self.run_sync(expected=1))
+                self.assertIn("overlaps installation state", self.run_sync(expected=sync.CONFLICTS_EXIT))
                 self.assertEqual(before, self.tree())
                 self.git("rm", "-f", "--", relative)
                 # Git prunes empty parent directories, so later iterations can
@@ -470,7 +476,7 @@ class InstallerTests(InstallerFixture):
         outside = self.root / "outside"
         outside.write_text("outside\n")
         source.symlink_to(outside)
-        self.assertIn("tracked source is missing or symlinked", self.run_sync(expected=1))
+        self.assertIn("tracked source is missing or symlinked", self.run_sync(expected=sync.CONFLICTS_EXIT))
         self.git("add", "--", ".zshrc")
         self.assertIn("unsupported", self.run_sync(expected=1))
 
@@ -490,6 +496,7 @@ class InstallerTests(InstallerFixture):
         self.assertIn(".zshrc", self.state()["files"])
 
     def test_skill_directory_symlinks_use_normal_parent_checks(self):
+        self.run_sync()
         self.source(".codex/skills/commit/SKILL.md")
         unrelated = self.root / "other skills"
         unrelated.mkdir()
@@ -497,7 +504,7 @@ class InstallerTests(InstallerFixture):
         link.parent.mkdir()
         link.symlink_to(unrelated, target_is_directory=True)
         before = self.tree()
-        self.assertIn("symlinked parent", self.run_sync(expected=1))
+        self.assertIn("symlinked parent", self.run_sync(expected=sync.CONFLICTS_EXIT))
         self.assertEqual(before, self.tree())
         self.assertTrue(link.is_symlink())
         self.assertEqual(list(unrelated.iterdir()), [])
@@ -589,7 +596,7 @@ class InstallerTests(InstallerFixture):
         self.repository.rename(nested)
         self.repository = nested
         self.source(".config/checkout/file")
-        self.assertIn("overlaps the repository", self.run_sync(expected=1))
+        self.assertIn("overlaps the repository", self.run_sync(expected=sync.CONFLICTS_EXIT))
         self.assertFalse((nested / "file").exists())
 
     def test_state_destination_cannot_overlap_checkout(self):
@@ -865,7 +872,7 @@ class UpdateCommandTests(InstallerFixture):
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual((self.target / ".zshrc").read_text(), "local\n")
 
-    def test_init_installs_missing_zgenom_once_and_only_after_successful_apply(self):
+    def test_init_installs_missing_zgenom_once_even_with_conflicts(self):
         shutil.copyfile(REPOSITORY / "init.sh", self.repository / "init.sh")
         self.source()
         commands = self.root / "commands"
@@ -897,9 +904,11 @@ class UpdateCommandTests(InstallerFixture):
         (self.target / ".zshrc").write_text("local conflict\n")
         result = subprocess.run(["bash", str(self.repository / "init.sh")], cwd=self.root,
                                 env=env, capture_output=True, text=True)
-        self.assertNotEqual(result.returncode, 0)
-        self.assertEqual(log.read_text(), calls)
-        self.assertFalse((self.target / ".zgenom").exists())
+        self.assertEqual(result.returncode, sync.CONFLICTS_EXIT, result.stdout + result.stderr)
+        # Other files may already be applied, so .zshrc must not be left without zgenom.
+        self.assertEqual(len(log.read_text().splitlines()), 2)
+        self.assertTrue((self.target / ".zgenom").is_dir())
+        self.assertEqual((self.target / ".zshrc").read_text(), "local conflict\n")
 
 
 class ConfigCommandTests(InstallerFixture):
@@ -1054,6 +1063,8 @@ class ConfigCommandTests(InstallerFixture):
         self.publish()
         self.run_command("update")
         self.assertEqual(log.read_text(), "selfupdate upstream config\nupdate upstream config\n")
+        # A freshly cloned zgenom has no sources directory until the first save.
+        self.assertTrue((self.target / ".zgenom/sources").is_dir())
 
     def test_zgenom_failure_is_reported_after_applying(self):
         if shutil.which("zsh") is None:
@@ -1063,16 +1074,33 @@ class ConfigCommandTests(InstallerFixture):
         self.publish()
         self.assertIn("updating zgenom plugins failed", self.run_command("update", expected=1))
         self.assertEqual((self.target / ".zshrc").read_text(), "upstream config\n")
-        # A freshly cloned zgenom has no sources directory until the first save.
-        self.assertTrue((self.target / ".zgenom/sources").is_dir())
         self.assertEqual(log.read_text(), "selfupdate upstream config\n")
+
+    def test_zgenom_updates_despite_unrelated_conflicts(self):
+        if shutil.which("zsh") is None:
+            self.skipTest("requires zsh")
+        log = self.install_zgenom()
+        self.source(".vimrc", "base\n")
+        self.run_sync()
+        self.setup_remote()
+        self.publish(".vimrc", "upstream vim\n")
+        self.publish()
+        (self.target / ".vimrc").write_text("local conflict\n")
+        output = self.run_command("update", expected=sync.CONFLICTS_EXIT)
+        self.assertIn("Applied 1 change; 1 conflict remains.", output)
+        self.assertIn("conflicts remain. Run configs resolve.", output)
+        self.assertEqual((self.target / ".zshrc").read_text(), "upstream config\n")
+        self.assertEqual((self.target / ".vimrc").read_text(), "local conflict\n")
+        self.assertEqual(log.read_text(), "selfupdate upstream config\nupdate upstream config\n")
 
     def test_zgenom_is_not_updated_when_applying_fails(self):
         log = self.install_zgenom()
         self.setup_remote()
+        # Git can track a symlink, but the installer refuses to plan one.
+        (self.upstream / ".vimrc").symlink_to(".zshrc")
+        subprocess.run(["git", "-C", str(self.upstream), "add", "--", ".vimrc"], check=True, capture_output=True)
         self.publish()
-        (self.target / ".zshrc").write_text("local conflict\n")
-        self.run_command("update", expected=1)
+        self.assertIn("configuration application failed", self.run_command("update", expected=1))
         self.assertFalse(log.exists())
 
     def test_update_preserves_uncommitted_tracked_edits(self):
@@ -1106,12 +1134,13 @@ class ConfigCommandTests(InstallerFixture):
         self.run_command("update", expected=1)
         self.assertEqual(before, self.tree())
 
-    def test_apply_conflict_leaves_pulled_repository_and_target_unchanged(self):
+    def test_update_conflict_keeps_pulled_repository_and_local_edit(self):
         self.setup_remote()
         self.publish()
         (self.target / ".zshrc").write_text("installed edit\n")
         before = self.tree()
-        self.assertIn("Repository updated, but configuration application failed", self.run_command("update", expected=1))
+        self.assertIn("Repository updated, but conflicts remain",
+                      self.run_command("update", expected=sync.CONFLICTS_EXIT))
         self.assertEqual((self.repository / ".zshrc").read_text(), "upstream config\n")
         self.assertEqual(before, self.tree())
 
@@ -1305,18 +1334,23 @@ class ExportImportTests(InstallerFixture):
         self.assertEqual((self.other / ".zgenom/new-plugin.zsh").read_text(), "new\n")
         self.assertFalse((self.other / ".zgenom/zgenom.zsh").exists())
 
-    def test_apply_conflict_stops_before_replacing_plugins(self):
+    def test_unrelated_conflict_still_installs_configuration_and_plugins(self):
+        self.source(".vimrc", "base\n")
+        self.commit(self.repository, "Add vimrc")
         self.export()
         self.run_import(self.extract() / "configs")
         marker = self.other / ".zgenom/local-marker"
-        marker.write_text("keep\n")
-        (self.other / ".zshrc").write_text("local edit\n")
+        marker.write_text("replaced\n")
+        (self.other / ".vimrc").write_text("local edit\n")
         self.source(contents="second version\n")
+        self.source(".vimrc", "second vim\n")
         self.commit(self.repository, "Second version")
         self.export(("linux-x86_64",))
-        self.assertIn("then import again", self.run_import(self.other / COMMAND_PATH, str(self.archive), expected=1))
-        self.assertEqual((self.other / ".zshrc").read_text(), "local edit\n")
-        self.assertTrue(marker.exists())
+        output = self.run_import(self.other / COMMAND_PATH, str(self.archive), expected=sync.CONFLICTS_EXIT)
+        self.assertIn("conflicts remain. Run configs resolve", output)
+        self.assertEqual((self.other / ".zshrc").read_text(), "second version\n")
+        self.assertEqual((self.other / ".vimrc").read_text(), "local edit\n")
+        self.assertFalse(marker.exists())
 
     def test_checkout_on_another_branch_is_not_changed(self):
         self.export()
