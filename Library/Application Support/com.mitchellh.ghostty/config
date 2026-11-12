@@ -1,0 +1,4 @@
+# macOS-only overrides, loaded by Ghostty after ~/.config/ghostty/config.
+window-padding-x = 2
+window-padding-y = 2
+keybind = global:alt+shift+enter=new_window
