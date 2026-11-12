@@ -604,7 +604,10 @@ def update_zgenom(target):
     zsh = shutil.which("zsh")
     if zsh is None or not script.is_file():
         return 0
-    result = subprocess.run([zsh, "-c", 'source "$1" && zgenom selfupdate && zgenom update', "zsh", str(script)])
+    # zgenom writes update timestamps into $ZGEN_DIR but only creates it on the
+    # first save, which has not happened yet when zgenom was just cloned.
+    command = 'source "$1" && mkdir -p -- "$ZGEN_DIR" && zgenom selfupdate && zgenom update'
+    result = subprocess.run([zsh, "-c", command, "zsh", str(script)])
     if result.returncode:
         print("Configuration applied, but updating zgenom plugins failed. Rerun configs update.", file=sys.stderr)
     return result.returncode

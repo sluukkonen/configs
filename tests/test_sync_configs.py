@@ -1041,7 +1041,8 @@ class ConfigCommandTests(InstallerFixture):
         script.parent.mkdir()
         # Record the installed .zshrc to show plugins update after applying.
         script.write_text(
-            'zgenom() {{ print -r -- "$1 $(<{zshrc})" >> {log}; return {status}; }}\n'.format(
+            'ZGEN_DIR={sources}\nzgenom() {{ print -r -- "$1 $(<{zshrc})" >> {log}; return {status}; }}\n'.format(
+                sources=shlex.quote(str(script.parent / "sources")),
                 zshrc=shlex.quote(str(self.target / ".zshrc")), log=shlex.quote(str(log)), status=status))
         return log
 
@@ -1062,6 +1063,8 @@ class ConfigCommandTests(InstallerFixture):
         self.publish()
         self.assertIn("updating zgenom plugins failed", self.run_command("update", expected=1))
         self.assertEqual((self.target / ".zshrc").read_text(), "upstream config\n")
+        # A freshly cloned zgenom has no sources directory until the first save.
+        self.assertTrue((self.target / ".zgenom/sources").is_dir())
         self.assertEqual(log.read_text(), "selfupdate upstream config\n")
 
     def test_zgenom_is_not_updated_when_applying_fails(self):
