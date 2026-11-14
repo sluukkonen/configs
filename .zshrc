@@ -46,6 +46,27 @@ if command -v codex >/dev/null; then
     command codex --config 'notify=["ntfy-codex"]' "$@"
   }
 fi
+
+if command -v glow >/dev/null; then
+  # glow's auto style can pick dark on a light terminal, so follow the system
+  # appearance like Ghostty does. Dux (DMS) writes "default" in light mode.
+  glow() {
+    local style=auto
+    if [[ $OSTYPE == darwin* ]]; then
+      style=light
+      [[ $(defaults read -g AppleInterfaceStyle 2>/dev/null) == Dark ]] && style=dark
+    elif command -v gsettings >/dev/null; then
+      style=light
+      [[ $(gsettings get org.gnome.desktop.interface color-scheme 2>/dev/null) == "'prefer-dark'" ]] && style=dark
+    fi
+    # Page like bat does: less -F prints short output directly. glow refuses
+    # to combine its pager with the TUI (-t), so leave paging off for that.
+    local pager=true
+    (( ${@[(I)-t|--tui]} )) && pager=false
+    GLOW_PAGER=$pager PAGER='less -RF' command glow --style "$style" "$@"
+  }
+fi
+
 command -v eza >/dev/null && alias ls=eza
 command -v batcat >/dev/null && alias bat=batcat
 command -v vim >/dev/null && alias vi=vim

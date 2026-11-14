@@ -15,6 +15,7 @@ dnf git
 dnf git-absorb
 dnf git-delta
 dnf git-interactive-rebase-tool
+dnf glow
 dnf gnupg2
 dnf golang
 dnf httpie
