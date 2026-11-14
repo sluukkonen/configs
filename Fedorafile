@@ -1,0 +1,45 @@
+# Fedora counterpart of the Brewfile, applied by update-fedora.
+# Each line is "copr <owner/project>", "dnf <package>", "cargo <crate>" or "flatpak <app-id>".
+# Cargo crates need a toolchain: run rustup-init once after rustup is installed.
+
+copr scottames/ghostty
+copr imput/helium
+
+dnf 7zip
+dnf bat
+dnf btop
+dnf eza
+dnf fzf
+dnf gh
+dnf git
+dnf git-absorb
+dnf git-delta
+dnf git-interactive-rebase-tool
+dnf gnupg2
+dnf golang
+dnf httpie
+dnf jq
+dnf moreutils
+dnf pgcli
+dnf pinentry
+dnf podman-compose
+dnf podman-docker
+dnf ripgrep
+dnf rustup
+dnf ShellCheck
+dnf tig
+dnf tmux
+dnf tree
+dnf vim-enhanced
+dnf wget
+dnf yubikey-manager
+dnf zsh
+
+dnf cascadia-code-pl-fonts
+dnf ghostty
+dnf helium-bin
+
+cargo fnm
+
+flatpak com.discordapp.Discord
+flatpak com.spotify.Client

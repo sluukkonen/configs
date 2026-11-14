@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+CONFIG_REPOSITORY="$(python3 "$SCRIPT_DIR/configs" repo)"
+PACKAGE_FILE="$CONFIG_REPOSITORY/Fedorafile"
+
+coprs=()
+packages=()
+crates=()
+flatpaks=()
+while read -r kind name extra; do
+  case "$kind" in
+    '' | '#'*) continue ;;
+  esac
+  if [[ -z "$name" || -n "$extra" ]]; then
+    echo "Fedorafile: expected '<kind> <name>': $kind $name $extra" >&2
+    exit 1
+  fi
+  case "$kind" in
+    copr) coprs+=("$name") ;;
+    dnf) packages+=("$name") ;;
+    cargo) crates+=("$name") ;;
+    flatpak) flatpaks+=("$name") ;;
+    *) echo "Fedorafile: unknown kind: $kind" >&2; exit 1 ;;
+  esac
+done < "$PACKAGE_FILE"
+
+enabled_coprs="$(dnf copr list 2>/dev/null | awk '$2 != "(disabled)" {print $1}')"
+for copr in "${coprs[@]}"; do
+  if ! grep -qxF "copr.fedorainfracloud.org/$copr" <<< "$enabled_coprs"; then
+    sudo dnf copr enable -y "$copr"
+  fi
+done
+
+sudo dnf upgrade --refresh -y
+
+# The upgrade already covered installed packages; dnf install skips them.
+if (( ${#packages[@]} )); then
+  sudo dnf install -y "${packages[@]}"
+fi
+
+# cargo install rebuilds a crate only when a newer version is available.
+if (( ${#crates[@]} )); then
+  if command -v cargo >/dev/null; then
+    for crate in "${crates[@]}"; do
+      cargo install --locked "$crate"
+    done
+  else
+    echo "cargo not found; run rustup-init, then rerun update-fedora to install: ${crates[*]}" >&2
+  fi
+fi
+
+if (( ${#flatpaks[@]} )); then
+  flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+  flatpak install -y --noninteractive flathub "${flatpaks[@]}"
+fi
+flatpak update -y --noninteractive
+flatpak uninstall -y --noninteractive --unused
+
+# Exit status 1 means updated core packages (such as the kernel) need a reboot.
+if ! dnf needs-restarting --reboothint &>/dev/null; then
+  read -r -p "Updates need a reboot. Reboot now? [y/N]: " restart_answer
+  if [[ "$restart_answer" =~ ^[Yy]$ ]]; then
+    systemctl reboot
+  fi
+fi

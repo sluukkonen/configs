@@ -28,7 +28,7 @@ import zlib
 
 REPOSITORY_ONLY = {
     ".gitignore", ".gitattributes", ".gitmodules", ".github",
-    "AGENTS.md", "README.md", "Brewfile", "Brewfile.lock.json",
+    "AGENTS.md", "README.md", "Brewfile", "Brewfile.lock.json", "Fedorafile",
     "init.sh", "tests", "docs", "__pycache__",
 }
 STATE_PATH = ".local/state/configs/state.json"
