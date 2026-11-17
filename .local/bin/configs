@@ -610,8 +610,30 @@ def update_zgenom(target):
         return 0
     # zgenom writes update timestamps into $ZGEN_DIR but only creates it on the
     # first save, which has not happened yet when zgenom was just cloned.
-    command = 'source "$1" && mkdir -p -- "$ZGEN_DIR" && zgenom selfupdate && zgenom update'
-    result = subprocess.run([zsh, "-c", command, "zsh", str(script)])
+    # zgenom update always deletes init.zsh, and the next shell then rebuilds it
+    # with output that trips Powerlevel10k's instant prompt warning. Reset only
+    # when zgenom, a plugin or .zshrc changed, and rebuild init.zsh here by
+    # sourcing .zshrc non-interactively, as zgenom autoupdate does.
+    command = r'''
+        source "$1" && mkdir -p -- "$ZGEN_DIR" || exit
+        setopt extended_glob
+        heads() {
+            local repo
+            for repo in ${1:h} $ZGEN_DIR/**/*/.git(/FN^M:h); do git -C $repo rev-parse HEAD 2>/dev/null; done
+        }
+        before=$(heads "$1")
+        zgenom selfupdate --no-reset && zgenom update --no-reset || exit
+        if [[ -f $ZGEN_INIT && ( $(heads "$1") != $before || ~/.zshrc -nt $ZGEN_INIT ) ]]; then
+            zgenom reset
+        fi
+        if [[ -n $ZGEN_INIT && ! -f $ZGEN_INIT ]]; then
+            command zsh -c 'source ~/.zshrc' </dev/null
+            [[ -f $ZGEN_INIT ]]
+        fi
+    '''
+    env = dict(os.environ, HOME=str(target))
+    env.pop("ZDOTDIR", None)
+    result = subprocess.run([zsh, "-c", command, "zsh", str(script)], env=env)
     if result.returncode:
         print("Configuration applied, but updating zgenom plugins failed. Rerun configs update.", file=sys.stderr)
     return result.returncode
