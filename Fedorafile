@@ -5,7 +5,6 @@
 copr scottames/ghostty
 copr imput/helium
 
-dnf 7zip
 dnf bat
 dnf btop
 dnf eza
@@ -20,7 +19,6 @@ dnf gnupg2
 dnf golang
 dnf httpie
 dnf jq
-dnf moreutils
 dnf pgcli
 dnf pinentry
 dnf podman-compose
