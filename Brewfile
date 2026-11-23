@@ -50,6 +50,7 @@ cask "maccy"
 cask "pocket-casts"
 cask "spotify"
 cask "whatsapp"
+cask "zed"
 
 mdm_enrolled = `profiles status -type enrollment 2>/dev/null`.include?("Yes")
 
