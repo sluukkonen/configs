@@ -4,19 +4,18 @@
 import argparse
 import fcntl
 import hashlib
-from http.client import HTTPException
 import json
 import os
-from pathlib import Path
 import random
 import subprocess
 import sys
 import tempfile
 import time
+from http.client import HTTPException
+from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode, urlparse
 from urllib.request import Request, urlopen
-
 
 THEMES = ("landscape", "forest", "mountains", "coast")
 MAX_BYTES = 30 * 1024 * 1024
@@ -46,9 +45,7 @@ def search(theme, minimum, page=1):
         "page": page,
     }
     time.sleep(1.5)
-    return json.loads(request(
-        "https://wallhaven.cc/api/v1/search?" + urlencode(params), 2 * 1024 * 1024
-    ))
+    return json.loads(request("https://wallhaven.cc/api/v1/search?" + urlencode(params), 2 * 1024 * 1024))
 
 
 def atomic_write(path, data):
@@ -78,8 +75,7 @@ def fetch(args, directory):
     state_path = directory / ".nature-wallpapers.json"
     history = json.loads(state_path.read_text()) if state_path.exists() else {}
     if not isinstance(history, dict) or any(
-        not isinstance(record, dict) or not isinstance(record.get("sha256"), str)
-        for record in history.values()
+        not isinstance(record, dict) or not isinstance(record.get("sha256"), str) for record in history.values()
     ):
         raise ValueError(f"invalid download history: {state_path}")
     hashes = {record["sha256"] for record in history.values()}
@@ -107,9 +103,13 @@ def fetch(args, directory):
         identifier = image["id"]
         if identifier in history:
             continue
-        if (image["purity"] != "sfw" or image["category"] != "general"
-                or image["dimension_x"] < width or image["dimension_y"] < height
-                or image["dimension_x"] <= image["dimension_y"]):
+        if (
+            image["purity"] != "sfw"
+            or image["category"] != "general"
+            or image["dimension_x"] < width
+            or image["dimension_y"] < height
+            or image["dimension_x"] <= image["dimension_y"]
+        ):
             continue
         extension = {"image/jpeg": ".jpg", "image/png": ".png"}.get(image["file_type"])
         if not extension or image["file_size"] > MAX_BYTES:
@@ -168,11 +168,19 @@ def install_systemd(args):
     config_home = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
     units = config_home / "systemd/user"
     units.mkdir(parents=True, exist_ok=True)
-    command = " ".join(unit_quote(value) for value in (
-        sys.executable, Path(__file__).resolve(), "--directory",
-        args.directory.expanduser().resolve(), "--count", args.count,
-        "--min-resolution", args.min_resolution,
-    ))
+    command = " ".join(
+        unit_quote(value)
+        for value in (
+            sys.executable,
+            Path(__file__).resolve(),
+            "--directory",
+            args.directory.expanduser().resolve(),
+            "--count",
+            args.count,
+            "--min-resolution",
+            args.min_resolution,
+        )
+    )
     (units / "nature-wallpapers.service").write_text(
         "[Unit]\nDescription=Download nature wallpapers\n\n"
         f"[Service]\nType=oneshot\nExecStart={command}\nTimeoutStartSec=15min\n"
@@ -192,7 +200,9 @@ def main():
     parser.add_argument("--count", type=int, default=3, help="maximum new images per run (default: 3)")
     parser.add_argument("--directory", type=Path, default=Path.home() / "Pictures/Wallpapers")
     parser.add_argument("--min-resolution", default="3840x2160", help="minimum WIDTHxHEIGHT (default: 3840x2160)")
-    parser.add_argument("--install-systemd", action="store_true", help="install and enable a daily Linux user timer using these options")
+    parser.add_argument(
+        "--install-systemd", action="store_true", help="install and enable a daily Linux user timer using these options"
+    )
     args = parser.parse_args()
     try:
         width, height = map(int, args.min_resolution.split("x"))

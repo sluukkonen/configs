@@ -1,0 +1,8 @@
+line-length = 120
+# Python scripts without a .py extension.
+extend-include = [
+    ".local/bin/configs",
+    ".local/bin/git-ssh-keygen",
+    ".local/bin/pinentry-auto",
+    ".local/bin/wallpaper-fetch",
+]

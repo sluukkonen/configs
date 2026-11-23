@@ -1,8 +1,6 @@
 import importlib.util
-from importlib.machinery import SourceFileLoader
 import json
 import os
-from pathlib import Path
 import re
 import shutil
 import subprocess
@@ -10,8 +8,9 @@ import sys
 import tempfile
 import time
 import unittest
+from importlib.machinery import SourceFileLoader
+from pathlib import Path
 from unittest import mock
-
 
 SCRIPT = Path(__file__).resolve().parents[1] / ".local/bin/git-ssh-keygen"
 spec = importlib.util.spec_from_loader("signing", SourceFileLoader("signing", str(SCRIPT)))
@@ -19,7 +18,7 @@ signing = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(signing)
 
 
-STUB = r'''
+STUB = r"""
 import base64
 import hashlib
 import json
@@ -102,7 +101,7 @@ elif name.startswith("pinentry"):
         if command == "GETPIN":
             print("D test-pin%25+value")
         print("ERR 99 cancelled" if command in ("GETPIN", "CONFIRM") and os.environ.get("CANCEL") else "OK")
-'''
+"""
 
 
 class SigningTests(unittest.TestCase):
@@ -118,19 +117,34 @@ class SigningTests(unittest.TestCase):
             command.chmod(0o755)
         self.key = self.root / "key handle"
         self.key.write_text("fake public key one")
-        self.env = {key: value for key, value in os.environ.items()
-                    if not key.startswith("GIT_SSH_KEYGEN_") and key not in ("DISPLAY", "WAYLAND_DISPLAY", "SSH_ASKPASS_PROMPT")}
-        self.env.update(STUB_ROOT=str(self.root), PATH=str(self.bin) + os.pathsep + os.environ["PATH"],
-                        SSH_AUTH_SOCK="must-not-be-used", GIT_SSH_KEYGEN_TRACE="1")
+        self.env = {
+            key: value
+            for key, value in os.environ.items()
+            if not key.startswith("GIT_SSH_KEYGEN_") and key not in ("DISPLAY", "WAYLAND_DISPLAY", "SSH_ASKPASS_PROMPT")
+        }
+        self.env.update(
+            STUB_ROOT=str(self.root),
+            PATH=str(self.bin) + os.pathsep + os.environ["PATH"],
+            SSH_AUTH_SOCK="must-not-be-used",
+            GIT_SSH_KEYGEN_TRACE="1",
+        )
 
     def calls(self, event):
         path = self.root / "calls"
-        return [item for line in path.read_text().splitlines()
-                for item in [json.loads(line)] if item["event"] == event] if path.exists() else []
+        return (
+            [item for line in path.read_text().splitlines() for item in [json.loads(line)] if item["event"] == event]
+            if path.exists()
+            else []
+        )
 
     def sign(self, expected=0, **env):
-        result = subprocess.run([sys.executable, str(SCRIPT), "-Y", "sign", "-n", "git", "-f", str(self.key)],
-                                input=b"payload-must-not-be-traced", env=dict(self.env, **env), capture_output=True)
+        result = subprocess.run(
+            [sys.executable, str(SCRIPT), "-Y", "sign", "-n", "git", "-f", str(self.key)],
+            input=b"payload-must-not-be-traced",
+            env=dict(self.env, **env),
+            capture_output=True,
+            check=False,
+        )
         self.assertEqual(result.returncode, expected, result.stderr.decode())
         self.assertNotIn(b"test-pin", result.stderr)
         self.assertNotIn(b"payload-must-not-be-traced", result.stderr)
@@ -204,20 +218,36 @@ class SigningTests(unittest.TestCase):
         self.assertEqual(call["tty"], "/dev/test-tty")
 
     def test_non_signing_operations_preserve_arguments_io_and_status(self):
-        result = subprocess.run([sys.executable, str(SCRIPT), "-Y", "verify", "-n", "git"],
-                                input=b"test input", env=self.env, capture_output=True)
+        result = subprocess.run(
+            [sys.executable, str(SCRIPT), "-Y", "verify", "-n", "git"],
+            input=b"test input",
+            env=self.env,
+            capture_output=True,
+            check=False,
+        )
         self.assertEqual(result.returncode, 7)
         self.assertEqual(result.stdout, b"test input")
         self.assertEqual(self.calls("agent"), [])
         self.assertEqual(self.calls("passthrough")[0]["args"], ["-Y", "verify", "-n", "git"])
 
     def test_fallback_pinentry_and_notification(self):
-        env = dict(self.env, GIT_SSH_KEYGEN_ASKPASS="1", GIT_SSH_KEYGEN_BACKEND="pinentry",
-                   GIT_SSH_KEYGEN_PROMPT_PROGRAM=str(self.bin / "pinentry-mac"))
-        for hint, prompt, output in (("none", "Touch", b""), ("confirm", "Allow?", b""),
-                                     ("", "Enter PIN for ED25519-SK key: ", b"test-pin%+value\n")):
-            result = subprocess.run([sys.executable, str(SCRIPT), prompt],
-                                    env=dict(env, SSH_ASKPASS_PROMPT=hint), capture_output=True)
+        env = dict(
+            self.env,
+            GIT_SSH_KEYGEN_ASKPASS="1",
+            GIT_SSH_KEYGEN_BACKEND="pinentry",
+            GIT_SSH_KEYGEN_PROMPT_PROGRAM=str(self.bin / "pinentry-mac"),
+        )
+        for hint, prompt, output in (
+            ("none", "Touch", b""),
+            ("confirm", "Allow?", b""),
+            ("", "Enter PIN for ED25519-SK key: ", b"test-pin%+value\n"),
+        ):
+            result = subprocess.run(
+                [sys.executable, str(SCRIPT), prompt],
+                env=dict(env, SSH_ASKPASS_PROMPT=hint),
+                capture_output=True,
+                check=False,
+            )
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(result.stdout, output)
         self.assertEqual(sum(call["command"] == "GETPIN" for call in self.calls("pinentry")), 1)
@@ -225,24 +255,41 @@ class SigningTests(unittest.TestCase):
 
 class ProtocolTests(unittest.TestCase):
     def test_empty_secret_fails_without_writing_an_askpass_response(self):
-        with mock.patch.dict(os.environ, {
-            signing.PREFIX + "BACKEND": "agent", signing.PREFIX + "PROMPT_PROGRAM": "/agent",
-        }, clear=True), mock.patch.object(signing, "assuan", return_value=b""), \
-                mock.patch.object(signing.sys, "stdout") as output:
+        with (
+            mock.patch.dict(
+                os.environ,
+                {
+                    signing.PREFIX + "BACKEND": "agent",
+                    signing.PREFIX + "PROMPT_PROGRAM": "/agent",
+                },
+                clear=True,
+            ),
+            mock.patch.object(signing, "assuan", return_value=b""),
+            mock.patch.object(signing.sys, "stdout") as output,
+        ):
             with self.assertRaises(signing.PromptError):
                 signing.askpass("Enter PIN for ED25519-SK key: ")
             output.buffer.write.assert_not_called()
 
     def test_protocol_errors_never_return_partial_secrets(self):
-        responses = (b"D test-secret\nERR 99 cancelled\n", b"D test-secret\n",
-                     b"D test-secret\nOK\nOK\n", b"D invalid%ZZ\nOK\n",
-                     b"D invalid%0Anewline\nOK\n", b"INQUIRE unexpected\nOK\n")
+        responses = (
+            b"D test-secret\nERR 99 cancelled\n",
+            b"D test-secret\n",
+            b"D test-secret\nOK\nOK\n",
+            b"D invalid%ZZ\nOK\n",
+            b"D invalid%0Anewline\nOK\n",
+            b"INQUIRE unexpected\nOK\n",
+        )
         for output in responses:
-            with self.subTest(output=output):
-                with mock.patch.object(signing.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, output, b"")):
-                    with self.assertRaises(signing.PromptError) as error:
-                        signing.assuan("agent", ["GET_PASSPHRASE"], agent=True)
-                    self.assertNotIn("test-secret", str(error.exception))
+            with (
+                self.subTest(output=output),
+                mock.patch.object(
+                    signing.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, output, b"")
+                ),
+            ):
+                with self.assertRaises(signing.PromptError) as error:
+                    signing.assuan("agent", ["GET_PASSPHRASE"], agent=True)
+                self.assertNotIn("test-secret", str(error.exception))
 
     def test_multiline_data_is_decoded_once_and_prompt_is_escaped(self):
         response = subprocess.CompletedProcess([], 0, b"S info\nD test%25\nD 2B+value\nOK\n", b"")
@@ -257,19 +304,24 @@ class ProtocolTests(unittest.TestCase):
             ("linux", {}, {}, None),
             ("darwin", {}, {"gpg-connect-agent": "/agent"}, "agent"),
         ):
-            with self.subTest(platform=platform, expected=expected):
-                with mock.patch.dict(os.environ, display, clear=True), mock.patch.object(signing.sys, "platform", platform), \
-                        mock.patch.object(signing.shutil, "which", side_effect=available.get), \
-                        mock.patch.object(signing.os, "isatty", return_value=False):
-                    signing.configure_prompt()
-                    self.assertEqual(os.environ.get(signing.PREFIX + "BACKEND"), expected)
-                    self.assertEqual(os.environ.get("SSH_ASKPASS_REQUIRE"), "force" if expected else None)
+            with (
+                self.subTest(platform=platform, expected=expected),
+                mock.patch.dict(os.environ, display, clear=True),
+                mock.patch.object(signing.sys, "platform", platform),
+                mock.patch.object(signing.shutil, "which", side_effect=available.get),
+                mock.patch.object(signing.os, "isatty", return_value=False),
+            ):
+                signing.configure_prompt()
+                self.assertEqual(os.environ.get(signing.PREFIX + "BACKEND"), expected)
+                self.assertEqual(os.environ.get("SSH_ASKPASS_REQUIRE"), "force" if expected else None)
 
     def test_current_terminal_replaces_stale_tty_setting(self):
-        with mock.patch.dict(os.environ, {"GPG_TTY": "/dev/stale"}, clear=True), \
-                mock.patch.object(signing.shutil, "which", return_value="/agent"), \
-                mock.patch.object(signing.os, "isatty", side_effect=lambda fd: fd == 2), \
-                mock.patch.object(signing.os, "ttyname", return_value="/dev/pts/123"):
+        with (
+            mock.patch.dict(os.environ, {"GPG_TTY": "/dev/stale"}, clear=True),
+            mock.patch.object(signing.shutil, "which", return_value="/agent"),
+            mock.patch.object(signing.os, "isatty", side_effect=lambda fd: fd == 2),
+            mock.patch.object(signing.os, "ttyname", return_value="/dev/pts/123"),
+        ):
             signing.configure_prompt()
             self.assertEqual(os.environ["GPG_TTY"], "/dev/pts/123")
 
@@ -287,16 +339,16 @@ class AgentIntegrationTests(unittest.TestCase):
                 "print('OK ready', flush=True)\n"
                 "for line in sys.stdin:\n"
                 "    if line.strip() == 'GETPIN':\n"
-                "        with Path({!r}).open('a') as stream:\n"
+                f"        with Path({str(calls)!r}).open('a') as stream:\n"
                 "            stream.write('dialog\\n')\n"
                 "        print('D test-pin%25+value', flush=True)\n"
                 "    print('OK', flush=True)\n"
                 "    if line.strip() == 'BYE':\n"
-                "        break\n".format(str(calls))
+                "        break\n"
             )
             pinentry.chmod(0o755)
             (root / "gpg-agent.conf").write_text(
-                "pinentry-program {}\ndefault-cache-ttl 1\nmax-cache-ttl 1\nno-allow-external-cache\n".format(pinentry)
+                f"pinentry-program {pinentry}\ndefault-cache-ttl 1\nmax-cache-ttl 1\nno-allow-external-cache\n"
             )
             agent = shutil.which("gpg-connect-agent")
             with mock.patch.dict(os.environ, {"GNUPGHOME": directory}):
@@ -312,8 +364,11 @@ class AgentIntegrationTests(unittest.TestCase):
                     signing.assuan(agent, [command], agent=True)
                     self.assertEqual(len(calls.read_text().splitlines()), 3)
                 finally:
-                    subprocess.run([shutil.which("gpgconf"), "--homedir", directory, "--kill", "gpg-agent"],
-                                   capture_output=True, check=True)
+                    subprocess.run(
+                        [shutil.which("gpgconf"), "--homedir", directory, "--kill", "gpg-agent"],
+                        capture_output=True,
+                        check=True,
+                    )
 
 
 if __name__ == "__main__":

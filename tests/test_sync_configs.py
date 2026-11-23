@@ -1,10 +1,8 @@
 import importlib.util
-from importlib.machinery import SourceFileLoader
 import io
 import json
 import os
 import re
-from pathlib import Path
 import shlex
 import shutil
 import stat
@@ -13,8 +11,9 @@ import sys
 import tarfile
 import tempfile
 import unittest
+from importlib.machinery import SourceFileLoader
+from pathlib import Path
 from unittest import mock
-
 
 REPOSITORY = Path(__file__).resolve().parents[1]
 COMMAND_PATH = ".local/bin/configs"
@@ -38,15 +37,30 @@ class InstallerFixture(unittest.TestCase):
     def git(self, *args):
         return subprocess.run(
             ["git", "-C", str(self.repository), "-c", "core.excludesFile=/dev/null", *args],
-            check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            check=True,
+            capture_output=True,
         )
 
     def commit(self, repository, message):
         subprocess.run(
-            ["git", "-C", str(repository), "-c", "user.name=Configs Tests",
-             "-c", "user.email=configs@example.invalid", "-c", "commit.gpgsign=false",
-             "-c", "core.hooksPath=/dev/null", "commit", "-qm", message],
-            check=True, capture_output=True,
+            [
+                "git",
+                "-C",
+                str(repository),
+                "-c",
+                "user.name=Configs Tests",
+                "-c",
+                "user.email=configs@example.invalid",
+                "-c",
+                "commit.gpgsign=false",
+                "-c",
+                "core.hooksPath=/dev/null",
+                "commit",
+                "-qm",
+                message,
+            ],
+            check=True,
+            capture_output=True,
         )
 
     def source(self, relative=".zshrc", contents="original\n", mode=0o644):
@@ -66,9 +80,10 @@ class InstallerFixture(unittest.TestCase):
 
     def run_sync(self, command="apply", expected=0, *options):
         result = subprocess.run(
-            [sys.executable, str(self.repository / COMMAND_PATH), command,
-             "--target", str(self.target), *options],
-            text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            [sys.executable, str(self.repository / COMMAND_PATH), command, "--target", str(self.target), *options],
+            text=True,
+            capture_output=True,
+            check=False,
         )
         self.assertEqual(result.returncode, expected, result.stdout + result.stderr)
         return result.stdout + result.stderr
@@ -77,10 +92,14 @@ class InstallerFixture(unittest.TestCase):
         return json.loads((self.target / sync.STATE_PATH).read_text())
 
     def tree(self):
-        return {str(path.relative_to(self.target)): (
-            path.lstat().st_mode, path.lstat().st_mtime_ns,
-            os.readlink(path) if path.is_symlink() else path.read_bytes() if path.is_file() else None,
-        ) for path in self.target.rglob("*")}
+        return {
+            str(path.relative_to(self.target)): (
+                path.lstat().st_mode,
+                path.lstat().st_mtime_ns,
+                os.readlink(path) if path.is_symlink() else path.read_bytes() if path.is_file() else None,
+            )
+            for path in self.target.rglob("*")
+        }
 
     def plan(self):
         state = sync.load_state(self.target)
@@ -143,16 +162,22 @@ class InstallerTests(InstallerFixture):
         self.assertEqual(before, self.tree())
 
     def test_diff_color_policy(self):
-        for tty, env, expected in ((True, {}, True), (False, {}, False),
-                                   (True, {"NO_COLOR": "1"}, False),
-                                   (True, {"TERM": "dumb"}, False),
-                                   (True, {"NO_COLOR": ""}, True)):
-            with self.subTest(tty=tty, env=env):
-                with mock.patch.object(sync.sys.stdout, "isatty", return_value=tty), mock.patch.dict(os.environ, env, clear=True):
-                    self.assertEqual(sync.use_color("auto"), expected)
-                    self.assertEqual(sync.use_color(None), expected)
-                    self.assertTrue(sync.use_color("always"))
-                    self.assertFalse(sync.use_color("never"))
+        for tty, env, expected in (
+            (True, {}, True),
+            (False, {}, False),
+            (True, {"NO_COLOR": "1"}, False),
+            (True, {"TERM": "dumb"}, False),
+            (True, {"NO_COLOR": ""}, True),
+        ):
+            with (
+                self.subTest(tty=tty, env=env),
+                mock.patch.object(sync.sys.stdout, "isatty", return_value=tty),
+                mock.patch.dict(os.environ, env, clear=True),
+            ):
+                self.assertEqual(sync.use_color("auto"), expected)
+                self.assertEqual(sync.use_color(None), expected)
+                self.assertTrue(sync.use_color("always"))
+                self.assertFalse(sync.use_color("never"))
         for command in ("apply", "update", "repo", "prune"):
             self.assertIn("only supported for diff", self.run_sync(command, 2, "--color", "always"))
 
@@ -163,15 +188,24 @@ class InstallerTests(InstallerFixture):
         operations, conflicts, _ = sync.make_plan(self.repository, self.target, sync.load_state(self.target))
         before = self.tree()
         output = io.StringIO()
-        with mock.patch.object(sync.sys, "stdout", output), \
-                mock.patch.object(output, "isatty", return_value=True), \
-                mock.patch.object(sync.shutil, "which", return_value="/tools/delta"), \
-                mock.patch.object(sync.subprocess, "run", return_value=subprocess.CompletedProcess([], 0)) as run:
+        with (
+            mock.patch.object(sync.sys, "stdout", output),
+            mock.patch.object(output, "isatty", return_value=True),
+            mock.patch.object(sync.shutil, "which", return_value="/tools/delta"),
+            mock.patch.object(sync.subprocess, "run", return_value=subprocess.CompletedProcess([], 0)) as run,
+        ):
             sync.show_diff_plan(operations, conflicts, [".obsolete"], True)
         self.assertEqual(run.call_args.args[0], ["/tools/delta", "--color-only"])
         report = run.call_args.kwargs["input"]
-        for expected in ("CONFLICT .zshrc", "-local", "+repository", "\\ No newline at end of file",
-                         "mode 644 -> 755", "Binary contents differ", "NO LONGER SELECTED"):
+        for expected in (
+            "CONFLICT .zshrc",
+            "-local",
+            "+repository",
+            "\\ No newline at end of file",
+            "mode 644 -> 755",
+            "Binary contents differ",
+            "NO LONGER SELECTED",
+        ):
             self.assertIn(expected, report)
         self.assertNotIn("\033[", report)
         self.assertEqual(output.getvalue(), "")
@@ -189,12 +223,14 @@ class InstallerTests(InstallerFixture):
         ):
             with self.subTest(tty=tty, color=color, available=available, failure=failure):
                 output, errors = io.StringIO(), io.StringIO()
-                with mock.patch.object(sync.sys, "stdout", output), \
-                        mock.patch.object(sync.sys, "stderr", errors), \
-                        mock.patch.dict(os.environ, {"PAGER": ""}), \
-                        mock.patch.object(output, "isatty", return_value=tty), \
-                        mock.patch.object(sync.shutil, "which", return_value="/tools/delta" if available else None), \
-                        mock.patch.object(sync.subprocess, "run") as run:
+                with (
+                    mock.patch.object(sync.sys, "stdout", output),
+                    mock.patch.object(sync.sys, "stderr", errors),
+                    mock.patch.dict(os.environ, {"PAGER": ""}),
+                    mock.patch.object(output, "isatty", return_value=tty),
+                    mock.patch.object(sync.shutil, "which", return_value="/tools/delta" if available else None),
+                    mock.patch.object(sync.subprocess, "run") as run,
+                ):
                     if isinstance(failure, OSError):
                         run.side_effect = failure
                     else:
@@ -208,10 +244,12 @@ class InstallerTests(InstallerFixture):
 
     def test_diff_does_not_launch_delta_for_empty_report(self):
         output = io.StringIO()
-        with mock.patch.object(sync.sys, "stdout", output), \
-                mock.patch.object(output, "isatty", return_value=True), \
-                mock.patch.object(sync.shutil, "which", return_value="/tools/delta"), \
-                mock.patch.object(sync.subprocess, "run") as run:
+        with (
+            mock.patch.object(sync.sys, "stdout", output),
+            mock.patch.object(output, "isatty", return_value=True),
+            mock.patch.object(sync.shutil, "which", return_value="/tools/delta"),
+            mock.patch.object(sync.subprocess, "run") as run,
+        ):
             sync.show_diff_plan([], [], [], True)
         run.assert_not_called()
         self.assertEqual(output.getvalue(), "")
@@ -220,15 +258,23 @@ class InstallerTests(InstallerFixture):
         self.source()
         _, operations = self.plan()
         for color in (True, False):
-            for env, expected in (({}, ["less", "-FRX"]),
-                                  ({"PAGER": '"/tools/my pager" --option'}, ["/tools/my pager", "--option"])):
+            for env, expected in (
+                ({}, ["less", "-FRX"]),
+                ({"PAGER": '"/tools/my pager" --option'}, ["/tools/my pager", "--option"]),
+            ):
                 with self.subTest(color=color, env=env):
                     output = io.StringIO()
-                    with mock.patch.object(sync.sys, "stdout", output), \
-                            mock.patch.object(output, "isatty", return_value=True), \
-                            mock.patch.dict(os.environ, env, clear=True), \
-                            mock.patch.object(sync.shutil, "which", side_effect=lambda name: None if name == "delta" else name), \
-                            mock.patch.object(sync.subprocess, "run", return_value=subprocess.CompletedProcess([], 0)) as run:
+                    with (
+                        mock.patch.object(sync.sys, "stdout", output),
+                        mock.patch.object(output, "isatty", return_value=True),
+                        mock.patch.dict(os.environ, env, clear=True),
+                        mock.patch.object(
+                            sync.shutil, "which", side_effect=lambda name: None if name == "delta" else name
+                        ),
+                        mock.patch.object(
+                            sync.subprocess, "run", return_value=subprocess.CompletedProcess([], 0)
+                        ) as run,
+                    ):
                         sync.show_diff_plan(operations, [], [], color)
                     self.assertEqual(run.call_args.args[0], expected)
                     report = run.call_args.kwargs["input"]
@@ -248,12 +294,14 @@ class InstallerTests(InstallerFixture):
         ):
             with self.subTest(tty=tty, env=env, available=available, failure=failure):
                 output, errors = io.StringIO(), io.StringIO()
-                with mock.patch.object(sync.sys, "stdout", output), \
-                        mock.patch.object(sync.sys, "stderr", errors), \
-                        mock.patch.object(output, "isatty", return_value=tty), \
-                        mock.patch.dict(os.environ, env, clear=True), \
-                        mock.patch.object(sync.shutil, "which", return_value="pager" if available else None), \
-                        mock.patch.object(sync.subprocess, "run") as run:
+                with (
+                    mock.patch.object(sync.sys, "stdout", output),
+                    mock.patch.object(sync.sys, "stderr", errors),
+                    mock.patch.object(output, "isatty", return_value=tty),
+                    mock.patch.dict(os.environ, env, clear=True),
+                    mock.patch.object(sync.shutil, "which", return_value="pager" if available else None),
+                    mock.patch.object(sync.subprocess, "run") as run,
+                ):
                     if isinstance(failure, OSError):
                         run.side_effect = failure
                     else:
@@ -386,9 +434,19 @@ class InstallerTests(InstallerFixture):
 
     def test_excludes_tooling_and_untracked_files(self):
         for path in (
-            ".gitignore", ".gitattributes", ".gitmodules", ".github/workflows/test.yml",
-            "AGENTS.md", "README.md", "Brewfile", "Brewfile.lock.json", "init.sh",
-            "tests/test_example.py", "docs/setup.md", "__pycache__/cached.pyc",
+            ".gitignore",
+            ".gitattributes",
+            ".gitmodules",
+            ".github/workflows/test.yml",
+            "AGENTS.md",
+            "README.md",
+            "Brewfile",
+            "Brewfile.lock.json",
+            "init.sh",
+            "ruff.toml",
+            "tests/test_example.py",
+            "docs/setup.md",
+            "__pycache__/cached.pyc",
         ):
             self.source(path, "# tooling\n")
         (self.repository / "README.md").unlink()
@@ -409,9 +467,13 @@ class InstallerTests(InstallerFixture):
 
     def test_exclusions_do_not_match_nested_names_or_root_prefixes(self):
         paths = (
-            ".codex/AGENTS.md", ".codex/skills/example/README.md",
-            ".config/tool/tests/example.py", ".config/tool/.gitignore",
-            ".gitignore_global", "tests-extra/config", "README.md.local",
+            ".codex/AGENTS.md",
+            ".codex/skills/example/README.md",
+            ".config/tool/tests/example.py",
+            ".config/tool/.gitignore",
+            ".gitignore_global",
+            "tests-extra/config",
+            "README.md.local",
         )
         for relative in paths:
             self.source(relative)
@@ -427,8 +489,7 @@ class InstallerTests(InstallerFixture):
         installed = self.target / "support/new-file"
         installed.write_text("local edit\n")
         installer = self.repository / COMMAND_PATH
-        installer.write_text(installer.read_text().replace(
-            "REPOSITORY_ONLY = {", 'REPOSITORY_ONLY = {"support",', 1))
+        installer.write_text(installer.read_text().replace("REPOSITORY_ONLY = {", 'REPOSITORY_ONLY = {"support",', 1))
         before = self.tree()
         baseline = self.state()["files"]["support/new-file"]
         for command in ("diff", "apply"):
@@ -526,9 +587,8 @@ class InstallerTests(InstallerFixture):
         source.write_text("new\n")
         state, operations = self.plan()
         before = self.tree()
-        with mock.patch.object(sync.os, "replace", side_effect=OSError("disk error")):
-            with self.assertRaises(OSError):
-                sync.apply_plan(self.repository, self.target, state, operations)
+        with mock.patch.object(sync.os, "replace", side_effect=OSError("disk error")), self.assertRaises(OSError):
+            sync.apply_plan(self.repository, self.target, state, operations)
         # The parent directory mtime may change when the temporary file is
         # created, but no installed file or manifest may change.
         self.assertEqual((self.target / ".zshrc").read_text(), "original\n")
@@ -542,9 +602,8 @@ class InstallerTests(InstallerFixture):
         self.run_sync()
         source.write_text("new\n")
         state, operations = self.plan()
-        with mock.patch.object(sync, "save_state", side_effect=OSError("disk error")):
-            with self.assertRaises(OSError):
-                sync.apply_plan(self.repository, self.target, state, operations)
+        with mock.patch.object(sync, "save_state", side_effect=OSError("disk error")), self.assertRaises(OSError):
+            sync.apply_plan(self.repository, self.target, state, operations)
         self.assertEqual((self.target / ".zshrc").read_text(), "new\n")
         self.assertIn("ADOPT", self.run_sync())
         self.assertEqual(self.state()["files"][".zshrc"]["mode"], 0o600)
@@ -787,18 +846,16 @@ class PruneTests(InstallerFixture):
         state = self.state()
         operations, _ = sync.make_prune_plan(self.repository, self.target, state)
         before = self.tree()
-        with mock.patch.object(Path, "unlink", side_effect=OSError("disk error")):
-            with self.assertRaises(OSError):
-                sync.prune_plan(self.target, state, operations)
+        with mock.patch.object(Path, "unlink", side_effect=OSError("disk error")), self.assertRaises(OSError):
+            sync.prune_plan(self.target, state, operations)
         self.assertEqual(before, self.tree())
 
     def test_failed_state_write_after_deletion_is_recoverable(self):
         self.obsolete("a", "b")
         state = self.state()
         operations, _ = sync.make_prune_plan(self.repository, self.target, state)
-        with mock.patch.object(sync, "save_state", side_effect=OSError("disk error")):
-            with self.assertRaises(OSError):
-                sync.prune_plan(self.target, state, operations)
+        with mock.patch.object(sync, "save_state", side_effect=OSError("disk error")), self.assertRaises(OSError):
+            sync.prune_plan(self.target, state, operations)
         self.assertFalse((self.target / "a").exists())
         self.assertTrue((self.target / "b").exists())
         self.assertIn("a", self.state()["files"])
@@ -832,21 +889,31 @@ class UpdateCommandTests(InstallerFixture):
         for name in ("zsh", "brew", "softwareupdate"):
             command = self.commands / name
             command.write_text(
-                "#!/bin/bash\nset -eu\nprintf '%s:%s:%s\\n' \"${0##*/}\" \"$PWD\" \"$*\" >> \"$CALL_LOG\"\n"
+                '#!/bin/bash\nset -eu\nprintf \'%s:%s:%s\\n\' "${0##*/}" "$PWD" "$*" >> "$CALL_LOG"\n'
                 + ('echo "No new software available."\n' if name == "softwareupdate" else "")
             )
             command.chmod(0o755)
-        self.env = dict(os.environ, HOME=str(self.target), CALL_LOG=str(self.log),
-                        PATH=str(self.commands) + os.pathsep + os.environ["PATH"])
+        self.env = dict(
+            os.environ,
+            HOME=str(self.target),
+            CALL_LOG=str(self.log),
+            PATH=str(self.commands) + os.pathsep + os.environ["PATH"],
+        )
 
     def test_update_commands_use_saved_repository(self):
         self.install_commands()
-        result = subprocess.run(["bash", str(self.target / ".local/bin/update-mac")],
-                                cwd=self.root, env=self.env, capture_output=True, text=True)
+        result = subprocess.run(
+            ["bash", str(self.target / ".local/bin/update-mac")],
+            cwd=self.root,
+            env=self.env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         calls = self.log.read_text()
-        self.assertIn("brew:{}:bundle install --no-upgrade".format(self.repository), calls)
-        self.assertIn("brew:{}:cleanup".format(self.repository), calls)
+        self.assertIn(f"brew:{self.repository}:bundle install --no-upgrade", calls)
+        self.assertIn(f"brew:{self.repository}:cleanup", calls)
 
     def test_missing_or_invalid_locator_stops_before_external_commands(self):
         self.install_commands()
@@ -856,10 +923,13 @@ class UpdateCommandTests(InstallerFixture):
                 state_path.unlink()
             else:
                 state_path.write_text(contents)
-            for command in ([sys.executable, str(self.target / COMMAND_PATH), "update"],
-                            ["bash", str(self.target / ".local/bin/update-mac")]):
-                result = subprocess.run(command,
-                                        cwd=self.root, env=self.env, capture_output=True, text=True)
+            for command in (
+                [sys.executable, str(self.target / COMMAND_PATH), "update"],
+                ["bash", str(self.target / ".local/bin/update-mac")],
+            ):
+                result = subprocess.run(
+                    command, cwd=self.root, env=self.env, capture_output=True, text=True, check=False
+                )
                 self.assertNotEqual(result.returncode, 0)
                 self.assertIn("Run python3", result.stderr)
                 self.assertFalse(self.log.exists())
@@ -872,12 +942,24 @@ class UpdateCommandTests(InstallerFixture):
         commands.mkdir()
         self.fake_sudo(commands)
         env = dict(os.environ, HOME=str(self.target), PATH=str(commands) + os.pathsep + os.environ["PATH"])
-        result = subprocess.run(["bash", str(self.repository / "init.sh")], cwd=self.root,
-                                env=env, capture_output=True, text=True)
+        result = subprocess.run(
+            ["bash", str(self.repository / "init.sh")],
+            cwd=self.root,
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
         self.assertEqual(result.returncode, 0, result.stderr)
         (self.target / ".zshrc").write_text("local\n")
-        result = subprocess.run(["bash", str(self.repository / "init.sh")], cwd=self.root,
-                                env=env, capture_output=True, text=True)
+        result = subprocess.run(
+            ["bash", str(self.repository / "init.sh")],
+            cwd=self.root,
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual((self.target / ".zshrc").read_text(), "local\n")
 
@@ -893,18 +975,24 @@ class UpdateCommandTests(InstallerFixture):
             "#!/usr/bin/env python3\n"
             "import os, sys\nfrom pathlib import Path\n"
             "if sys.argv[1] == 'clone':\n"
-            "    with Path({!r}).open('a') as log:\n"
+            f"    with Path({str(log)!r}).open('a') as log:\n"
             "        log.write(repr(sys.argv[1:]) + '\\n')\n"
             "    Path(sys.argv[-1]).mkdir()\n"
             "else:\n"
-            "    os.execv({!r}, [{!r}] + sys.argv[1:])\n".format(str(log), real_git, real_git)
+            f"    os.execv({real_git!r}, [{real_git!r}] + sys.argv[1:])\n"
         )
         git.chmod(0o755)
         self.fake_sudo(commands)
         env = dict(os.environ, HOME=str(self.target), PATH=str(commands) + os.pathsep + os.environ["PATH"])
         for _ in range(2):
-            result = subprocess.run(["bash", str(self.repository / "init.sh")], cwd=self.root,
-                                    env=env, capture_output=True, text=True)
+            result = subprocess.run(
+                ["bash", str(self.repository / "init.sh")],
+                cwd=self.root,
+                env=env,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertTrue((self.target / COMMAND_PATH).is_file())
         calls = log.read_text()
@@ -912,8 +1000,14 @@ class UpdateCommandTests(InstallerFixture):
         self.assertIn("https://github.com/jandamm/zgenom.git", calls)
         (self.target / ".zgenom").rmdir()
         (self.target / ".zshrc").write_text("local conflict\n")
-        result = subprocess.run(["bash", str(self.repository / "init.sh")], cwd=self.root,
-                                env=env, capture_output=True, text=True)
+        result = subprocess.run(
+            ["bash", str(self.repository / "init.sh")],
+            cwd=self.root,
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
         self.assertEqual(result.returncode, sync.CONFLICTS_EXIT, result.stdout + result.stderr)
         # Other files may already be applied, so .zshrc must not be left without zgenom.
         self.assertEqual(len(log.read_text().splitlines()), 2)
@@ -926,12 +1020,14 @@ class ConfigCommandTests(InstallerFixture):
         super().setUp()
         self.source()
         self.run_sync()
-        self.env = dict(os.environ, HOME=str(self.target),
-                        PATH=str(self.target / ".local/bin") + os.pathsep + os.environ["PATH"])
+        self.env = dict(
+            os.environ, HOME=str(self.target), PATH=str(self.target / ".local/bin") + os.pathsep + os.environ["PATH"]
+        )
 
     def run_command(self, *arguments, expected=0):
-        result = subprocess.run(["configs", *arguments], cwd=self.root, env=self.env,
-                                capture_output=True, text=True)
+        result = subprocess.run(
+            ["configs", *arguments], cwd=self.root, env=self.env, capture_output=True, text=True, check=False
+        )
         self.assertEqual(result.returncode, expected, result.stdout + result.stderr)
         return result.stdout + result.stderr
 
@@ -953,8 +1049,11 @@ class ConfigCommandTests(InstallerFixture):
         subprocess.run(["git", "init", "-q", str(self.target)], check=True, capture_output=True)
         other = self.root / "other home"
         other.mkdir()
-        subprocess.run([sys.executable, str(self.repository / COMMAND_PATH), "apply", "--target", str(other)],
-                       check=True, capture_output=True)
+        subprocess.run(
+            [sys.executable, str(self.repository / COMMAND_PATH), "apply", "--target", str(other)],
+            check=True,
+            capture_output=True,
+        )
         before = self.tree()
         (self.repository / ".zshrc").write_text("other target\n")
         self.run_command("apply", "--target", str(other))
@@ -1014,8 +1113,11 @@ class ConfigCommandTests(InstallerFixture):
         other = self.root / "other home"
         other.mkdir()
         self.source("old")
-        subprocess.run([sys.executable, str(self.repository / COMMAND_PATH), "apply", "--target", str(other)],
-                       check=True, capture_output=True)
+        subprocess.run(
+            [sys.executable, str(self.repository / COMMAND_PATH), "apply", "--target", str(other)],
+            check=True,
+            capture_output=True,
+        )
         self.git("rm", "-f", "--", "old")
         before = self.tree()
         state_bytes = (other / sync.STATE_PATH).read_bytes()
@@ -1029,18 +1131,17 @@ class ConfigCommandTests(InstallerFixture):
     def setup_remote(self):
         self.commit(self.repository, "Initial configs")
         self.remote = self.root / "remote.git"
-        subprocess.run(["git", "clone", "--bare", str(self.repository), str(self.remote)],
-                       check=True, capture_output=True)
+        subprocess.run(
+            ["git", "clone", "--bare", str(self.repository), str(self.remote)], check=True, capture_output=True
+        )
         self.git("remote", "add", "origin", str(self.remote))
         self.git("push", "-u", "origin", "HEAD")
         self.upstream = self.root / "upstream checkout"
-        subprocess.run(["git", "clone", str(self.remote), str(self.upstream)],
-                       check=True, capture_output=True)
+        subprocess.run(["git", "clone", str(self.remote), str(self.upstream)], check=True, capture_output=True)
 
     def publish(self, relative=".zshrc", contents="upstream config\n"):
         (self.upstream / relative).write_text(contents)
-        subprocess.run(["git", "-C", str(self.upstream), "add", "--", relative],
-                       check=True, capture_output=True)
+        subprocess.run(["git", "-C", str(self.upstream), "add", "--", relative], check=True, capture_output=True)
         self.commit(self.upstream, "Update configs")
         subprocess.run(["git", "-C", str(self.upstream), "push"], check=True, capture_output=True)
 
@@ -1048,7 +1149,9 @@ class ConfigCommandTests(InstallerFixture):
         self.setup_remote()
         self.publish()
         installer = self.upstream / COMMAND_PATH
-        self.publish(COMMAND_PATH, installer.read_text().replace("Configuration applied.", "Updated installer applied."))
+        self.publish(
+            COMMAND_PATH, installer.read_text().replace("Configuration applied.", "Updated installer applied.")
+        )
         self.assertIn("Updated installer applied.", self.run_command("update"))
         self.assertEqual((self.target / ".zshrc").read_text(), "upstream config\n")
         self.assertEqual((self.target / COMMAND_PATH).read_bytes(), installer.read_bytes())
@@ -1062,7 +1165,11 @@ class ConfigCommandTests(InstallerFixture):
         script.write_text(
             'ZGEN_DIR={sources}\nzgenom() {{ print -r -- "$1 $(<{zshrc})" >> {log}; return {status}; }}\n'.format(
                 sources=shlex.quote(str(script.parent / "sources")),
-                zshrc=shlex.quote(str(self.target / ".zshrc")), log=shlex.quote(str(log)), status=status))
+                zshrc=shlex.quote(str(self.target / ".zshrc")),
+                log=shlex.quote(str(log)),
+                status=status,
+            )
+        )
         return log
 
     def test_update_refreshes_zgenom_after_applying(self):
@@ -1149,8 +1256,9 @@ class ConfigCommandTests(InstallerFixture):
         self.publish()
         (self.target / ".zshrc").write_text("installed edit\n")
         before = self.tree()
-        self.assertIn("Repository updated, but conflicts remain",
-                      self.run_command("update", expected=sync.CONFLICTS_EXIT))
+        self.assertIn(
+            "Repository updated, but conflicts remain", self.run_command("update", expected=sync.CONFLICTS_EXIT)
+        )
         self.assertEqual((self.repository / ".zshrc").read_text(), "upstream config\n")
         self.assertEqual(before, self.tree())
 
@@ -1193,11 +1301,13 @@ class ExportImportTests(InstallerFixture):
         return output.getvalue()
 
     def install_info(self):
-        lines = ["# uname_s_glob=\"ignored\"; uname_m_glob=\"*\"; file=\"x\"; version=\"v0\"; sha256=\"0\";"]
+        lines = ['# uname_s_glob="ignored"; uname_m_glob="*"; file="x"; version="v0"; sha256="0";']
         for platform, data in self.releases.items():
             kernel, machine = platform.split("-")
-            lines.append('uname_s_glob="{}"; uname_m_glob="{}"; file="gitstatusd-${{uname_s}}-${{uname_m}}"; '
-                         'version="v1.5.4"; sha256="{}";'.format(kernel, machine, sync.digest(data)))
+            lines.append(
+                f'uname_s_glob="{kernel}"; uname_m_glob="{machine}"; file="gitstatusd-${{uname_s}}-${{uname_m}}"; '
+                f'version="v1.5.4"; sha256="{sync.digest(data)}";'
+            )
         return "\n".join(lines) + "\n"
 
     def install_zgenom(self):
@@ -1225,9 +1335,11 @@ class ExportImportTests(InstallerFixture):
             platform = re.search(r"gitstatusd-(.+)\.tar\.gz$", url).group(1)
             return self.releases[platform]
 
-        with mock.patch.object(sync, "download", side_effect=download), \
-                mock.patch.object(sync.sys, "stdout", io.StringIO()), \
-                mock.patch.object(sync.sys, "stderr", self.stderr):
+        with (
+            mock.patch.object(sync, "download", side_effect=download),
+            mock.patch.object(sync.sys, "stdout", io.StringIO()),
+            mock.patch.object(sync.sys, "stderr", self.stderr),
+        ):
             sync.export_archive(self.repository, self.target, self.archive, platforms)
         return downloads
 
@@ -1242,7 +1354,11 @@ class ExportImportTests(InstallerFixture):
     def run_import(self, command, *options, expected=0):
         result = subprocess.run(
             [sys.executable, str(command), "import", *options, "--target", str(self.other)],
-            cwd=self.root, env=dict(os.environ, HOME=str(self.other)), capture_output=True, text=True,
+            cwd=self.root,
+            env=dict(os.environ, HOME=str(self.other)),
+            capture_output=True,
+            text=True,
+            check=False,
         )
         self.assertEqual(result.returncode, expected, result.stdout + result.stderr)
         return result.stdout + result.stderr
@@ -1255,8 +1371,13 @@ class ExportImportTests(InstallerFixture):
 
     def test_export_bundles_repository_plugins_and_gitstatusd(self):
         downloads = self.export(("linux-x86_64", "darwin-arm64"))
-        self.assertEqual(downloads, [sync.GITSTATUS_URL.format(version="v1.5.4", file="gitstatusd-" + platform)
-                                     for platform in ("linux-x86_64", "darwin-arm64")])
+        self.assertEqual(
+            downloads,
+            [
+                sync.GITSTATUS_URL.format(version="v1.5.4", file="gitstatusd-" + platform)
+                for platform in ("linux-x86_64", "darwin-arm64")
+            ],
+        )
         members = self.members()
         root = sync.EXPORT_ROOT + "/"
         manifest = json.loads(self.read(root + "manifest.json"))
@@ -1266,10 +1387,15 @@ class ExportImportTests(InstallerFixture):
         self.assertEqual(stat.S_IMODE(members[root + "configs"].mode), 0o755)
         self.assertIn(root + "repository.bundle", members)
         self.assertIn(root + "zgenom/sources/romkatv/powerlevel10k/___/powerlevel10k.zsh-theme", members)
-        self.assertEqual(members[root + "zgenom/sources/theme-link"].linkname,
-                         "romkatv/powerlevel10k/___/powerlevel10k.zsh-theme")
-        for excluded in ("sources/init.zsh", "sources/zcompdump_5.9", "sources/zcompdump_5.9.zwc",
-                         "sources/romkatv/powerlevel10k/___/powerlevel10k.zsh-theme.zwc"):
+        self.assertEqual(
+            members[root + "zgenom/sources/theme-link"].linkname, "romkatv/powerlevel10k/___/powerlevel10k.zsh-theme"
+        )
+        for excluded in (
+            "sources/init.zsh",
+            "sources/zcompdump_5.9",
+            "sources/zcompdump_5.9.zwc",
+            "sources/romkatv/powerlevel10k/___/powerlevel10k.zsh-theme.zwc",
+        ):
             self.assertNotIn(root + "zgenom/" + excluded, members)
         usrbin = root + "zgenom/sources/romkatv/powerlevel10k/___/gitstatus/usrbin/"
         for platform in ("linux-x86_64", "darwin-arm64"):
@@ -1296,10 +1422,13 @@ class ExportImportTests(InstallerFixture):
         self.assertEqual([path.name for path in self.root.iterdir() if path.name.startswith(".configs-")], [])
 
     def test_gitstatus_release_follows_install_globs(self):
-        install_info = ('uname_s_glob="linux"; uname_m_glob="armv8l"; file="gitstatusd-${uname_s}-aarch64"; '
-                        'version="v1.5.4"; sha256="' + "a" * 64 + '";\n')
-        self.assertEqual(sync.gitstatus_release(install_info, "linux-armv8l"),
-                         ("gitstatusd-linux-aarch64", "v1.5.4", "a" * 64))
+        install_info = (
+            'uname_s_glob="linux"; uname_m_glob="armv8l"; file="gitstatusd-${uname_s}-aarch64"; '
+            'version="v1.5.4"; sha256="' + "a" * 64 + '";\n'
+        )
+        self.assertEqual(
+            sync.gitstatus_release(install_info, "linux-armv8l"), ("gitstatusd-linux-aarch64", "v1.5.4", "a" * 64)
+        )
         with self.assertRaisesRegex(sync.SyncError, "invalid gitstatus"):
             sync.gitstatus_release(install_info.replace("v1.5.4", "$(touch x)"), "linux-armv8l")
         commented = '  # uname_s_glob="linux"; an indented note\n' + install_info
@@ -1315,11 +1444,15 @@ class ExportImportTests(InstallerFixture):
         self.assertEqual((self.other / ".zshrc").read_text(), "original\n")
         state = json.loads((self.other / sync.STATE_PATH).read_text())
         self.assertEqual(state["repository"], str(checkout.resolve()))
-        self.assertEqual(subprocess.run(["git", "-C", str(checkout), "remote"], capture_output=True,
-                                        text=True, check=True).stdout, "")
+        self.assertEqual(
+            subprocess.run(["git", "-C", str(checkout), "remote"], capture_output=True, text=True, check=True).stdout,
+            "",
+        )
         usrbin = self.other / ".zgenom/sources/romkatv/powerlevel10k/___/gitstatus/usrbin"
-        self.assertEqual(sorted(path.name for path in usrbin.iterdir()),
-                         sorted("gitstatusd-" + platform for platform in sync.DEFAULT_PLATFORMS))
+        self.assertEqual(
+            sorted(path.name for path in usrbin.iterdir()),
+            sorted("gitstatusd-" + platform for platform in sync.DEFAULT_PLATFORMS),
+        )
         self.assertTrue(os.access(usrbin / "gitstatusd-linux-x86_64", os.X_OK))
         self.assertFalse((self.other / ".zgenom/sources/init.zsh").exists())
         self.assertTrue((self.other / ".zgenom/sources/theme-link").is_symlink())
@@ -1331,9 +1464,12 @@ class ExportImportTests(InstallerFixture):
         self.export()
         self.run_import(self.extract() / "configs")
         checkout = self.other / "Code/configs"
-        self.assertEqual(subprocess.run(["git", "-C", str(checkout), "remote", "get-url", "origin"],
-                                        capture_output=True, text=True, check=True).stdout.strip(),
-                         "https://example.invalid/configs.git")
+        self.assertEqual(
+            subprocess.run(
+                ["git", "-C", str(checkout), "remote", "get-url", "origin"], capture_output=True, text=True, check=True
+            ).stdout.strip(),
+            "https://example.invalid/configs.git",
+        )
         self.source(contents="second version\n")
         self.commit(self.repository, "Second version")
         (self.zgenom / "zgenom.zsh").unlink()
@@ -1392,10 +1528,16 @@ class ExportImportTests(InstallerFixture):
             "outside its directory": [(root + "zgenom/link", link, "../configs")],
             # These stay inside zgenom/ lexically, so only the link-walk and
             # duplicate checks can catch them.
-            "write through link": [(root + "zgenom/a", directory, ""), (root + "zgenom/a/up", link, "../b"),
-                                   (root + "zgenom/a/up/file", file, "")],
-            "link through link": [(root + "zgenom/a/b", directory, ""), (root + "zgenom/a/b/up", link, "../../c"),
-                                  (root + "zgenom/escape", link, "a/b/up/../../../escaped")],
+            "write through link": [
+                (root + "zgenom/a", directory, ""),
+                (root + "zgenom/a/up", link, "../b"),
+                (root + "zgenom/a/up/file", file, ""),
+            ],
+            "link through link": [
+                (root + "zgenom/a/b", directory, ""),
+                (root + "zgenom/a/b/up", link, "../../c"),
+                (root + "zgenom/escape", link, "a/b/up/../../../escaped"),
+            ],
             "duplicate": [(root + "zgenom/same", link, "other"), (root + "zgenom/same", file, "")],
         }
         for case, entries in cases.items():
@@ -1414,9 +1556,12 @@ class ExportImportTests(InstallerFixture):
         self.export(("linux-x86_64",))
         data = self.archive.read_bytes()
         corrupted = bytearray(data)
-        corrupted[len(data) // 2:len(data) // 2 + 64] = bytes(64)
-        for case, contents in (("truncated", data[:len(data) // 2]), ("corrupted", bytes(corrupted)),
-                               ("not gzip", b"not an archive")):
+        corrupted[len(data) // 2 : len(data) // 2 + 64] = bytes(64)
+        for case, contents in (
+            ("truncated", data[: len(data) // 2]),
+            ("corrupted", bytes(corrupted)),
+            ("not gzip", b"not an archive"),
+        ):
             with self.subTest(case=case):
                 self.archive.write_bytes(contents)
                 output = self.run_import(self.repository / COMMAND_PATH, str(self.archive), expected=1)
@@ -1440,16 +1585,23 @@ class ExportImportTests(InstallerFixture):
         manifest = json.loads(self.read(sync.EXPORT_ROOT + "/manifest.json"))
         self.assertEqual(manifest["origin"], "https://example.invalid/configs.git")
         self.assertNotIn(b"secret-token", self.read(sync.EXPORT_ROOT + "/manifest.json"))
-        for url, expected in (("ssh://git:secret@host/configs.git", "ssh://git@host/configs.git"),
-                              ("ssh://git@host/configs.git", "ssh://git@host/configs.git"),
-                              ("git@github.com:owner/configs.git", "git@github.com:owner/configs.git")):
+        for url, expected in (
+            ("ssh://git:secret@host/configs.git", "ssh://git@host/configs.git"),
+            ("ssh://git@host/configs.git", "ssh://git@host/configs.git"),
+            ("git@github.com:owner/configs.git", "git@github.com:owner/configs.git"),
+        ):
             self.assertEqual(sync.without_credentials(url), expected)
 
     def test_installed_export_forwards_archive_and_platforms(self):
         def run(*options):
-            return subprocess.run([sys.executable, str(self.target / COMMAND_PATH), "export", *options],
-                                  cwd=self.root, env=dict(os.environ, HOME=str(self.target)),
-                                  capture_output=True, text=True)
+            return subprocess.run(
+                [sys.executable, str(self.target / COMMAND_PATH), "export", *options],
+                cwd=self.root,
+                env=dict(os.environ, HOME=str(self.target)),
+                capture_output=True,
+                text=True,
+                check=False,
+            )
 
         # Only the forwarded platform can produce this error, without any download.
         result = run("out.tar.gz", "--platform", "plan9-mips")
@@ -1478,7 +1630,8 @@ class RepositoryPayloadTests(InstallerFixture):
     def test_complete_repository_payload_installs_and_reapplies(self):
         result = subprocess.run(
             ["git", "-C", str(REPOSITORY), "ls-files", "--cached", "--others", "--exclude-standard", "-z"],
-            check=True, stdout=subprocess.PIPE,
+            check=True,
+            stdout=subprocess.PIPE,
         )
         payload = {}
         for raw_path in result.stdout.split(b"\0"):

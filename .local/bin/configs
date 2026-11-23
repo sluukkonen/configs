@@ -11,7 +11,6 @@ import hashlib
 import io
 import json
 import os
-from pathlib import Path, PurePosixPath
 import posixpath
 import re
 import shlex
@@ -24,12 +23,23 @@ import tempfile
 import urllib.parse
 import urllib.request
 import zlib
-
+from pathlib import Path, PurePosixPath
 
 REPOSITORY_ONLY = {
-    ".gitignore", ".gitattributes", ".gitmodules", ".github",
-    "AGENTS.md", "README.md", "Brewfile", "Brewfile.lock.json", "Fedorafile",
-    "init.sh", "tests", "docs", "__pycache__",
+    ".gitignore",
+    ".gitattributes",
+    ".gitmodules",
+    ".github",
+    "AGENTS.md",
+    "README.md",
+    "Brewfile",
+    "Brewfile.lock.json",
+    "Fedorafile",
+    "init.sh",
+    "ruff.toml",
+    "tests",
+    "docs",
+    "__pycache__",
 }
 STATE_PATH = ".local/state/configs/state.json"
 COMMAND_PATH = ".local/bin/configs"
@@ -52,9 +62,12 @@ def digest(contents):
 
 
 def valid_relative(path):
-    return (isinstance(path, str) and bool(path)
-            and not PurePosixPath(path).is_absolute()
-            and all(part not in ("", ".", "..") for part in path.split("/")))
+    return (
+        isinstance(path, str)
+        and bool(path)
+        and not PurePosixPath(path).is_absolute()
+        and all(part not in ("", ".", "..") for part in path.split("/"))
+    )
 
 
 def check_parents(root, relative):
@@ -63,9 +76,9 @@ def check_parents(root, relative):
     for part in PurePosixPath(relative).parts[:-1]:
         current = current / part
         if current.is_symlink():
-            raise SyncError("symlinked parent directory: {}".format(current))
+            raise SyncError(f"symlinked parent directory: {current}")
         if current.exists() and not current.is_dir():
-            raise SyncError("parent is not a directory: {}".format(current))
+            raise SyncError(f"parent is not a directory: {current}")
 
 
 def inspect(root, relative):
@@ -78,10 +91,10 @@ def inspect(root, relative):
     if stat.S_ISLNK(info.st_mode):
         return {"kind": "link", "target": os.readlink(path)}, None
     if not stat.S_ISREG(info.st_mode):
-        raise SyncError("not a regular file: {}".format(path))
+        raise SyncError(f"not a regular file: {path}")
     mode = stat.S_IMODE(info.st_mode)
     if mode & 0o7000:
-        raise SyncError("special permission bits are unsupported: {}".format(path))
+        raise SyncError(f"special permission bits are unsupported: {path}")
     contents = path.read_bytes()
     return {"kind": "file", "sha256": digest(contents), "mode": mode}, contents
 
@@ -98,23 +111,30 @@ def load_state(target):
         raise SyncError("installation state must be a regular file")
     try:
         state = json.loads(contents)
-        if (not isinstance(state, dict) or type(state.get("version")) is not int or state["version"] != 1
-                or not isinstance(state.get("repository"), str)
-                or not Path(state["repository"]).is_absolute()
-                or not isinstance(state.get("files"), dict)):
+        if (
+            not isinstance(state, dict)
+            or type(state.get("version")) is not int
+            or state["version"] != 1
+            or not isinstance(state.get("repository"), str)
+            or not Path(state["repository"]).is_absolute()
+            or not isinstance(state.get("files"), dict)
+        ):
             raise ValueError("invalid schema or unsupported version")
         for relative, record in state["files"].items():
-            if (not valid_relative(relative) or not isinstance(record, dict)
-                    or set(record) != {"sha256", "mode"}
-                    or not isinstance(record["sha256"], str)
-                    or len(record["sha256"]) != 64
-                    or any(char not in "0123456789abcdef" for char in record["sha256"])
-                    or type(record["mode"]) is not int
-                    or not 0 <= record["mode"] <= 0o777):
+            if (
+                not valid_relative(relative)
+                or not isinstance(record, dict)
+                or set(record) != {"sha256", "mode"}
+                or not isinstance(record["sha256"], str)
+                or len(record["sha256"]) != 64
+                or any(char not in "0123456789abcdef" for char in record["sha256"])
+                or type(record["mode"]) is not int
+                or not 0 <= record["mode"] <= 0o777
+            ):
                 raise ValueError("invalid file record")
         return state
     except (ValueError, TypeError, UnicodeError) as error:
-        raise SyncError("invalid installation state: {}".format(error)) from error
+        raise SyncError(f"invalid installation state: {error}") from error
 
 
 def is_installable(relative):
@@ -125,7 +145,8 @@ def is_installable(relative):
 def tracked_sources(repository, include_deleted=False):
     result = subprocess.run(
         ["git", "-C", str(repository), "ls-files", "--stage", "-z"],
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True,
+        capture_output=True,
+        check=True,
     )
     for entry in result.stdout.split(b"\0"):
         if not entry:
@@ -136,7 +157,7 @@ def tracked_sources(repository, include_deleted=False):
         if not is_installable(relative):
             continue
         if not valid_relative(relative) or stage != b"0" or mode not in (b"100644", b"100755"):
-            raise SyncError("unsupported or unmerged tracked configuration: {}".format(relative))
+            raise SyncError(f"unsupported or unmerged tracked configuration: {relative}")
         check_parents(repository, relative)
         if include_deleted or os.path.lexists(repository / relative):
             yield relative
@@ -145,16 +166,21 @@ def tracked_sources(repository, include_deleted=False):
 def show_checkout_changes(repository):
     for relative in tracked_sources(repository, include_deleted=True):
         if not os.path.lexists(repository / relative):
-            print("CHECKOUT DELETED {} (excluded from installation)".format(relative))
+            print(f"CHECKOUT DELETED {relative} (excluded from installation)")
     result = subprocess.run(
         ["git", "-C", str(repository), "ls-files", "--others", "--exclude-standard", "-z"],
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True,
+        capture_output=True,
+        check=True,
     )
     for raw_path in result.stdout.split(b"\0"):
         relative = os.fsdecode(raw_path)
-        if (relative and is_installable(relative)
-                and not (repository / relative).is_symlink() and (repository / relative).is_file()):
-            print("UNTRACKED {} (not installed); run git add -- {}".format(relative, shlex.quote(relative)))
+        if (
+            relative
+            and is_installable(relative)
+            and not (repository / relative).is_symlink()
+            and (repository / relative).is_file()
+        ):
+            print(f"UNTRACKED {relative} (not installed); run git add -- {shlex.quote(relative)}")
 
 
 def install_mode(source_mode, current_mode):
@@ -169,29 +195,39 @@ def make_plan(repository, target, state):
     conflicts = []
     destinations = set()
     sources = list(tracked_sources(repository))
-    if COMMAND_PATH not in sources or not (repository / COMMAND_PATH).is_file() or (repository / COMMAND_PATH).is_symlink():
-        raise SyncError("the installer requires a tracked .local/bin/configs; "
-                        "run git add .local/bin/configs before applying")
+    if (
+        COMMAND_PATH not in sources
+        or not (repository / COMMAND_PATH).is_file()
+        or (repository / COMMAND_PATH).is_symlink()
+    ):
+        raise SyncError(
+            "the installer requires a tracked .local/bin/configs; run git add .local/bin/configs before applying"
+        )
     for relative in sources:
         destination = relative
         if destination in destinations:
-            raise SyncError("multiple sources target {}".format(destination))
+            raise SyncError(f"multiple sources target {destination}")
         destination_parts = PurePosixPath(destination)
-        if any(destination_parts in PurePosixPath(other).parents
-               or PurePosixPath(other) in destination_parts.parents for other in destinations):
-            raise SyncError("file and directory destinations overlap: {}".format(destination))
+        if any(
+            destination_parts in PurePosixPath(other).parents or PurePosixPath(other) in destination_parts.parents
+            for other in destinations
+        ):
+            raise SyncError(f"file and directory destinations overlap: {destination}")
         destinations.add(destination)
         try:
             destination_path = target / destination
             state_directory = (target / STATE_PATH).parent
-            if (destination_path == state_directory or state_directory in destination_path.parents
-                    or destination_path in state_directory.parents):
-                raise SyncError("destination overlaps installation state: {}".format(destination))
+            if (
+                destination_path == state_directory
+                or state_directory in destination_path.parents
+                or destination_path in state_directory.parents
+            ):
+                raise SyncError(f"destination overlaps installation state: {destination}")
             if target / destination == repository or repository in (target / destination).parents:
-                raise SyncError("destination overlaps the repository: {}".format(destination))
+                raise SyncError(f"destination overlaps the repository: {destination}")
             source, contents = inspect(repository, relative)
             if source["kind"] != "file":
-                raise SyncError("tracked source is missing or symlinked: {}".format(relative))
+                raise SyncError(f"tracked source is missing or symlinked: {relative}")
             current, old_contents = inspect(target, destination)
             previous = state["files"].get(destination)
             mode = source["mode"]
@@ -201,10 +237,10 @@ def make_plan(repository, target, state):
             desired = {"sha256": source["sha256"], "mode": mode}
 
             if current["kind"] == "link":
-                raise SyncError("destination is a symlink: {}".format(destination))
+                raise SyncError(f"destination is a symlink: {destination}")
             elif current["kind"] == "missing":
                 if previous is not None:
-                    raise SyncError("locally deleted: {}".format(destination))
+                    raise SyncError(f"locally deleted: {destination}")
                 action = "INSTALL"
             elif file_record(current) == desired:
                 action = "KEEP" if previous == desired else "ADOPT"
@@ -212,14 +248,20 @@ def make_plan(repository, target, state):
                 action = "UPDATE"
             else:
                 action = "CONFLICT"
-                conflicts.append("locally edited or unmanaged file differs: {}".format(destination))
+                conflicts.append(f"locally edited or unmanaged file differs: {destination}")
 
-            operations.append({
-                "source": relative, "destination": destination, "before": current,
-                "source_before": source,
-                "record": desired, "contents": contents, "old_contents": old_contents,
-                "action": action,
-            })
+            operations.append(
+                {
+                    "source": relative,
+                    "destination": destination,
+                    "before": current,
+                    "source_before": source,
+                    "record": desired,
+                    "contents": contents,
+                    "old_contents": old_contents,
+                    "action": action,
+                }
+            )
         except SyncError as error:
             conflicts.append(str(error))
     return operations, conflicts, sorted(set(state["files"]) - destinations)
@@ -241,7 +283,7 @@ def page_report(report):
             pager = shlex.split(os.environ.get("PAGER", "less -FRX"))
             if pager and shutil.which(pager[0]):
                 sys.stdout.flush()
-                result = subprocess.run(pager, input=report, text=True)
+                result = subprocess.run(pager, input=report, text=True, check=False)
                 if result.returncode == 0:
                     return
                 print("Pager failed; printing diff directly.", file=sys.stderr)
@@ -262,7 +304,10 @@ def show_diff_plan(operations, conflicts, removed, color):
         sys.stdout.flush()
         try:
             result = subprocess.run(
-                [delta, "--color-only"], input=report, text=True,
+                [delta, "--color-only"],
+                input=report,
+                text=True,
+                check=False,
             )
             if result.returncode == 0:
                 return
@@ -279,7 +324,7 @@ def show_plan(operations, conflicts, removed, show_diff, color=False):
     for operation in operations:
         action, destination = operation["action"], operation["destination"]
         if action != "KEEP":
-            print("{} {}".format(action, destination))
+            print(f"{action} {destination}")
         old = operation["old_contents"]
         new = operation["contents"]
         if show_diff and action in ("INSTALL", "UPDATE", "CONFLICT") and old != new:
@@ -288,29 +333,44 @@ def show_plan(operations, conflicts, removed, show_diff, color=False):
                 new_text = new.decode("utf-8")
                 if "\0" in old_text or "\0" in new_text:
                     raise UnicodeError()
-                for index, line in enumerate(difflib.unified_diff(
-                    old_text.splitlines(keepends=True), new_text.splitlines(keepends=True),
-                    fromfile="installed/" + destination, tofile="repository/" + operation["source"],
-                )):
-                    style = ("1" if index < 2 else "36" if line.startswith("@@")
-                             else "32" if line.startswith("+") else "31" if line.startswith("-") else None)
-                    rendered = line[:-1] if line.endswith("\n") else line
+                for index, line in enumerate(
+                    difflib.unified_diff(
+                        old_text.splitlines(keepends=True),
+                        new_text.splitlines(keepends=True),
+                        fromfile="installed/" + destination,
+                        tofile="repository/" + operation["source"],
+                    )
+                ):
+                    style = (
+                        "1"
+                        if index < 2
+                        else "36"
+                        if line.startswith("@@")
+                        else "32"
+                        if line.startswith("+")
+                        else "31"
+                        if line.startswith("-")
+                        else None
+                    )
+                    rendered = line.removesuffix("\n")
                     if color and style:
-                        rendered = "\033[{}m{}\033[0m".format(style, rendered)
+                        rendered = f"\033[{style}m{rendered}\033[0m"
                     print(rendered)
                     if not line.endswith("\n"):
                         print("\\ No newline at end of file")
             except UnicodeError:
                 print("  Binary contents differ.")
         if action in ("UPDATE", "CONFLICT") and operation["before"]["mode"] != operation["record"]["mode"]:
-            print("  mode {:03o} -> {:03o}".format(
-                operation["before"]["mode"], operation["record"]["mode"]))
+            print("  mode {:03o} -> {:03o}".format(operation["before"]["mode"], operation["record"]["mode"]))
     for relative in removed:
-        print("NO LONGER SELECTED (left installed) {}".format(relative))
+        print(f"NO LONGER SELECTED (left installed) {relative}")
     if removed:
         print("Run configs prune --dry-run to preview obsolete-file cleanup.")
-    content_conflicts = {"locally edited or unmanaged file differs: " + operation["destination"]
-                         for operation in operations if operation["action"] == "CONFLICT"}
+    content_conflicts = {
+        "locally edited or unmanaged file differs: " + operation["destination"]
+        for operation in operations
+        if operation["action"] == "CONFLICT"
+    }
     for conflict in conflicts:
         if conflict not in content_conflicts:
             print("CONFLICT " + conflict)
@@ -325,7 +385,7 @@ def make_parents(root, relative):
             current.mkdir(mode=0o700)
         except FileExistsError:
             if current.is_symlink() or not current.is_dir():
-                raise SyncError("unsafe parent directory: {}".format(current))
+                raise SyncError(f"unsafe parent directory: {current}")
 
 
 @contextlib.contextmanager
@@ -364,7 +424,7 @@ def apply_plan(repository, target, state, operations):
         destination = operation["destination"]
         current, _ = inspect(target, destination)
         if current != operation["before"]:
-            raise SyncError("destination changed during apply: {}".format(destination))
+            raise SyncError(f"destination changed during apply: {destination}")
         if operation["action"] in ("INSTALL", "UPDATE"):
             atomic_write(target, destination, operation["contents"], operation["record"]["mode"])
         dirty = dirty or state["files"].get(destination) != operation["record"]
@@ -378,8 +438,7 @@ def apply_plan(repository, target, state, operations):
         save_state(target, state)
 
 
-MERGE_MARKERS = (b"<<<<<<< configs installed", b"======= configs separator",
-                 b">>>>>>> configs repository")
+MERGE_MARKERS = (b"<<<<<<< configs installed", b"======= configs separator", b">>>>>>> configs repository")
 
 
 def merge_contents(operation):
@@ -397,9 +456,18 @@ def merge_contents(operation):
     with tempfile.TemporaryDirectory(prefix="configs-merge-") as directory:
         root = Path(directory)
         relative = Path(operation["destination"]).name
-        contents = (MERGE_MARKERS[0] + b"\n" + old + (b"" if old.endswith(b"\n") else b"\n")
-                    + MERGE_MARKERS[1] + b"\n" + new + (b"" if new.endswith(b"\n") else b"\n")
-                    + MERGE_MARKERS[2] + b"\n")
+        contents = (
+            MERGE_MARKERS[0]
+            + b"\n"
+            + old
+            + (b"" if old.endswith(b"\n") else b"\n")
+            + MERGE_MARKERS[1]
+            + b"\n"
+            + new
+            + (b"" if new.endswith(b"\n") else b"\n")
+            + MERGE_MARKERS[2]
+            + b"\n"
+        )
         atomic_write(root, relative, contents, 0o600)
         subprocess.run(editor + [str(root / relative)], check=True)
         snapshot, contents = inspect(root, relative)
@@ -423,7 +491,7 @@ def save_resolution(repository, target, state, operation, contents, mode, keep_i
     source, _ = inspect(repository, operation["source"])
     current, _ = inspect(target, relative)
     if source != operation["source_before"] or current != operation["before"]:
-        raise SyncError("file changed during resolution: {}".format(relative))
+        raise SyncError(f"file changed during resolution: {relative}")
     # Write the checkout first. If the installed write or state save fails, a
     # retry can detect the conflict or adopt the already matching contents.
     source_mode = source["mode"]
@@ -444,15 +512,17 @@ def save_resolution(repository, target, state, operation, contents, mode, keep_i
 def resolve_plan(repository, target, state, operations, conflicts, paths):
     if not sys.stdin.isatty() or not sys.stdout.isatty():
         raise SyncError("configs resolve requires an interactive terminal")
-    choices = {operation["destination"]: operation for operation in operations
-               if operation["action"] == "CONFLICT"}
+    choices = {operation["destination"]: operation for operation in operations if operation["action"] == "CONFLICT"}
     for relative in paths:
         if not valid_relative(relative) or relative not in choices:
-            raise SyncError("not a resolvable conflict: {}".format(relative))
+            raise SyncError(f"not a resolvable conflict: {relative}")
     selected = list(dict.fromkeys(paths)) if paths else list(choices)
     unresolved = set(choices)
-    structural = [conflict for conflict in conflicts
-                  if conflict not in {"locally edited or unmanaged file differs: " + path for path in choices}]
+    structural = [
+        conflict
+        for conflict in conflicts
+        if conflict not in {"locally edited or unmanaged file differs: " + path for path in choices}
+    ]
     for conflict in structural:
         print("CONFLICT " + conflict)
     for relative in selected:
@@ -476,13 +546,20 @@ def resolve_plan(repository, target, state, operations, conflicts, paths):
                 else:
                     print("Choose repository, installed, merge, skip, or quit.")
                     continue
-                save_resolution(repository, target, state, operation, contents, mode,
-                                keep_installed_mode=choice in ("i", "installed"))
+                save_resolution(
+                    repository,
+                    target,
+                    state,
+                    operation,
+                    contents,
+                    mode,
+                    keep_installed_mode=choice in ("i", "installed"),
+                )
                 unresolved.remove(relative)
                 print("RESOLVED " + relative)
                 break
         except (SyncError, OSError, ValueError, subprocess.CalledProcessError) as error:
-            print("CONFLICT {}: {}".format(relative, error), file=sys.stderr)
+            print(f"CONFLICT {relative}: {error}", file=sys.stderr)
         except EOFError:
             return 1
     return 1 if unresolved or structural else 0
@@ -498,18 +575,19 @@ def same_file(left, right):
 def check_prune_aliases(destination, active, reserved):
     for path in active:
         if same_file(destination, path):
-            raise SyncError("obsolete path aliases an active configuration: {}".format(destination))
+            raise SyncError(f"obsolete path aliases an active configuration: {destination}")
     # Parent aliases can also hide a destination inside a protected directory.
     for parent in (destination, *destination.parents):
         if any(same_file(parent, path) for path in reserved):
-            raise SyncError("obsolete path aliases repository or installation state: {}".format(destination))
+            raise SyncError(f"obsolete path aliases repository or installation state: {destination}")
 
 
 def make_prune_plan(repository, target, state):
     sources = set(tracked_sources(repository))
     if COMMAND_PATH not in sources:
-        raise SyncError("the installer requires a tracked .local/bin/configs; "
-                        "run git add .local/bin/configs before pruning")
+        raise SyncError(
+            "the installer requires a tracked .local/bin/configs; run git add .local/bin/configs before pruning"
+        )
     operations, conflicts = [], []
     active = tuple(target / relative for relative in sorted(sources))
     reserved = (repository, (target / STATE_PATH).parent)
@@ -517,9 +595,8 @@ def make_prune_plan(repository, target, state):
         try:
             destination = target / relative
             for path in reserved:
-                if (destination == path or path in destination.parents
-                        or destination in path.parents):
-                    raise SyncError("obsolete destination overlaps repository or installation state: {}".format(relative))
+                if destination == path or path in destination.parents or destination in path.parents:
+                    raise SyncError(f"obsolete destination overlaps repository or installation state: {relative}")
             current, _ = inspect(target, relative)
             check_prune_aliases(destination, active, reserved)
             if current["kind"] == "missing":
@@ -527,9 +604,10 @@ def make_prune_plan(repository, target, state):
             elif current["kind"] == "file" and file_record(current) == state["files"][relative]:
                 action = "REMOVE"
             else:
-                raise SyncError("obsolete file was locally changed: {}".format(relative))
-            operations.append({"destination": relative, "before": current, "action": action,
-                               "active": active, "reserved": reserved})
+                raise SyncError(f"obsolete file was locally changed: {relative}")
+            operations.append(
+                {"destination": relative, "before": current, "action": action, "active": active, "reserved": reserved}
+            )
         except (SyncError, OSError) as error:
             conflicts.append(str(error))
     return operations, conflicts
@@ -542,7 +620,7 @@ def prune_plan(target, state, operations):
         try:
             current, _ = inspect(target, relative)
             if current != operation["before"]:
-                raise SyncError("destination changed during prune: {}".format(relative))
+                raise SyncError(f"destination changed during prune: {relative}")
             check_prune_aliases(target / relative, operation["active"], operation["reserved"])
         except (SyncError, OSError) as error:
             conflicts.append(str(error))
@@ -566,7 +644,7 @@ def installation_lock(target):
         try:
             fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError as error:
-            raise SyncError("another installer is using {}".format(target)) from error
+            raise SyncError(f"another installer is using {target}") from error
         yield
     finally:
         os.close(fd)
@@ -583,13 +661,16 @@ def find_repository(script, target):
             raise SyncError("no saved repository")
         repository = Path(location)
     check_parents(repository, COMMAND_PATH)
-    if (not (repository / ".git").exists()
-            or not (repository / COMMAND_PATH).is_file()
-            or (repository / COMMAND_PATH).is_symlink()):
+    if (
+        not (repository / ".git").exists()
+        or not (repository / COMMAND_PATH).is_file()
+        or (repository / COMMAND_PATH).is_symlink()
+    ):
         raise SyncError("repository moved or configs command is missing")
     result = subprocess.run(
         ["git", "-C", str(repository), "rev-parse", "--show-toplevel"],
-        check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        check=True,
+        capture_output=True,
     )
     if Path(os.fsdecode(result.stdout).rstrip("\n")).resolve() != repository.resolve():
         raise SyncError("saved location is not a repository root")
@@ -599,7 +680,7 @@ def find_repository(script, target):
 def run_checkout(repository, *arguments):
     # Keep our buffered output ahead of the child's when stdout is a pipe.
     sys.stdout.flush()
-    return subprocess.run([sys.executable, str(repository / COMMAND_PATH), *arguments]).returncode
+    return subprocess.run([sys.executable, str(repository / COMMAND_PATH), *arguments], check=False).returncode
 
 
 def update_zgenom(target):
@@ -614,7 +695,7 @@ def update_zgenom(target):
     # with output that trips Powerlevel10k's instant prompt warning. Reset only
     # when zgenom, a plugin or .zshrc changed, and rebuild init.zsh here by
     # sourcing .zshrc non-interactively, as zgenom autoupdate does.
-    command = r'''
+    command = r"""
         source "$1" && mkdir -p -- "$ZGEN_DIR" || exit
         setopt extended_glob
         heads() {
@@ -630,18 +711,17 @@ def update_zgenom(target):
             command zsh -c 'source ~/.zshrc' </dev/null
             [[ -f $ZGEN_INIT ]]
         fi
-    '''
+    """
     env = dict(os.environ, HOME=str(target))
     env.pop("ZDOTDIR", None)
-    result = subprocess.run([zsh, "-c", command, "zsh", str(script)], env=env)
+    result = subprocess.run([zsh, "-c", command, "zsh", str(script)], env=env, check=False)
     if result.returncode:
         print("Configuration applied, but updating zgenom plugins failed. Rerun configs update.", file=sys.stderr)
     return result.returncode
 
 
 def git_output(repository, *arguments, check=True):
-    result = subprocess.run(["git", "-C", str(repository), *arguments],
-                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=check)
+    result = subprocess.run(["git", "-C", str(repository), *arguments], capture_output=True, check=check)
     return os.fsdecode(result.stdout).strip() if result.returncode == 0 else None
 
 
@@ -650,7 +730,7 @@ def download(url):
     with urllib.request.urlopen(url, timeout=60) as response:
         data = response.read(limit + 1)
     if len(data) > limit:
-        raise SyncError("download exceeds {} bytes: {}".format(limit, url))
+        raise SyncError(f"download exceeds {limit} bytes: {url}")
     return data
 
 
@@ -664,22 +744,26 @@ def gitstatus_release(install_info, platform):
         if not fields:
             continue
         if not {"uname_s_glob", "uname_m_glob", "file", "version", "sha256"} <= set(fields):
-            raise SyncError("invalid gitstatus install.info line: {}".format(line))
-        if (fnmatch.fnmatchcase(kernel, fields["uname_s_glob"])
-                and fnmatch.fnmatchcase(machine, fields["uname_m_glob"])):
+            raise SyncError(f"invalid gitstatus install.info line: {line}")
+        if fnmatch.fnmatchcase(kernel, fields["uname_s_glob"]) and fnmatch.fnmatchcase(machine, fields["uname_m_glob"]):
             name = fields["file"].replace("${uname_s}", kernel).replace("${uname_m}", machine)
-            if (not re.fullmatch(r"gitstatusd-[a-z0-9_.-]+", name)
-                    or not re.fullmatch(r"v[0-9][0-9.]*", fields["version"])
-                    or not re.fullmatch(r"[0-9a-f]{64}", fields["sha256"])):
-                raise SyncError("invalid gitstatus install.info line: {}".format(line))
+            if (
+                not re.fullmatch(r"gitstatusd-[a-z0-9_.-]+", name)
+                or not re.fullmatch(r"v[0-9][0-9.]*", fields["version"])
+                or not re.fullmatch(r"[0-9a-f]{64}", fields["sha256"])
+            ):
+                raise SyncError(f"invalid gitstatus install.info line: {line}")
             return name, fields["version"], fields["sha256"]
-    raise SyncError("no gitstatusd release for {}".format(platform))
+    raise SyncError(f"no gitstatusd release for {platform}")
 
 
 def add_gitstatus(zgenom, platforms):
     """Bundle gitstatusd where powerlevel10k looks before trying to download it."""
-    directories = sorted(path.parent for path in (zgenom / "sources").rglob("install.info")
-                         if path.parent.name == "gitstatus" and path.is_file() and not path.is_symlink())
+    directories = sorted(
+        path.parent
+        for path in (zgenom / "sources").rglob("install.info")
+        if path.parent.name == "gitstatus" and path.is_file() and not path.is_symlink()
+    )
     if not directories:
         print("NOTE no gitstatus found in zgenom plugins; skipping gitstatusd", file=sys.stderr)
         return
@@ -693,18 +777,18 @@ def add_gitstatus(zgenom, platforms):
                 try:
                     data = download(url)
                 except OSError as error:
-                    raise SyncError("could not download gitstatusd for {}: {}".format(platform, error)) from error
+                    raise SyncError(f"could not download gitstatusd for {platform}: {error}") from error
                 if digest(data) != sha256:
-                    raise SyncError("gitstatusd checksum mismatch for {}: {}".format(platform, url))
+                    raise SyncError(f"gitstatusd checksum mismatch for {platform}: {url}")
                 try:
                     with tarfile.open(fileobj=io.BytesIO(data), mode="r:gz") as archive:
                         member = archive.getmember(name)
                         if not member.isfile():
-                            raise SyncError("gitstatusd archive entry is not a file: {}".format(url))
+                            raise SyncError(f"gitstatusd archive entry is not a file: {url}")
                         downloads[url] = archive.extractfile(member).read()
                 except (tarfile.TarError, KeyError) as error:
-                    raise SyncError("invalid gitstatusd archive {}: {}".format(url, error)) from error
-                print("EXPORT gitstatusd {} {}".format(platform, version))
+                    raise SyncError(f"invalid gitstatusd archive {url}: {error}") from error
+                print(f"EXPORT gitstatusd {platform} {version}")
             usrbin = directory / "usrbin"
             usrbin.mkdir(exist_ok=True)
             (usrbin / name).write_bytes(downloads[url])
@@ -733,9 +817,8 @@ def write_archive(root, archive):
         return info
 
     archive = Path(os.path.abspath(archive))
-    with atomic_file(archive, 0o600) as stream:
-        with tarfile.open(fileobj=stream, mode="w:gz") as output:
-            output.add(str(root), arcname=EXPORT_ROOT, filter=normalize)
+    with atomic_file(archive, 0o600) as stream, tarfile.open(fileobj=stream, mode="w:gz") as output:
+        output.add(str(root), arcname=EXPORT_ROOT, filter=normalize)
     return archive
 
 
@@ -754,11 +837,13 @@ def export_archive(repository, target, archive, platforms):
         root = Path(directory) / EXPORT_ROOT
         root.mkdir()
         git_output(repository, "bundle", "create", "--quiet", str(root / "repository.bundle"), "refs/heads/" + branch)
-        print("EXPORT repository {} {}".format(branch, commit[:12]))
+        print(f"EXPORT repository {branch} {commit[:12]}")
         # Match the bundle rather than any uncommitted edits to the installer.
-        (root / "configs").write_bytes(subprocess.run(
-            ["git", "-C", str(repository), "show", "{}:{}".format(commit, COMMAND_PATH)],
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True).stdout)
+        (root / "configs").write_bytes(
+            subprocess.run(
+                ["git", "-C", str(repository), "show", f"{commit}:{COMMAND_PATH}"], capture_output=True, check=True
+            ).stdout
+        )
         (root / "configs").chmod(0o755)
         zgenom = target / ".zgenom"
 
@@ -775,21 +860,22 @@ def export_archive(repository, target, archive, platforms):
             print("EXPORT zgenom")
             add_gitstatus(root / "zgenom", platforms)
         else:
-            print("NOTE {} not found; exporting without zsh plugins".format(zgenom), file=sys.stderr)
+            print(f"NOTE {zgenom} not found; exporting without zsh plugins", file=sys.stderr)
         origin = git_output(repository, "config", "--get", "remote.origin.url", check=False)
         manifest = {
-            "format": EXPORT_FORMAT, "branch": branch, "repository": relative,
+            "format": EXPORT_FORMAT,
+            "branch": branch,
+            "repository": relative,
             "origin": without_credentials(origin) if origin else None,
         }
         (root / "manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         try:
             check_entries(staged_entries(root))
         except SyncError as error:
-            raise SyncError("cannot export an archive that import would reject: {}".format(error)) from error
+            raise SyncError(f"cannot export an archive that import would reject: {error}") from error
         archive = write_archive(root, archive)
-    print("Wrote {}".format(archive))
-    print("On the other machine: tar xzf {} && python3 {}/configs import".format(
-        shlex.quote(archive.name), EXPORT_ROOT))
+    print(f"Wrote {archive}")
+    print(f"On the other machine: tar xzf {shlex.quote(archive.name)} && python3 {EXPORT_ROOT}/configs import")
 
 
 def through_link(path, links):
@@ -816,16 +902,15 @@ def check_entries(entries):
         raise SyncError("duplicate archive entry")
     links = {name for name, kind, _ in entries if kind == "link"}
     for name, kind, link in entries:
-        if (not valid_relative(name) or name.split("/", 1)[0] != EXPORT_ROOT
-                or through_link(name, links)):
-            raise SyncError("unsafe archive entry: {}".format(name))
+        if not valid_relative(name) or name.split("/", 1)[0] != EXPORT_ROOT or through_link(name, links):
+            raise SyncError(f"unsafe archive entry: {name}")
         if kind == "link":
             target = posixpath.join(posixpath.dirname(name), link)
             scope = "/".join(name.split("/")[:2]) + "/"
             if not posixpath.normpath(target).startswith(scope) or through_link(target, links):
-                raise SyncError("unsafe archive link: {} -> {}".format(name, link))
+                raise SyncError(f"unsafe archive link: {name} -> {link}")
         elif kind not in ("file", "dir"):
-            raise SyncError("unsupported archive entry: {}".format(name))
+            raise SyncError(f"unsupported archive entry: {name}")
 
 
 def member_entry(member):
@@ -838,8 +923,15 @@ def staged_entries(root):
         for name in directories + files:
             path = os.path.join(directory, name)
             mode = os.lstat(path).st_mode
-            kind = ("link" if stat.S_ISLNK(mode) else "dir" if stat.S_ISDIR(mode)
-                    else "file" if stat.S_ISREG(mode) else "other")
+            kind = (
+                "link"
+                if stat.S_ISLNK(mode)
+                else "dir"
+                if stat.S_ISDIR(mode)
+                else "file"
+                if stat.S_ISREG(mode)
+                else "other"
+            )
             relative = posixpath.join(EXPORT_ROOT, *Path(os.path.relpath(path, str(root))).parts)
             yield relative, kind, os.readlink(path) if kind == "link" else None
 
@@ -852,8 +944,7 @@ def extract_archive(archive, directory):
             while stream.read(1024 * 1024):
                 pass
     except (OSError, EOFError, zlib.error) as error:
-        raise SyncError("invalid export archive {} (incomplete or corrupted transfer?): {}".format(
-            archive, error)) from error
+        raise SyncError(f"invalid export archive {archive} (incomplete or corrupted transfer?): {error}") from error
     try:
         with tarfile.open(str(archive), mode="r:gz") as source:
             members = source.getmembers()
@@ -863,7 +954,7 @@ def extract_archive(archive, directory):
             else:
                 source.extractall(directory, members=members)
     except tarfile.TarError as error:
-        raise SyncError("invalid export archive {}: {}".format(archive, error)) from error
+        raise SyncError(f"invalid export archive {archive}: {error}") from error
     return Path(directory) / EXPORT_ROOT
 
 
@@ -883,28 +974,33 @@ def load_manifest(export):
             raise ValueError("repository bundle is missing")
         return manifest
     except (OSError, ValueError, UnicodeError) as error:
-        raise SyncError("invalid export {}: {}".format(export, error)) from error
+        raise SyncError(f"invalid export {export}: {error}") from error
 
 
 def import_repository(export, manifest, destination):
     bundle, branch = str(export / "repository.bundle"), manifest["branch"]
     if os.path.lexists(destination):
         if not (destination / ".git").exists():
-            raise SyncError("repository destination exists but is not a Git checkout: {}".format(destination))
+            raise SyncError(f"repository destination exists but is not a Git checkout: {destination}")
         current = git_output(destination, "symbolic-ref", "--quiet", "--short", "HEAD", check=False)
         if current != branch:
-            raise SyncError("checkout {} is on {}, but the export is from {}".format(destination, current, branch))
+            raise SyncError(f"checkout {destination} is on {current}, but the export is from {branch}")
         subprocess.run(["git", "-C", str(destination), "pull", "--ff-only", "--quiet", bundle, branch], check=True)
     else:
         destination.parent.mkdir(parents=True, exist_ok=True)
         subprocess.run(["git", "clone", "--quiet", "--branch", branch, bundle, str(destination)], check=True)
         # Keep the original remote so git pull works if the machine is ever online.
         if manifest.get("origin"):
-            subprocess.run(["git", "-C", str(destination), "remote", "set-url", "origin", manifest["origin"]], check=True)
+            subprocess.run(
+                ["git", "-C", str(destination), "remote", "set-url", "origin", manifest["origin"]], check=True
+            )
         else:
             subprocess.run(["git", "-C", str(destination), "remote", "remove", "origin"], check=True)
-    print("IMPORT repository {} {} into {}".format(
-        branch, git_output(destination, "rev-parse", "--short=12", "HEAD"), destination))
+    print(
+        "IMPORT repository {} {} into {}".format(
+            branch, git_output(destination, "rev-parse", "--short=12", "HEAD"), destination
+        )
+    )
 
 
 def remove_tree(path):
@@ -917,7 +1013,7 @@ def remove_tree(path):
 def import_zgenom(source, target):
     destination = target / ".zgenom"
     if destination.is_symlink() or (destination.exists() and not destination.is_dir()):
-        raise SyncError("not a directory: {}".format(destination))
+        raise SyncError(f"not a directory: {destination}")
     staging, previous = target / ".zgenom.import", target / ".zgenom.previous"
     if os.path.lexists(staging):
         remove_tree(staging)
@@ -930,10 +1026,14 @@ def import_zgenom(source, target):
     os.rename(staging, destination)
     if os.path.lexists(previous):
         remove_tree(previous)
-    print("IMPORT zgenom into {}".format(destination))
+    print(f"IMPORT zgenom into {destination}")
     if os.path.lexists(target / ".zgen"):
-        print("WARNING zgenom keeps plugins in {} while it exists; remove it to use the imported plugins".format(
-            target / ".zgen"), file=sys.stderr)
+        print(
+            "WARNING zgenom keeps plugins in {} while it exists; remove it to use the imported plugins".format(
+                target / ".zgen"
+            ),
+            file=sys.stderr,
+        )
 
 
 def import_archive(script, target, source, repository):
@@ -941,7 +1041,7 @@ def import_archive(script, target, source, repository):
         if source is None:
             export = script.parent
             if not (export / "manifest.json").is_file():
-                raise SyncError("pass the export archive or its extracted {} directory".format(EXPORT_ROOT))
+                raise SyncError(f"pass the export archive or its extracted {EXPORT_ROOT} directory")
         elif source.is_dir():
             export = source if (source / "manifest.json").exists() else source / EXPORT_ROOT
         else:
@@ -956,15 +1056,20 @@ def import_archive(script, target, source, repository):
         import_repository(export, manifest, destination)
         result = run_checkout(destination, "apply", "--target", str(target))
         if result not in (0, CONFLICTS_EXIT):
-            print("Repository imported, but configuration application failed. Resolve the error, "
-                  "rerun configs apply, then import again to install zsh plugins.", file=sys.stderr)
+            print(
+                "Repository imported, but configuration application failed. Resolve the error, "
+                "rerun configs apply, then import again to install zsh plugins.",
+                file=sys.stderr,
+            )
             return result
         if (export / "zgenom").is_dir():
             with installation_lock(target):
                 import_zgenom(export / "zgenom", target)
     if result:
-        print("Configuration imported, but conflicts remain. Run configs resolve, then start a new shell.",
-              file=sys.stderr)
+        print(
+            "Configuration imported, but conflicts remain. Run configs resolve, then start a new shell.",
+            file=sys.stderr,
+        )
         return result
     print("Configuration imported. Start a new shell to load it.")
     return 0
@@ -973,22 +1078,33 @@ def import_archive(script, target, source, repository):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=("diff", "apply", "update", "repo", "prune", "resolve", "export", "import"))
-    parser.add_argument("paths", nargs="*",
-                        help="repository-relative conflicts to resolve, or the archive to export or import")
+    parser.add_argument(
+        "paths", nargs="*", help="repository-relative conflicts to resolve, or the archive to export or import"
+    )
     parser.add_argument("--target", type=Path, default=Path.home(), help="existing home directory to install into")
     parser.add_argument("--dry-run", action="store_true", help="preview prune without deleting files or changing state")
-    parser.add_argument("--color", choices=("auto", "always", "never"),
-                        help="color diff output (default: auto; respects NO_COLOR and TERM=dumb)")
-    parser.add_argument("--platform", action="append",
-                        help="OS-ARCH to bundle gitstatusd for, repeatable (export only; default: {})".format(
-                            ", ".join(DEFAULT_PLATFORMS)))
-    parser.add_argument("--repository", type=Path,
-                        help="checkout location (import only; default: the exported location under the target)")
+    parser.add_argument(
+        "--color",
+        choices=("auto", "always", "never"),
+        help="color diff output (default: auto; respects NO_COLOR and TERM=dumb)",
+    )
+    parser.add_argument(
+        "--platform",
+        action="append",
+        help="OS-ARCH to bundle gitstatusd for, repeatable (export only; default: {})".format(
+            ", ".join(DEFAULT_PLATFORMS)
+        ),
+    )
+    parser.add_argument(
+        "--repository",
+        type=Path,
+        help="checkout location (import only; default: the exported location under the target)",
+    )
     args = parser.parse_intermixed_args()
     if args.paths and args.command not in ("resolve", "export", "import"):
         parser.error("paths are only supported for resolve, export, and import")
     if len(args.paths) > 1 and args.command in ("export", "import"):
-        parser.error("{} takes at most one archive".format(args.command))
+        parser.error(f"{args.command} takes at most one archive")
     if args.dry_run and args.command != "prune":
         parser.error("--dry-run is only supported for prune")
     if args.color is not None and args.command != "diff":
@@ -1011,7 +1127,7 @@ def main():
         try:
             repository = find_repository(script, target)
         except (SyncError, OSError, subprocess.CalledProcessError) as error:
-            raise SyncError("{}. Run python3 /path/to/configs/.local/bin/configs apply.".format(error)) from error
+            raise SyncError(f"{error}. Run python3 /path/to/configs/.local/bin/configs apply.") from error
         if target == repository or repository in target.parents:
             raise SyncError("target must not be inside the repository")
         if repository in (target / STATE_PATH).parents:
@@ -1020,8 +1136,12 @@ def main():
             # The checkout runs with the same working directory, so relative paths still resolve.
             return run_checkout(repository, *sys.argv[1:])
         if args.command == "export":
-            export_archive(repository, target, Path(args.paths[0]) if args.paths else Path(DEFAULT_ARCHIVE),
-                           args.platform or DEFAULT_PLATFORMS)
+            export_archive(
+                repository,
+                target,
+                Path(args.paths[0]) if args.paths else Path(DEFAULT_ARCHIVE),
+                args.platform or DEFAULT_PLATFORMS,
+            )
             return 0
         with installation_lock(target):
             state = load_state(target)
@@ -1056,18 +1176,30 @@ def main():
                         print("Configuration applied.")
                         return 0
                     changed = sum(operation["action"] in ("INSTALL", "UPDATE") for operation in operations)
-                    print("Applied {} change{}; {} conflict{} remain{}.".format(
-                        changed, "s" * (changed != 1), len(conflicts), "s" * (len(conflicts) != 1),
-                        "s" * (len(conflicts) == 1)), file=sys.stderr)
+                    print(
+                        "Applied {} change{}; {} conflict{} remain{}.".format(
+                            changed,
+                            "s" * (changed != 1),
+                            len(conflicts),
+                            "s" * (len(conflicts) != 1),
+                            "s" * (len(conflicts) == 1),
+                        ),
+                        file=sys.stderr,
+                    )
                 if conflicts:
-                    print("Run configs resolve to choose or merge conflicting files; fix structural errors manually.",
-                          file=sys.stderr)
+                    print(
+                        "Run configs resolve to choose or merge conflicting files; fix structural errors manually.",
+                        file=sys.stderr,
+                    )
                     return CONFLICTS_EXIT if args.command == "apply" else 1
         if args.command == "update":
             result = run_checkout(repository, "apply", "--target", str(target))
             if result not in (0, CONFLICTS_EXIT):
-                print("Repository updated, but configuration application failed. Resolve the error and rerun "
-                      "configs apply.", file=sys.stderr)
+                print(
+                    "Repository updated, but configuration application failed. Resolve the error and rerun "
+                    "configs apply.",
+                    file=sys.stderr,
+                )
                 return result
             zgenom = update_zgenom(target)
             if result:
@@ -1075,7 +1207,7 @@ def main():
             return result or zgenom
         return 0
     except (SyncError, OSError, subprocess.CalledProcessError) as error:
-        print("configs: {}".format(error), file=sys.stderr)
+        print(f"configs: {error}", file=sys.stderr)
         return 1
     except KeyboardInterrupt:
         print("\nResolution interrupted.", file=sys.stderr)

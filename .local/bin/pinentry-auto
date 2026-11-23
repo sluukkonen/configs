@@ -2,9 +2,9 @@
 """Choose the platform's pinentry without changing its Assuan protocol."""
 
 import os
-from pathlib import Path
 import shutil
 import sys
+from pathlib import Path
 
 
 def find_pinentry():
@@ -29,7 +29,7 @@ def main():
         # Preserve arguments, streams, environment, signals, and exit status.
         os.execv(program, [program, *sys.argv[1:]])
     except OSError as error:
-        print("pinentry-auto: {}".format(error), file=sys.stderr)
+        print(f"pinentry-auto: {error}", file=sys.stderr)
         return 1
 
 
