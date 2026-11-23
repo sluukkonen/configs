@@ -6,9 +6,11 @@ from pathlib import Path
 from unittest import mock
 
 SCRIPT = Path(__file__).resolve().parents[1] / ".local/bin/pinentry-auto"
-spec = importlib.util.spec_from_loader("pinentry_auto", SourceFileLoader("pinentry_auto", str(SCRIPT)))
+loader = SourceFileLoader("pinentry_auto", str(SCRIPT))
+spec = importlib.util.spec_from_file_location(loader.name, loader.path, loader=loader)
+assert spec is not None
 pinentry = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(pinentry)
+loader.exec_module(pinentry)
 
 
 class PinentryTests(unittest.TestCase):

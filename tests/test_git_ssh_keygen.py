@@ -13,9 +13,11 @@ from pathlib import Path
 from unittest import mock
 
 SCRIPT = Path(__file__).resolve().parents[1] / ".local/bin/git-ssh-keygen"
-spec = importlib.util.spec_from_loader("signing", SourceFileLoader("signing", str(SCRIPT)))
+loader = SourceFileLoader("signing", str(SCRIPT))
+spec = importlib.util.spec_from_file_location(loader.name, loader.path, loader=loader)
+assert spec is not None
 signing = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(signing)
+loader.exec_module(signing)
 
 
 STUB = r"""
@@ -365,7 +367,7 @@ class AgentIntegrationTests(unittest.TestCase):
                     self.assertEqual(len(calls.read_text().splitlines()), 3)
                 finally:
                     subprocess.run(
-                        [shutil.which("gpgconf"), "--homedir", directory, "--kill", "gpg-agent"],
+                        [shutil.which("gpgconf") or "gpgconf", "--homedir", directory, "--kill", "gpg-agent"],
                         capture_output=True,
                         check=True,
                     )

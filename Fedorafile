@@ -29,6 +29,7 @@ dnf ShellCheck
 dnf tig
 dnf tmux
 dnf tree
+dnf uv
 dnf vim-enhanced
 dnf wget
 dnf yubikey-manager

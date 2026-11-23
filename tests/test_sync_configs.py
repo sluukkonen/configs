@@ -17,9 +17,11 @@ from unittest import mock
 
 REPOSITORY = Path(__file__).resolve().parents[1]
 COMMAND_PATH = ".local/bin/configs"
-spec = importlib.util.spec_from_loader("configs", SourceFileLoader("configs", str(REPOSITORY / COMMAND_PATH)))
+loader = SourceFileLoader("configs", str(REPOSITORY / COMMAND_PATH))
+spec = importlib.util.spec_from_file_location(loader.name, loader.path, loader=loader)
+assert spec is not None
 sync = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(sync)
+loader.exec_module(sync)
 
 
 class InstallerFixture(unittest.TestCase):
@@ -443,7 +445,9 @@ class InstallerTests(InstallerFixture):
             "Brewfile",
             "Brewfile.lock.json",
             "init.sh",
-            "ruff.toml",
+            "Makefile",
+            "pyproject.toml",
+            "uv.lock",
             "tests/test_example.py",
             "docs/setup.md",
             "__pycache__/cached.pyc",
@@ -1332,7 +1336,9 @@ class ExportImportTests(InstallerFixture):
 
         def download(url):
             downloads.append(url)
-            platform = re.search(r"gitstatusd-(.+)\.tar\.gz$", url).group(1)
+            match = re.search(r"gitstatusd-(.+)\.tar\.gz$", url)
+            assert match is not None
+            platform = match.group(1)
             return self.releases[platform]
 
         with (
@@ -1349,7 +1355,9 @@ class ExportImportTests(InstallerFixture):
 
     def read(self, name):
         with tarfile.open(str(self.archive)) as archive:
-            return archive.extractfile(name).read()
+            member = archive.extractfile(name)
+            assert member is not None
+            return member.read()
 
     def run_import(self, command, *options, expected=0):
         result = subprocess.run(

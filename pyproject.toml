@@ -1,0 +1,40 @@
+# Development tools for the Python scripts. The scripts themselves only use the
+# standard library and must run on macOS's system Python 3.9.
+[project]
+name = "configs"
+version = "0"
+requires-python = ">=3.9"
+dependencies = []
+
+[dependency-groups]
+dev = ["pyrefly", "pytest", "pytest-xdist", "ruff"]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# Run tests in parallel with pytest-xdist; pass -n0 to run them serially.
+addopts = ["-n", "auto"]
+
+[tool.ruff]
+line-length = 120
+# Python scripts without a .py extension.
+extend-include = [
+    ".local/bin/configs",
+    ".local/bin/git-ssh-keygen",
+    ".local/bin/pinentry-auto",
+    ".local/bin/wallpaper-fetch",
+]
+
+[tool.pyrefly]
+# Check against the oldest Python the bundled stubs model (3.10); macOS's system
+# Python is 3.9, so also make sure the scripts still run with /usr/bin/python3.
+python-version = "3.10"
+project-includes = [
+    ".local/bin/configs",
+    ".local/bin/git-ssh-keygen",
+    ".local/bin/pinentry-auto",
+    ".local/bin/wallpaper-fetch",
+    "tests",
+]
