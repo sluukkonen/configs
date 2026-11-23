@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Preview, apply, update, export, and import this repository's tracked configuration files."""
 
+from __future__ import annotations
+
 import argparse
 import contextlib
 import difflib
@@ -23,7 +25,25 @@ import tempfile
 import urllib.parse
 import urllib.request
 import zlib
+from collections.abc import Generator, Iterable, Iterator, Sequence
 from pathlib import Path, PurePosixPath
+from typing import IO, TYPE_CHECKING, Literal, cast, overload
+
+if TYPE_CHECKING:
+    from typing import Any, TypeAlias
+
+    # inspect() result: {"kind": "missing" | "link" | "file", ...}.
+    Snapshot: TypeAlias = dict[str, Any]
+    # {"sha256": str, "mode": int}
+    FileRecord: TypeAlias = dict[str, Any]
+    # {"version": 1, "repository": str, "files": {destination: FileRecord}}
+    State: TypeAlias = dict[str, Any]
+    # One planned apply or prune step for a destination.
+    Operation: TypeAlias = dict[str, Any]
+    # Export manifest.json: {"format", "branch", "repository", "origin"}.
+    Manifest: TypeAlias = dict[str, Any]
+    # Archive entry: (name, "file" | "dir" | "link" | "other", link target).
+    Entry: TypeAlias = tuple[str, str, str | None]
 
 REPOSITORY_ONLY = {
     ".gitignore",
@@ -59,11 +79,11 @@ class SyncError(Exception):
     pass
 
 
-def digest(contents):
+def digest(contents: bytes) -> str:
     return hashlib.sha256(contents).hexdigest()
 
 
-def valid_relative(path):
+def valid_relative(path: object) -> bool:
     return (
         isinstance(path, str)
         and bool(path)
@@ -72,7 +92,7 @@ def valid_relative(path):
     )
 
 
-def check_parents(root, relative):
+def check_parents(root: Path, relative: str) -> None:
     """Never follow a link inside a source or destination tree."""
     current = root
     for part in PurePosixPath(relative).parts[:-1]:
@@ -83,7 +103,7 @@ def check_parents(root, relative):
             raise SyncError(f"parent is not a directory: {current}")
 
 
-def inspect(root, relative):
+def inspect(root: Path, relative: str) -> tuple[Snapshot, bytes | None]:
     check_parents(root, relative)
     path = root / relative
     try:
@@ -101,18 +121,18 @@ def inspect(root, relative):
     return {"kind": "file", "sha256": digest(contents), "mode": mode}, contents
 
 
-def file_record(snapshot):
+def file_record(snapshot: Snapshot) -> FileRecord:
     return {key: snapshot[key] for key in ("sha256", "mode")}
 
 
-def load_state(target):
+def load_state(target: Path) -> State:
     snapshot, contents = inspect(target, STATE_PATH)
     if snapshot["kind"] == "missing":
         return {"version": 1, "repository": "", "files": {}}
     if snapshot["kind"] != "file":
         raise SyncError("installation state must be a regular file")
     try:
-        state = json.loads(contents)
+        state = json.loads(cast(bytes, contents))
         if (
             not isinstance(state, dict)
             or type(state.get("version")) is not int
@@ -135,16 +155,16 @@ def load_state(target):
             ):
                 raise ValueError("invalid file record")
         return state
-    except (ValueError, TypeError, UnicodeError) as error:
+    except (ValueError, TypeError) as error:
         raise SyncError(f"invalid installation state: {error}") from error
 
 
-def is_installable(relative):
+def is_installable(relative: str) -> bool:
     """Exclude repository support paths only at the root of the checkout."""
     return relative.split("/", 1)[0] not in REPOSITORY_ONLY
 
 
-def tracked_sources(repository, include_deleted=False):
+def tracked_sources(repository: Path, include_deleted: bool = False) -> Iterator[str]:
     result = subprocess.run(
         ["git", "-C", str(repository), "ls-files", "--stage", "-z"],
         capture_output=True,
@@ -165,7 +185,7 @@ def tracked_sources(repository, include_deleted=False):
             yield relative
 
 
-def show_checkout_changes(repository):
+def show_checkout_changes(repository: Path) -> None:
     for relative in tracked_sources(repository, include_deleted=True):
         if not os.path.lexists(repository / relative):
             print(f"CHECKOUT DELETED {relative} (excluded from installation)")
@@ -185,17 +205,17 @@ def show_checkout_changes(repository):
             print(f"UNTRACKED {relative} (not installed); run git add -- {shlex.quote(relative)}")
 
 
-def install_mode(source_mode, current_mode):
+def install_mode(source_mode: int, current_mode: int) -> int:
     # Never add read/write access to an existing file. An executable source can
     # add execute permission only to classes that can already read that file.
     allowed = current_mode | ((current_mode & 0o444) >> 2)
     return source_mode & allowed
 
 
-def make_plan(repository, target, state):
-    operations = []
-    conflicts = []
-    destinations = set()
+def make_plan(repository: Path, target: Path, state: State) -> tuple[list[Operation], list[str], list[str]]:
+    operations: list[Operation] = []
+    conflicts: list[str] = []
+    destinations: set[str] = set()
     sources = list(tracked_sources(repository))
     if (
         COMMAND_PATH not in sources
@@ -269,7 +289,7 @@ def make_plan(repository, target, state):
     return operations, conflicts, sorted(set(state["files"]) - destinations)
 
 
-def use_color(mode):
+def use_color(mode: str | None) -> bool:
     if mode == "always":
         return True
     if mode == "never":
@@ -277,7 +297,7 @@ def use_color(mode):
     return sys.stdout.isatty() and not os.environ.get("NO_COLOR") and os.environ.get("TERM") != "dumb"
 
 
-def page_report(report):
+def page_report(report: str) -> None:
     if not report:
         return
     if sys.stdout.isatty() and os.environ.get("TERM") != "dumb":
@@ -294,7 +314,7 @@ def page_report(report):
     print(report, end="")
 
 
-def show_diff_plan(operations, conflicts, removed, color):
+def show_diff_plan(operations: list[Operation], conflicts: list[str], removed: list[str], color: bool) -> None:
     delta = shutil.which("delta") if color and sys.stdout.isatty() else None
     if delta:
         output = io.StringIO()
@@ -322,7 +342,9 @@ def show_diff_plan(operations, conflicts, removed, color):
     page_report(output.getvalue())
 
 
-def show_plan(operations, conflicts, removed, show_diff, color=False):
+def show_plan(
+    operations: list[Operation], conflicts: list[str], removed: list[str], show_diff: bool, color: bool = False
+) -> None:
     for operation in operations:
         action, destination = operation["action"], operation["destination"]
         if action != "KEEP":
@@ -378,7 +400,7 @@ def show_plan(operations, conflicts, removed, show_diff, color=False):
             print("CONFLICT " + conflict)
 
 
-def make_parents(root, relative):
+def make_parents(root: Path, relative: str) -> None:
     check_parents(root, relative)
     current = root
     for part in PurePosixPath(relative).parts[:-1]:
@@ -391,7 +413,7 @@ def make_parents(root, relative):
 
 
 @contextlib.contextmanager
-def atomic_file(path, mode):
+def atomic_file(path: Path, mode: int) -> Generator[IO[bytes], None, None]:
     fd, temporary = tempfile.mkstemp(prefix=".configs-", dir=path.parent)
     try:
         with os.fdopen(fd, "wb") as stream:
@@ -405,18 +427,18 @@ def atomic_file(path, mode):
             os.unlink(temporary)
 
 
-def atomic_write(root, relative, contents, mode):
+def atomic_write(root: Path, relative: str, contents: bytes, mode: int) -> None:
     make_parents(root, relative)
     with atomic_file(root / relative, mode) as stream:
         stream.write(contents)
 
 
-def save_state(target, state):
+def save_state(target: Path, state: State) -> None:
     contents = (json.dumps(state, indent=2, sort_keys=True) + "\n").encode("utf-8")
     atomic_write(target, STATE_PATH, contents, 0o600)
 
 
-def apply_plan(repository, target, state, operations):
+def apply_plan(repository: Path, target: Path, state: State, operations: list[Operation]) -> None:
     dirty = state["repository"] != str(repository)
     state["repository"] = str(repository)
     for operation in operations:
@@ -443,7 +465,7 @@ def apply_plan(repository, target, state, operations):
 MERGE_MARKERS = (b"<<<<<<< configs installed", b"======= configs separator", b">>>>>>> configs repository")
 
 
-def merge_contents(operation):
+def merge_contents(operation: Operation) -> bytes | None:
     old, new = operation["old_contents"], operation["contents"]
     try:
         old.decode("utf-8")
@@ -472,9 +494,10 @@ def merge_contents(operation):
         )
         atomic_write(root, relative, contents, 0o600)
         subprocess.run(editor + [str(root / relative)], check=True)
-        snapshot, contents = inspect(root, relative)
+        snapshot, merged = inspect(root, relative)
         if snapshot["kind"] != "file":
             raise SyncError("merge result must be a regular file")
+        contents = cast(bytes, merged)
         try:
             contents.decode("utf-8")
             if b"\0" in contents:
@@ -488,7 +511,15 @@ def merge_contents(operation):
         return contents
 
 
-def save_resolution(repository, target, state, operation, contents, mode, keep_installed_mode=False):
+def save_resolution(
+    repository: Path,
+    target: Path,
+    state: State,
+    operation: Operation,
+    contents: bytes,
+    mode: int,
+    keep_installed_mode: bool = False,
+) -> None:
     relative = operation["destination"]
     source, _ = inspect(repository, operation["source"])
     current, _ = inspect(target, relative)
@@ -511,7 +542,9 @@ def save_resolution(repository, target, state, operation, contents, mode, keep_i
     save_state(target, state)
 
 
-def resolve_plan(repository, target, state, operations, conflicts, paths):
+def resolve_plan(
+    repository: Path, target: Path, state: State, operations: list[Operation], conflicts: list[str], paths: list[str]
+) -> int:
     if not sys.stdin.isatty() or not sys.stdout.isatty():
         raise SyncError("configs resolve requires an interactive terminal")
     choices = {operation["destination"]: operation for operation in operations if operation["action"] == "CONFLICT"}
@@ -567,14 +600,14 @@ def resolve_plan(repository, target, state, operations, conflicts, paths):
     return 1 if unresolved or structural else 0
 
 
-def same_file(left, right):
+def same_file(left: Path, right: Path) -> bool:
     try:
         return left.samefile(right)
     except (FileNotFoundError, NotADirectoryError):
         return False
 
 
-def check_prune_aliases(destination, active, reserved):
+def check_prune_aliases(destination: Path, active: Sequence[Path], reserved: Sequence[Path]) -> None:
     for path in active:
         if same_file(destination, path):
             raise SyncError(f"obsolete path aliases an active configuration: {destination}")
@@ -584,13 +617,14 @@ def check_prune_aliases(destination, active, reserved):
             raise SyncError(f"obsolete path aliases repository or installation state: {destination}")
 
 
-def make_prune_plan(repository, target, state):
+def make_prune_plan(repository: Path, target: Path, state: State) -> tuple[list[Operation], list[str]]:
     sources = set(tracked_sources(repository))
     if COMMAND_PATH not in sources:
         raise SyncError(
             "the installer requires a tracked .local/bin/configs; run git add .local/bin/configs before pruning"
         )
-    operations, conflicts = [], []
+    operations: list[Operation] = []
+    conflicts: list[str] = []
     active = tuple(target / relative for relative in sorted(sources))
     reserved = (repository, (target / STATE_PATH).parent)
     for relative in sorted(set(state["files"]) - sources):
@@ -615,8 +649,8 @@ def make_prune_plan(repository, target, state):
     return operations, conflicts
 
 
-def prune_plan(target, state, operations):
-    conflicts = []
+def prune_plan(target: Path, state: State, operations: list[Operation]) -> list[str]:
+    conflicts: list[str] = []
     for operation in operations:
         relative = operation["destination"]
         try:
@@ -638,7 +672,7 @@ def prune_plan(target, state, operations):
 
 
 @contextlib.contextmanager
-def installation_lock(target):
+def installation_lock(target: Path) -> Generator[None, None, None]:
     # Lock the existing home directory without creating a lock file, including
     # for diff. This also excludes installers from other repository checkouts.
     fd = os.open(target, os.O_RDONLY)
@@ -652,7 +686,7 @@ def installation_lock(target):
         os.close(fd)
 
 
-def find_repository(script, target):
+def find_repository(script: Path, target: Path) -> Path:
     candidate = script.parents[2]
     # Installed copies use state even when the home/target is a Git repository.
     if candidate not in (target, Path.home().resolve()) and (candidate / ".git").exists():
@@ -679,13 +713,13 @@ def find_repository(script, target):
     return repository.resolve()
 
 
-def run_checkout(repository, *arguments):
+def run_checkout(repository: Path, *arguments: str) -> int:
     # Keep our buffered output ahead of the child's when stdout is a pipe.
     sys.stdout.flush()
     return subprocess.run([sys.executable, str(repository / COMMAND_PATH), *arguments], check=False).returncode
 
 
-def update_zgenom(target):
+def update_zgenom(target: Path) -> int:
     """Update zgenom and its plugins when it is installed in the target."""
     script = target / ".zgenom/zgenom.zsh"
     zsh = shutil.which("zsh")
@@ -722,12 +756,20 @@ def update_zgenom(target):
     return result.returncode
 
 
-def git_output(repository, *arguments, check=True):
+@overload
+def git_output(repository: Path, *arguments: str, check: Literal[True] = ...) -> str: ...
+
+
+@overload
+def git_output(repository: Path, *arguments: str, check: bool) -> str | None: ...
+
+
+def git_output(repository: Path, *arguments: str, check: bool = True) -> str | None:
     result = subprocess.run(["git", "-C", str(repository), *arguments], capture_output=True, check=check)
     return os.fsdecode(result.stdout).strip() if result.returncode == 0 else None
 
 
-def download(url):
+def download(url: str) -> bytes:
     limit = 64 * 1024 * 1024
     with urllib.request.urlopen(url, timeout=60) as response:
         data = response.read(limit + 1)
@@ -736,7 +778,7 @@ def download(url):
     return data
 
 
-def gitstatus_release(install_info, platform):
+def gitstatus_release(install_info: str, platform: str) -> tuple[str, str, str]:
     """Select a gitstatusd release the way gitstatus/install matches uname."""
     kernel, machine = platform.split("-", 1)
     for line in install_info.splitlines():
@@ -759,7 +801,7 @@ def gitstatus_release(install_info, platform):
     raise SyncError(f"no gitstatusd release for {platform}")
 
 
-def add_gitstatus(zgenom, platforms):
+def add_gitstatus(zgenom: Path, platforms: Sequence[str]) -> None:
     """Bundle gitstatusd where powerlevel10k looks before trying to download it."""
     directories = sorted(
         path.parent
@@ -769,7 +811,7 @@ def add_gitstatus(zgenom, platforms):
     if not directories:
         print("NOTE no gitstatus found in zgenom plugins; skipping gitstatusd", file=sys.stderr)
         return
-    downloads = {}
+    downloads: dict[str, bytes] = {}
     for directory in directories:
         install_info = (directory / "install.info").read_text(encoding="utf-8")
         for platform in platforms:
@@ -787,7 +829,8 @@ def add_gitstatus(zgenom, platforms):
                         member = archive.getmember(name)
                         if not member.isfile():
                             raise SyncError(f"gitstatusd archive entry is not a file: {url}")
-                        downloads[url] = archive.extractfile(member).read()
+                        # extractfile() only returns None for members that are not files.
+                        downloads[url] = cast(IO[bytes], archive.extractfile(member)).read()
                 except (tarfile.TarError, KeyError) as error:
                     raise SyncError(f"invalid gitstatusd archive {url}: {error}") from error
                 print(f"EXPORT gitstatusd {platform} {version}")
@@ -797,7 +840,7 @@ def add_gitstatus(zgenom, platforms):
             (usrbin / name).chmod(0o755)
 
 
-def without_credentials(url):
+def without_credentials(url: str) -> str:
     """Keep a remote URL usable elsewhere without copying passwords or tokens."""
     parts = urllib.parse.urlsplit(url)
     if "@" not in parts.netloc:
@@ -812,8 +855,8 @@ def without_credentials(url):
     return urllib.parse.urlunsplit(parts._replace(netloc=netloc))
 
 
-def write_archive(root, archive):
-    def normalize(info):
+def write_archive(root: Path, archive: Path) -> Path:
+    def normalize(info: tarfile.TarInfo) -> tarfile.TarInfo:
         info.uid = info.gid = 0
         info.uname = info.gname = ""
         return info
@@ -824,7 +867,7 @@ def write_archive(root, archive):
     return archive
 
 
-def export_archive(repository, target, archive, platforms):
+def export_archive(repository: Path, target: Path, archive: Path, platforms: Sequence[str]) -> None:
     branch = git_output(repository, "symbolic-ref", "--quiet", "--short", "HEAD", check=False)
     if not branch:
         raise SyncError("export requires a checked-out branch")
@@ -832,7 +875,7 @@ def export_archive(repository, target, archive, platforms):
     if git_output(repository, "status", "--porcelain", "--untracked-files=no"):
         print("WARNING uncommitted changes are not exported; commit them first to include them", file=sys.stderr)
     try:
-        relative = repository.relative_to(target).as_posix()
+        relative: str | None = repository.relative_to(target).as_posix()
     except ValueError:
         relative = None
     with tempfile.TemporaryDirectory(prefix="configs-export-") as directory:
@@ -849,7 +892,7 @@ def export_archive(repository, target, archive, platforms):
         (root / "configs").chmod(0o755)
         zgenom = target / ".zgenom"
 
-        def ignore(directory, names):
+        def ignore(directory: str, names: list[str]) -> set[str]:
             # init.zsh holds absolute paths and .zwc files are compiled for one zsh;
             # zgenom regenerates both offline because every plugin is present.
             ignored = {name for name in names if name.endswith(".zwc")}
@@ -880,7 +923,7 @@ def export_archive(repository, target, archive, platforms):
     print(f"On the other machine: tar xzf {shlex.quote(archive.name)} && python3 {EXPORT_ROOT}/configs import")
 
 
-def through_link(path, links):
+def through_link(path: str, links: set[str]) -> bool:
     """Whether a lexical path walks through one of the archive's own links."""
     current = ""
     for part in PurePosixPath(path).parts[:-1]:
@@ -890,7 +933,7 @@ def through_link(path, links):
     return False
 
 
-def check_entries(entries):
+def check_entries(entries: Iterable[Entry]) -> None:
     """Accept only files, directories, and links that stay inside their part of the export.
 
     Links must stay within their top-level directory (e.g. zgenom/), which is
@@ -907,7 +950,7 @@ def check_entries(entries):
         if not valid_relative(name) or name.split("/", 1)[0] != EXPORT_ROOT or through_link(name, links):
             raise SyncError(f"unsafe archive entry: {name}")
         if kind == "link":
-            target = posixpath.join(posixpath.dirname(name), link)
+            target = posixpath.join(posixpath.dirname(name), cast(str, link))
             scope = "/".join(name.split("/")[:2]) + "/"
             if not posixpath.normpath(target).startswith(scope) or through_link(target, links):
                 raise SyncError(f"unsafe archive link: {name} -> {link}")
@@ -915,12 +958,12 @@ def check_entries(entries):
             raise SyncError(f"unsupported archive entry: {name}")
 
 
-def member_entry(member):
+def member_entry(member: tarfile.TarInfo) -> Entry:
     kind = "link" if member.issym() else "dir" if member.isdir() else "file" if member.isfile() else "other"
     return member.name, kind, member.linkname if kind == "link" else None
 
 
-def staged_entries(root):
+def staged_entries(root: Path) -> Iterator[Entry]:
     for directory, directories, files in os.walk(str(root)):
         for name in directories + files:
             path = os.path.join(directory, name)
@@ -938,7 +981,7 @@ def staged_entries(root):
             yield relative, kind, os.readlink(path) if kind == "link" else None
 
 
-def extract_archive(archive, directory):
+def extract_archive(archive: Path, directory: str) -> Path:
     # tarfile stops at the end-of-archive marker before gzip's trailing CRC, so
     # read the stream once to detect a truncated or corrupted transfer.
     try:
@@ -960,7 +1003,7 @@ def extract_archive(archive, directory):
     return Path(directory) / EXPORT_ROOT
 
 
-def load_manifest(export):
+def load_manifest(export: Path) -> Manifest:
     try:
         manifest = json.loads((export / "manifest.json").read_text(encoding="utf-8"))
         if not isinstance(manifest, dict) or manifest.get("format") != EXPORT_FORMAT:
@@ -975,11 +1018,11 @@ def load_manifest(export):
         if not (export / "repository.bundle").is_file():
             raise ValueError("repository bundle is missing")
         return manifest
-    except (OSError, ValueError, UnicodeError) as error:
+    except (OSError, ValueError) as error:
         raise SyncError(f"invalid export {export}: {error}") from error
 
 
-def import_repository(export, manifest, destination):
+def import_repository(export: Path, manifest: Manifest, destination: Path) -> None:
     bundle, branch = str(export / "repository.bundle"), manifest["branch"]
     if os.path.lexists(destination):
         if not (destination / ".git").exists():
@@ -1005,14 +1048,14 @@ def import_repository(export, manifest, destination):
     )
 
 
-def remove_tree(path):
+def remove_tree(path: Path) -> None:
     if path.is_symlink() or not path.is_dir():
         path.unlink()
     else:
         shutil.rmtree(path)
 
 
-def import_zgenom(source, target):
+def import_zgenom(source: Path, target: Path) -> None:
     destination = target / ".zgenom"
     if destination.is_symlink() or (destination.exists() and not destination.is_dir()):
         raise SyncError(f"not a directory: {destination}")
@@ -1038,7 +1081,7 @@ def import_zgenom(source, target):
         )
 
 
-def import_archive(script, target, source, repository):
+def import_archive(script: Path, target: Path, source: Path | None, repository: Path | None) -> int:
     with tempfile.TemporaryDirectory(prefix="configs-import-") as directory:
         if source is None:
             export = script.parent
@@ -1077,7 +1120,7 @@ def import_archive(script, target, source, repository):
     return 0
 
 
-def main():
+def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=("diff", "apply", "update", "repo", "prune", "resolve", "export", "import"))
     parser.add_argument(

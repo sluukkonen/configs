@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Download landscape photographs from Wallhaven (Python 3.11+, no API key)."""
 
+from __future__ import annotations
+
 import argparse
 import fcntl
 import hashlib
@@ -13,7 +15,8 @@ import tempfile
 import time
 from http.client import HTTPException
 from pathlib import Path
-from urllib.error import HTTPError, URLError
+from typing import Any
+from urllib.error import HTTPError
 from urllib.parse import urlencode, urlparse
 from urllib.request import Request, urlopen
 
@@ -21,7 +24,7 @@ THEMES = ("landscape", "forest", "mountains", "coast")
 MAX_BYTES = 30 * 1024 * 1024
 
 
-def request(url, limit):
+def request(url: str, limit: int) -> bytes:
     req = Request(url, headers={"User-Agent": "nature-wallpapers/1.0"})
     with urlopen(req, timeout=30) as response:
         data = response.read(limit + 1)
@@ -33,7 +36,7 @@ def request(url, limit):
         return data
 
 
-def search(theme, minimum, page=1):
+def search(theme: str, minimum: str, page: int = 1) -> Any:
     # Explicit filters also apply when running without a Wallhaven account.
     params = {
         "q": f"+photography +{theme} -anime -illustration -painting -render -AI",
@@ -48,7 +51,7 @@ def search(theme, minimum, page=1):
     return json.loads(request("https://wallhaven.cc/api/v1/search?" + urlencode(params), 2 * 1024 * 1024))
 
 
-def atomic_write(path, data):
+def atomic_write(path: Path, data: bytes) -> None:
     with tempfile.NamedTemporaryFile(dir=path.parent, suffix=".part", delete=False) as stream:
         temporary = Path(stream.name)
         try:
@@ -59,7 +62,7 @@ def atomic_write(path, data):
             temporary.unlink(missing_ok=True)
 
 
-def download(args):
+def download(args: argparse.Namespace) -> None:
     directory = args.directory.expanduser().resolve()
     directory.mkdir(parents=True, exist_ok=True)
     with (directory / ".nature-wallpapers.lock").open("a") as lock:
@@ -71,7 +74,7 @@ def download(args):
         fetch(args, directory)
 
 
-def fetch(args, directory):
+def fetch(args: argparse.Namespace, directory: Path) -> None:
     state_path = directory / ".nature-wallpapers.json"
     history = json.loads(state_path.read_text()) if state_path.exists() else {}
     if not isinstance(history, dict) or any(
@@ -134,7 +137,7 @@ def fetch(args, directory):
             print(f"Skipping {identifier}: {error}", file=sys.stderr)
             failed = True
             continue
-        except (URLError, HTTPException, OSError, ValueError) as error:
+        except (HTTPException, OSError, ValueError) as error:
             print(f"Skipping {identifier}: {error}", file=sys.stderr)
             failed = True
             continue
@@ -155,14 +158,14 @@ def fetch(args, directory):
         raise ValueError("some image downloads failed; see messages above")
 
 
-def unit_quote(value):
+def unit_quote(value: object) -> str:
     # systemd parses ExecStart itself, without a shell; escape its substitutions.
     value = str(value).replace("\\", "\\\\").replace('"', '\\"')
     value = value.replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
     return '"' + value.replace("%", "%%").replace("$", "$$") + '"'
 
 
-def install_systemd(args):
+def install_systemd(args: argparse.Namespace) -> None:
     if sys.platform != "linux":
         raise ValueError("--install-systemd is only supported on Linux")
     config_home = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
@@ -195,7 +198,7 @@ def install_systemd(args):
     print("Daily timer enabled; missed runs catch up when the user manager starts.")
 
 
-def main():
+def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--count", type=int, default=3, help="maximum new images per run (default: 3)")
     parser.add_argument("--directory", type=Path, default=Path.home() / "Pictures/Wallpapers")
@@ -215,7 +218,7 @@ def main():
             install_systemd(args)
         else:
             download(args)
-    except (OSError, ValueError, KeyError, TypeError, URLError, HTTPException, subprocess.CalledProcessError) as error:
+    except (OSError, ValueError, KeyError, TypeError, HTTPException, subprocess.CalledProcessError) as error:
         print(f"nature-wallpapers: {error}", file=sys.stderr)
         return 1
     return 0

@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Git SSH signing with gpg-agent PIN caching and an SSH askpass adapter."""
 
+from __future__ import annotations
+
 import hashlib
 import os
 import re
@@ -20,7 +22,7 @@ class PromptError(Exception):
     pass
 
 
-def trace(event):
+def trace(event: str) -> None:
     if os.environ.get(PREFIX + "TRACE") == "1":
         identifier = os.environ.get(PREFIX + "INVOCATION", "")
         if not re.fullmatch(r"[0-9a-f]{12}", identifier):
@@ -29,11 +31,11 @@ def trace(event):
         print(f"git-ssh-keygen[{identifier}] {event}", file=sys.stderr)
 
 
-def escape(text):
+def escape(text: str) -> str:
     return quote(text, safe="", encoding="utf-8", errors="replace")
 
 
-def assuan(program, commands, agent=False):
+def assuan(program: str, commands: list[str], agent: bool = False) -> bytes:
     """Return data only after every command has completed successfully."""
     arguments = [program, "--no-history"] if agent else [program]
     script = "\n".join(commands + (["/bye"] if agent else [])) + "\n"
@@ -63,7 +65,7 @@ def assuan(program, commands, agent=False):
     return secret
 
 
-def askpass(prompt):
+def askpass(prompt: str) -> int:
     hint = os.environ.get("SSH_ASKPASS_PROMPT", "")
     kind = (
         "notification"
@@ -111,11 +113,11 @@ def askpass(prompt):
     return 0
 
 
-def executable(path):
+def executable(path: str | os.PathLike[str]) -> bool:
     return Path(path).is_file() and os.access(path, os.X_OK)
 
 
-def find_keygen():
+def find_keygen() -> str:
     if sys.platform == "darwin":
         brew = shutil.which("brew")
         if brew:
@@ -138,14 +140,14 @@ def find_keygen():
     return keygen
 
 
-def option_value(arguments, option):
+def option_value(arguments: list[str], option: str) -> str | None:
     for index, argument in enumerate(arguments[:-1]):
         if argument == option:
             return arguments[index + 1]
     return None
 
 
-def key_cache_id(keygen, arguments):
+def key_cache_id(keygen: str, arguments: list[str]) -> str:
     filename = option_value(arguments, "-f")
     if not filename:
         return ""
@@ -167,7 +169,7 @@ def key_cache_id(keygen, arguments):
     return "git-ssh-pin:" + hashlib.sha256(fields[1]).hexdigest()[:32]
 
 
-def configure_prompt():
+def configure_prompt() -> str | None:
     agent = shutil.which("gpg-connect-agent")
     if agent:
         backend, program = "agent", agent
@@ -207,7 +209,7 @@ def configure_prompt():
     return agent
 
 
-def main():
+def main() -> int:
     # Desktop agents may reject FIDO signatures; use the authenticator directly.
     os.environ.pop("SSH_AUTH_SOCK", None)
     if os.environ.get(PREFIX + "ASKPASS") == "1":
@@ -235,7 +237,7 @@ def main():
         return status if status >= 0 else 128 - status
     finally:
         trace(f"sign-exit={status}")
-        if status != 0 and cache_id:
+        if status != 0 and cache_id and agent:  # cache_id is only set when agent is.
             try:
                 assuan(agent, ["CLEAR_PASSPHRASE " + cache_id], agent=True)
                 trace("pin-cache-cleared")
