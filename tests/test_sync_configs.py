@@ -816,6 +816,12 @@ class PruneTests(InstallerFixture):
 
 
 class UpdateCommandTests(InstallerFixture):
+    def fake_sudo(self, commands):
+        # init.sh enables Touch ID for sudo on macOS; never run the real sudo.
+        sudo = commands / "sudo"
+        sudo.write_text("#!/bin/sh\ncat > /dev/null\n")
+        sudo.chmod(0o755)
+
     def install_commands(self):
         for name in ("configs", "update-mac"):
             self.source(".local/bin/" + name, (REPOSITORY / ".local/bin" / name).read_text(), 0o755)
@@ -862,7 +868,10 @@ class UpdateCommandTests(InstallerFixture):
         shutil.copyfile(REPOSITORY / "init.sh", self.repository / "init.sh")
         self.source()
         (self.target / ".zgenom").mkdir()
-        env = dict(os.environ, HOME=str(self.target))
+        commands = self.root / "commands"
+        commands.mkdir()
+        self.fake_sudo(commands)
+        env = dict(os.environ, HOME=str(self.target), PATH=str(commands) + os.pathsep + os.environ["PATH"])
         result = subprocess.run(["bash", str(self.repository / "init.sh")], cwd=self.root,
                                 env=env, capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -891,6 +900,7 @@ class UpdateCommandTests(InstallerFixture):
             "    os.execv({!r}, [{!r}] + sys.argv[1:])\n".format(str(log), real_git, real_git)
         )
         git.chmod(0o755)
+        self.fake_sudo(commands)
         env = dict(os.environ, HOME=str(self.target), PATH=str(commands) + os.pathsep + os.environ["PATH"])
         for _ in range(2):
             result = subprocess.run(["bash", str(self.repository / "init.sh")], cwd=self.root,
