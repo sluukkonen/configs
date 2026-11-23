@@ -7,30 +7,35 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_REPOSITORY="$(python3 "$SCRIPT_DIR/configs" repo)"
 cd "$CONFIG_REPOSITORY"
 
+softwareupdate_list_file="$(mktemp)"
+
+# Checking for macOS updates is slow, so do it while Homebrew runs.
+softwareupdate --list > "$softwareupdate_list_file" 2>&1 &
+softwareupdate_list_pid=$!
+trap 'kill "$softwareupdate_list_pid" 2>/dev/null || true; rm -f "$softwareupdate_list_file"' EXIT
+
 brew upgrade
 # brew upgrade already covered outdated packages; only install new Brewfile entries.
 brew bundle install --no-upgrade
 brew cleanup
 
-softwareupdate_list_output="$(softwareupdate --list 2>&1)"
-should_restart=false
+wait "$softwareupdate_list_pid"
+softwareupdate_list_output="$(< "$softwareupdate_list_file")"
 
-if grep -q "No new software available" <<< "$softwareupdate_list_output"; then
+if [[ "$softwareupdate_list_output" == *"No new software available"* ]]; then
   echo "No macOS software updates available."
   exit 0
 fi
 
-if grep -q "Action: restart" <<< "$softwareupdate_list_output"; then
+softwareupdate_args=(--install --all)
+
+if [[ "$softwareupdate_list_output" == *"Action: restart"* ]]; then
   echo "$softwareupdate_list_output"
   read -r -p "Restart? [y/N]: " restart_answer
   if [[ "$restart_answer" =~ ^[Yy]$ ]]; then
-    should_restart=true
+    softwareupdate_args+=(--restart)
   fi
 fi
 
-softwareupdate_args=(--install --all)
-if [[ "$should_restart" == true ]]; then
-  softwareupdate_args+=(--restart)
-fi
-
+# On Apple Silicon, softwareupdate asks for the user's password itself.
 sudo softwareupdate "${softwareupdate_args[@]}"
