@@ -19,6 +19,10 @@
       "type": "registry"
     }
   },
+  "agent": {
+    "expand_terminal_card": false,
+    "expand_edit_card": true
+  },
   "theme": {
     "mode": "system",
     "light": "Catppuccin Latte",
