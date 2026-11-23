@@ -24,6 +24,16 @@ sync = importlib.util.module_from_spec(spec)
 loader.exec_module(sync)
 
 
+def starship_archive(contents):
+    """Build a release archive like Starship's, holding only the starship binary."""
+    output = io.BytesIO()
+    with tarfile.open(fileobj=output, mode="w:gz") as archive:
+        info = tarfile.TarInfo("starship")
+        info.size = len(contents)
+        archive.addfile(info, io.BytesIO(contents))
+    return output.getvalue()
+
+
 class InstallerFixture(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory(prefix="configs tests ")
@@ -35,6 +45,28 @@ class InstallerFixture(unittest.TestCase):
         self.target.mkdir()
         self.git("init", "-q")
         self.source(COMMAND_PATH, (REPOSITORY / COMMAND_PATH).read_text(), 0o755)
+        # Serve starship releases from a local directory so no test reaches GitHub.
+        self.starship_releases = self.root / "starship releases"
+        self.publish_starship("v1")
+        environment = mock.patch.dict(os.environ, {sync.STARSHIP_RELEASES_ENV: self.starship_releases.as_uri()})
+        environment.start()
+        self.addCleanup(environment.stop)
+
+    def publish_starship(self, label):
+        """Publish a latest release whose binaries contain the label and platform."""
+        directory = self.starship_releases / "latest/download"
+        directory.mkdir(parents=True, exist_ok=True)
+        for platform, triple in sync.STARSHIP_TARGETS.items():
+            data = starship_archive(f"{label} {platform}".encode())
+            (directory / f"starship-{triple}.tar.gz").write_bytes(data)
+            (directory / f"starship-{triple}.tar.gz.sha256").write_text(sync.digest(data) + "\n")
+
+    def starship_platform(self):
+        """Return this machine's platform, skipping the test if Starship has no release for it."""
+        platform = sync.current_platform()
+        if platform not in sync.STARSHIP_TARGETS:
+            self.skipTest(f"no starship release for {platform}")
+        return platform
 
     def git(self, *args):
         return subprocess.run(
@@ -1003,6 +1035,10 @@ class UpdateCommandTests(InstallerFixture):
         self.assertEqual(len(calls.splitlines()), 1)
         self.assertIn("https://github.com/jandamm/zgenom.git", calls)
         (self.target / ".zgenom").rmdir()
+        starship = self.target / sync.STARSHIP_PATH
+        if sync.current_platform() in sync.STARSHIP_TARGETS:
+            self.assertTrue(starship.is_file())
+            starship.unlink()
         (self.target / ".zshrc").write_text("local conflict\n")
         result = subprocess.run(
             ["bash", str(self.repository / "init.sh")],
@@ -1017,6 +1053,8 @@ class UpdateCommandTests(InstallerFixture):
         self.assertEqual(len(log.read_text().splitlines()), 2)
         self.assertTrue((self.target / ".zgenom").is_dir())
         self.assertEqual((self.target / ".zshrc").read_text(), "local conflict\n")
+        # Starship does not depend on the conflicting file, so it is still installed.
+        self.assertEqual(starship.is_file(), sync.current_platform() in sync.STARSHIP_TARGETS)
 
 
 class ConfigCommandTests(InstallerFixture):
@@ -1176,6 +1214,43 @@ class ConfigCommandTests(InstallerFixture):
         )
         return log
 
+    def test_update_installs_latest_starship_only_when_it_changes(self):
+        platform = self.starship_platform()
+        self.setup_remote()
+        self.publish()
+        starship = self.target / sync.STARSHIP_PATH
+        self.assertIn(f"INSTALL starship {platform}", self.run_command("update"))
+        self.assertEqual(starship.read_bytes(), f"v1 {platform}".encode())
+        self.assertTrue(os.access(starship, os.X_OK))
+        output = self.run_command("update")
+        self.assertIn("starship is up to date", output)
+        self.assertNotRegex(output, "(INSTALL|UPDATE) starship")
+        self.publish_starship("v2")
+        self.assertIn(f"UPDATE starship {platform}", self.run_command("update"))
+        self.assertEqual(starship.read_bytes(), f"v2 {platform}".encode())
+        # A binary installed some other way, such as by import, is replaced too.
+        (self.target / sync.STARSHIP_CHECKSUM_PATH).unlink()
+        starship.write_bytes(b"imported")
+        self.assertIn(f"UPDATE starship {platform}", self.run_command("starship"))
+        self.assertEqual(starship.read_bytes(), f"v2 {platform}".encode())
+
+    def test_starship_failure_is_reported_after_applying(self):
+        self.starship_platform()
+        self.setup_remote()
+        self.publish()
+        shutil.rmtree(self.starship_releases)
+        output = self.run_command("update", expected=1)
+        self.assertIn("Updating starship failed", output)
+        self.assertEqual((self.target / ".zshrc").read_text(), "upstream config\n")
+        self.assertFalse(os.path.lexists(self.target / sync.STARSHIP_PATH))
+
+    def test_tampered_starship_release_is_not_installed(self):
+        platform = self.starship_platform()
+        archive = self.starship_releases / f"latest/download/starship-{sync.STARSHIP_TARGETS[platform]}.tar.gz"
+        archive.write_bytes(archive.read_bytes() + b"tampered")
+        self.assertIn("starship checksum mismatch", self.run_command("starship", expected=1))
+        self.assertFalse(os.path.lexists(self.target / sync.STARSHIP_PATH))
+
     def test_update_refreshes_zgenom_after_applying(self):
         if shutil.which("zsh") is None:
             self.skipTest("requires zsh")
@@ -1264,7 +1339,14 @@ class ConfigCommandTests(InstallerFixture):
             "Repository updated, but conflicts remain", self.run_command("update", expected=sync.CONFLICTS_EXIT)
         )
         self.assertEqual((self.repository / ".zshrc").read_text(), "upstream config\n")
-        self.assertEqual(before, self.tree())
+        # Like zgenom, starship still updates despite the conflict, which also
+        # touches the directories holding it.
+        changed = {".local/bin", ".local/state/configs", sync.STARSHIP_PATH, sync.STARSHIP_CHECKSUM_PATH}
+
+        def unrelated(tree):
+            return {path: entry for path, entry in tree.items() if path not in changed}
+
+        self.assertEqual(unrelated(before), unrelated(self.tree()))
 
     def test_update_lock_prevents_pull(self):
         self.setup_remote()
@@ -1287,32 +1369,19 @@ class ExportImportTests(InstallerFixture):
         self.commit(self.repository, "Initial configs")
         self.run_sync()
         self.releases = {platform: self.release(platform) for platform in sync.DEFAULT_PLATFORMS}
+        # Checksums always describe the genuine release, so tampering shows.
+        self.checksums = {platform: sync.digest(data) for platform, data in self.releases.items()}
         self.zgenom = self.target / ".zgenom"
-        self.gitstatus = self.zgenom / "sources/romkatv/powerlevel10k/___/gitstatus"
         self.install_zgenom()
         self.archive = self.root / "export.tar.gz"
         self.other = self.root / "other home"
         self.other.mkdir()
 
     def release(self, platform):
-        name = "gitstatusd-" + platform
-        contents = ("binary " + platform).encode()
-        output = io.BytesIO()
-        with tarfile.open(fileobj=output, mode="w:gz") as archive:
-            info = tarfile.TarInfo(name)
-            info.size = len(contents)
-            archive.addfile(info, io.BytesIO(contents))
-        return output.getvalue()
+        return starship_archive(("binary " + platform).encode())
 
-    def install_info(self):
-        lines = ['# uname_s_glob="ignored"; uname_m_glob="*"; file="x"; version="v0"; sha256="0";']
-        for platform, data in self.releases.items():
-            kernel, machine = platform.split("-")
-            lines.append(
-                f'uname_s_glob="{kernel}"; uname_m_glob="{machine}"; file="gitstatusd-${{uname_s}}-${{uname_m}}"; '
-                f'version="v1.5.4"; sha256="{sync.digest(data)}";'
-            )
-        return "\n".join(lines) + "\n"
+    def starship_url(self, platform):
+        return sync.starship_url(sync.STARSHIP_TARGETS[platform], "1.27.0")
 
     def install_zgenom(self):
         files = {
@@ -1320,29 +1389,31 @@ class ExportImportTests(InstallerFixture):
             "sources/init.zsh": "source /absolute/exporting/path\n",
             "sources/zcompdump_5.9": "dump\n",
             "sources/zcompdump_5.9.zwc": "compiled\n",
-            "sources/romkatv/powerlevel10k/___/powerlevel10k.zsh-theme": "theme\n",
-            "sources/romkatv/powerlevel10k/___/powerlevel10k.zsh-theme.zwc": "compiled\n",
-            "sources/romkatv/powerlevel10k/___/gitstatus/install.info": self.install_info(),
+            "sources/zsh-users/zsh-autosuggestions/___/zsh-autosuggestions.zsh": "plugin\n",
+            "sources/zsh-users/zsh-autosuggestions/___/zsh-autosuggestions.zsh.zwc": "compiled\n",
         }
         for relative, contents in files.items():
             path = self.zgenom / relative
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(contents)
-        (self.zgenom / "sources/theme-link").symlink_to("romkatv/powerlevel10k/___/powerlevel10k.zsh-theme")
+        (self.zgenom / "sources/plugin-link").symlink_to("zsh-users/zsh-autosuggestions/___/zsh-autosuggestions.zsh")
 
-    def export(self, platforms=sync.DEFAULT_PLATFORMS):
+    def export(self, platforms=sync.DEFAULT_PLATFORMS, version="1.27.0"):
         downloads = []
         self.stderr = io.StringIO()
+        triples = {triple: platform for platform, triple in sync.STARSHIP_TARGETS.items()}
 
         def download(url):
             downloads.append(url)
-            match = re.search(r"gitstatusd-(.+)\.tar\.gz$", url)
+            match = re.search(r"starship-(.+)\.tar\.gz(\.sha256)?$", url)
             assert match is not None
-            platform = match.group(1)
-            return self.releases[platform]
+            if match.group(2):
+                return (self.checksums[triples[match.group(1)]] + "\n").encode()
+            return self.releases[triples[match.group(1)]]
 
         with (
             mock.patch.object(sync, "download", side_effect=download),
+            mock.patch.object(sync, "installed_starship_version", return_value=version),
             mock.patch.object(sync.sys, "stdout", io.StringIO()),
             mock.patch.object(sync.sys, "stderr", self.stderr),
         ):
@@ -1377,13 +1448,14 @@ class ExportImportTests(InstallerFixture):
         subprocess.run(["tar", "-xzf", str(self.archive), "-C", str(directory)], check=True)
         return directory / sync.EXPORT_ROOT
 
-    def test_export_bundles_repository_plugins_and_gitstatusd(self):
+    def test_export_bundles_repository_plugins_and_starship(self):
         downloads = self.export(("linux-x86_64", "darwin-arm64"))
         self.assertEqual(
             downloads,
             [
-                sync.GITSTATUS_URL.format(version="v1.5.4", file="gitstatusd-" + platform)
+                url
                 for platform in ("linux-x86_64", "darwin-arm64")
+                for url in (self.starship_url(platform) + ".sha256", self.starship_url(platform))
             ],
         )
         members = self.members()
@@ -1394,24 +1466,24 @@ class ExportImportTests(InstallerFixture):
         self.assertEqual(self.read(root + "configs"), (self.repository / COMMAND_PATH).read_bytes())
         self.assertEqual(stat.S_IMODE(members[root + "configs"].mode), 0o755)
         self.assertIn(root + "repository.bundle", members)
-        self.assertIn(root + "zgenom/sources/romkatv/powerlevel10k/___/powerlevel10k.zsh-theme", members)
+        self.assertIn(root + "zgenom/sources/zsh-users/zsh-autosuggestions/___/zsh-autosuggestions.zsh", members)
         self.assertEqual(
-            members[root + "zgenom/sources/theme-link"].linkname, "romkatv/powerlevel10k/___/powerlevel10k.zsh-theme"
+            members[root + "zgenom/sources/plugin-link"].linkname,
+            "zsh-users/zsh-autosuggestions/___/zsh-autosuggestions.zsh",
         )
         for excluded in (
             "sources/init.zsh",
             "sources/zcompdump_5.9",
             "sources/zcompdump_5.9.zwc",
-            "sources/romkatv/powerlevel10k/___/powerlevel10k.zsh-theme.zwc",
+            "sources/zsh-users/zsh-autosuggestions/___/zsh-autosuggestions.zsh.zwc",
         ):
             self.assertNotIn(root + "zgenom/" + excluded, members)
-        usrbin = root + "zgenom/sources/romkatv/powerlevel10k/___/gitstatus/usrbin/"
         for platform in ("linux-x86_64", "darwin-arm64"):
-            self.assertEqual(self.read(usrbin + "gitstatusd-" + platform), ("binary " + platform).encode())
-            self.assertEqual(stat.S_IMODE(members[usrbin + "gitstatusd-" + platform].mode), 0o755)
-        self.assertNotIn(usrbin + "gitstatusd-linux-aarch64", members)
+            binary = f"{root}starship/{platform}/starship"
+            self.assertEqual(self.read(binary), ("binary " + platform).encode())
+            self.assertEqual(stat.S_IMODE(members[binary].mode), 0o755)
+        self.assertNotIn(root + "starship/linux-aarch64", members)
         self.assertTrue(all(member.uid == 0 and member.uname == "" for member in members.values()))
-        self.assertFalse(self.gitstatus.joinpath("usrbin").exists())
 
     def test_export_warns_about_and_omits_uncommitted_changes(self):
         committed = (self.repository / COMMAND_PATH).read_bytes()
@@ -1424,27 +1496,43 @@ class ExportImportTests(InstallerFixture):
         self.releases["linux-x86_64"] = self.release("tampered")
         with self.assertRaisesRegex(sync.SyncError, "checksum mismatch"):
             self.export(("linux-x86_64",))
-        with self.assertRaisesRegex(sync.SyncError, "no gitstatusd release for plan9-mips"):
+        with self.assertRaisesRegex(sync.SyncError, "no starship release for plan9-mips"):
             self.export(("plan9-mips",))
+        # Unknown platforms fail even when starship is missing and would be skipped.
+        with self.assertRaisesRegex(sync.SyncError, "no starship release for plan9-mips"):
+            self.export(("plan9-mips",), version=None)
         self.assertFalse(self.archive.exists())
         self.assertEqual([path.name for path in self.root.iterdir() if path.name.startswith(".configs-")], [])
 
-    def test_gitstatus_release_follows_install_globs(self):
-        install_info = (
-            'uname_s_glob="linux"; uname_m_glob="armv8l"; file="gitstatusd-${uname_s}-aarch64"; '
-            'version="v1.5.4"; sha256="' + "a" * 64 + '";\n'
-        )
-        self.assertEqual(
-            sync.gitstatus_release(install_info, "linux-armv8l"), ("gitstatusd-linux-aarch64", "v1.5.4", "a" * 64)
-        )
-        with self.assertRaisesRegex(sync.SyncError, "invalid gitstatus"):
-            sync.gitstatus_release(install_info.replace("v1.5.4", "$(touch x)"), "linux-armv8l")
-        commented = '  # uname_s_glob="linux"; an indented note\n' + install_info
-        self.assertEqual(sync.gitstatus_release(commented, "linux-armv8l")[0], "gitstatusd-linux-aarch64")
+    def test_export_without_starship_skips_it(self):
+        self.assertEqual(self.export(version=None), [])
+        self.assertIn("starship not found", self.stderr.getvalue())
+        self.assertFalse(any("/starship" in name for name in self.members()))
+        output = self.run_import(self.extract() / "configs")
+        self.assertIn("Configuration imported.", output)
+        self.assertFalse(os.path.lexists(self.other / sync.STARSHIP_PATH))
+
+    def test_installed_starship_version_parses_version_output(self):
+        output = "starship 1.27.0\nbranch:\ncommit_hash:\n"
+        completed = subprocess.CompletedProcess([], 0, stdout=output)
+        with (
+            mock.patch.object(sync.shutil, "which", return_value="/usr/bin/starship"),
+            mock.patch.object(sync.subprocess, "run", return_value=completed),
+        ):
+            self.assertEqual(sync.installed_starship_version(), "1.27.0")
+            completed.stdout = "starship $(touch x)\n"
+            with self.assertRaisesRegex(sync.SyncError, "unexpected starship --version output"):
+                sync.installed_starship_version()
+        with mock.patch.object(sync.shutil, "which", return_value=None):
+            self.assertIsNone(sync.installed_starship_version())
 
     def test_import_into_new_home_from_extracted_archive(self):
-        self.export()
+        self.export(sync.DEFAULT_PLATFORMS + ("linux-x86_64",))
         export = self.extract()
+        # A checksum recorded by an earlier update must not vouch for the imported binary.
+        record = self.other / sync.STARSHIP_CHECKSUM_PATH
+        record.parent.mkdir(parents=True)
+        record.write_text("stale\n")
         output = self.run_import(export / "configs")
         self.assertIn("Configuration imported.", output)
         checkout = self.other / "Code/configs"
@@ -1456,14 +1544,18 @@ class ExportImportTests(InstallerFixture):
             subprocess.run(["git", "-C", str(checkout), "remote"], capture_output=True, text=True, check=True).stdout,
             "",
         )
-        usrbin = self.other / ".zgenom/sources/romkatv/powerlevel10k/___/gitstatus/usrbin"
-        self.assertEqual(
-            sorted(path.name for path in usrbin.iterdir()),
-            sorted("gitstatusd-" + platform for platform in sync.DEFAULT_PLATFORMS),
-        )
-        self.assertTrue(os.access(usrbin / "gitstatusd-linux-x86_64", os.X_OK))
+        platform = sync.current_platform()
+        starship = self.other / sync.STARSHIP_PATH
+        if platform in sync.DEFAULT_PLATFORMS:
+            self.assertIn(f"IMPORT starship {platform}", output)
+            self.assertEqual(starship.read_bytes(), ("binary " + platform).encode())
+            self.assertTrue(os.access(starship, os.X_OK))
+            self.assertFalse(record.exists())
+        else:
+            self.assertIn(f"no starship for {platform}", output)
+            self.assertFalse(os.path.lexists(starship))
         self.assertFalse((self.other / ".zgenom/sources/init.zsh").exists())
-        self.assertTrue((self.other / ".zgenom/sources/theme-link").is_symlink())
+        self.assertTrue((self.other / ".zgenom/sources/plugin-link").is_symlink())
         self.assertFalse(os.path.lexists(self.other / ".zgenom.import"))
         self.assertFalse(os.path.lexists(self.other / ".zgenom.previous"))
 
@@ -1601,11 +1693,18 @@ class ExportImportTests(InstallerFixture):
             self.assertEqual(sync.without_credentials(url), expected)
 
     def test_installed_export_forwards_archive_and_platforms(self):
+        # Only git on PATH, so the export finds no starship and downloads nothing.
+        bin = self.root / "bin"
+        bin.mkdir()
+        git = shutil.which("git")
+        assert git is not None
+        (bin / "git").symlink_to(git)
+
         def run(*options):
             return subprocess.run(
                 [sys.executable, str(self.target / COMMAND_PATH), "export", *options],
                 cwd=self.root,
-                env=dict(os.environ, HOME=str(self.target)),
+                env=dict(os.environ, HOME=str(self.target), PATH=str(bin)),
                 capture_output=True,
                 text=True,
                 check=False,
@@ -1614,10 +1713,10 @@ class ExportImportTests(InstallerFixture):
         # Only the forwarded platform can produce this error, without any download.
         result = run("out.tar.gz", "--platform", "plan9-mips")
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
-        self.assertIn("no gitstatusd release for plan9-mips", result.stderr)
-        shutil.rmtree(self.gitstatus)
+        self.assertIn("no starship release for plan9-mips", result.stderr)
         result = run("out.tar.gz")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("starship not found", result.stderr)
         self.assertTrue((self.root / "out.tar.gz").is_file())
 
     def test_export_and_import_argument_validation(self):

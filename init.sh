@@ -12,4 +12,12 @@ if [[ "$(uname)" == Darwin ]] && ! grep -qs pam_tid.so /etc/pam.d/sudo_local; th
   echo "auth       sufficient     pam_tid.so" | sudo tee -a /etc/pam.d/sudo_local > /dev/null
 fi
 
-python3 "$SCRIPT_DIR/.local/bin/configs" apply
+status=0
+python3 "$SCRIPT_DIR/.local/bin/configs" apply || status=$?
+
+# Install the latest starship; configs update keeps it current. Conflicts
+# (exit 3) leave everything else applied, so install it despite them.
+if (( status == 0 || status == 3 )); then
+  python3 "$SCRIPT_DIR/.local/bin/configs" starship || (( status )) || status=1
+fi
+exit "$status"

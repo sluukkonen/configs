@@ -7,7 +7,6 @@ import argparse
 import contextlib
 import difflib
 import fcntl
-import fnmatch
 import gzip
 import hashlib
 import io
@@ -68,11 +67,23 @@ COMMAND_PATH = ".local/bin/configs"
 EXPORT_ROOT = "configs-export"
 EXPORT_FORMAT = 1
 DEFAULT_ARCHIVE = "configs-export.tar.gz"
-DEFAULT_PLATFORMS = ("linux-x86_64", "linux-aarch64", "darwin-arm64", "darwin-x86_64")
 # apply exits with this when it applied everything except conflicting files,
 # so callers can still run steps that do not depend on those files.
 CONFLICTS_EXIT = 3
-GITSTATUS_URL = "https://github.com/romkatv/gitstatus/releases/download/{version}/{file}.tar.gz"
+# Overridable to use a mirror (or a file:// directory in tests).
+STARSHIP_RELEASES_ENV = "CONFIGS_STARSHIP_RELEASES"
+STARSHIP_RELEASES = "https://github.com/starship/starship/releases"
+# Export platform (lowercase uname -s, uname -m) to Starship release target.
+STARSHIP_TARGETS = {
+    "linux-x86_64": "x86_64-unknown-linux-musl",
+    "linux-aarch64": "aarch64-unknown-linux-musl",
+    "darwin-arm64": "aarch64-apple-darwin",
+    "darwin-x86_64": "x86_64-apple-darwin",
+}
+DEFAULT_PLATFORMS = tuple(STARSHIP_TARGETS)
+STARSHIP_PATH = ".local/bin/starship"
+# SHA-256 of the release archive the installed binary came from.
+STARSHIP_CHECKSUM_PATH = ".local/state/configs/starship.sha256"
 
 
 class SyncError(Exception):
@@ -728,9 +739,8 @@ def update_zgenom(target: Path) -> int:
     # zgenom writes update timestamps into $ZGEN_DIR but only creates it on the
     # first save, which has not happened yet when zgenom was just cloned.
     # zgenom update always deletes init.zsh, and the next shell then rebuilds it
-    # with output that trips Powerlevel10k's instant prompt warning. Reset only
-    # when zgenom, a plugin or .zshrc changed, and rebuild init.zsh here by
-    # sourcing .zshrc non-interactively, as zgenom autoupdate does.
+    # noisily. Reset only when zgenom, a plugin or .zshrc changed, and rebuild
+    # init.zsh here by sourcing .zshrc non-interactively, as zgenom autoupdate does.
     command = r"""
         source "$1" && mkdir -p -- "$ZGEN_DIR" || exit
         setopt extended_glob
@@ -778,66 +788,104 @@ def download(url: str) -> bytes:
     return data
 
 
-def gitstatus_release(install_info: str, platform: str) -> tuple[str, str, str]:
-    """Select a gitstatusd release the way gitstatus/install matches uname."""
-    kernel, machine = platform.split("-", 1)
-    for line in install_info.splitlines():
-        if line.lstrip().startswith("#"):
-            continue
-        fields = dict(re.findall(r'(\w+)="([^"]*)"', line))
-        if not fields:
-            continue
-        if not {"uname_s_glob", "uname_m_glob", "file", "version", "sha256"} <= set(fields):
-            raise SyncError(f"invalid gitstatus install.info line: {line}")
-        if fnmatch.fnmatchcase(kernel, fields["uname_s_glob"]) and fnmatch.fnmatchcase(machine, fields["uname_m_glob"]):
-            name = fields["file"].replace("${uname_s}", kernel).replace("${uname_m}", machine)
-            if (
-                not re.fullmatch(r"gitstatusd-[a-z0-9_.-]+", name)
-                or not re.fullmatch(r"v[0-9][0-9.]*", fields["version"])
-                or not re.fullmatch(r"[0-9a-f]{64}", fields["sha256"])
-            ):
-                raise SyncError(f"invalid gitstatus install.info line: {line}")
-            return name, fields["version"], fields["sha256"]
-    raise SyncError(f"no gitstatusd release for {platform}")
+def installed_starship_version() -> str | None:
+    """Return the version of starship on PATH so exports match this machine."""
+    if shutil.which("starship") is None:
+        return None
+    output = subprocess.run(["starship", "--version"], capture_output=True, text=True, check=True).stdout
+    match = re.match(r"starship ([0-9]+\.[0-9]+\.[0-9]+)\s", output)
+    if match is None:
+        raise SyncError(f"unexpected starship --version output: {output.splitlines()[:1]}")
+    return match.group(1)
 
 
-def add_gitstatus(zgenom: Path, platforms: Sequence[str]) -> None:
-    """Bundle gitstatusd where powerlevel10k looks before trying to download it."""
-    directories = sorted(
-        path.parent
-        for path in (zgenom / "sources").rglob("install.info")
-        if path.parent.name == "gitstatus" and path.is_file() and not path.is_symlink()
-    )
-    if not directories:
-        print("NOTE no gitstatus found in zgenom plugins; skipping gitstatusd", file=sys.stderr)
+def starship_url(triple: str, version: str | None = None) -> str:
+    """Return the release archive URL for a version, or for the latest release."""
+    releases = os.environ.get(STARSHIP_RELEASES_ENV) or STARSHIP_RELEASES
+    release = f"download/v{version}" if version else "latest/download"
+    return f"{releases.rstrip('/')}/{release}/starship-{triple}.tar.gz"
+
+
+def starship_checksum(url: str) -> str:
+    try:
+        fields = download(url + ".sha256").decode("ascii", "replace").split()
+    except OSError as error:
+        raise SyncError(f"could not download {url}.sha256: {error}") from error
+    if not fields or not re.fullmatch(r"[0-9a-fA-F]{64}", fields[0]):
+        raise SyncError(f"invalid starship checksum file: {url}.sha256")
+    return fields[0].lower()
+
+
+def fetch_starship(url: str, checksum: str) -> bytes:
+    """Download a starship release archive, verify it, and return the binary."""
+    try:
+        data = download(url)
+    except OSError as error:
+        raise SyncError(f"could not download {url}: {error}") from error
+    if digest(data) != checksum:
+        raise SyncError(f"starship checksum mismatch: {url}")
+    try:
+        with tarfile.open(fileobj=io.BytesIO(data), mode="r:gz") as archive:
+            member = archive.getmember("starship")
+            if not member.isfile():
+                raise SyncError(f"starship archive entry is not a file: {url}")
+            # extractfile() only returns None for members that are not files.
+            return cast(IO[bytes], archive.extractfile(member)).read()
+    except (tarfile.TarError, KeyError) as error:
+        raise SyncError(f"invalid starship archive {url}: {error}") from error
+
+
+def add_starship(root: Path, platforms: Sequence[str]) -> None:
+    """Bundle the locally installed starship version for each platform."""
+    platforms = list(dict.fromkeys(platforms))
+    for platform in platforms:
+        if platform not in STARSHIP_TARGETS:
+            raise SyncError(f"no starship release for {platform}")
+    version = installed_starship_version()
+    if version is None:
+        print("NOTE starship not found; exporting without it", file=sys.stderr)
         return
-    downloads: dict[str, bytes] = {}
-    for directory in directories:
-        install_info = (directory / "install.info").read_text(encoding="utf-8")
-        for platform in platforms:
-            name, version, sha256 = gitstatus_release(install_info, platform)
-            url = GITSTATUS_URL.format(version=version, file=name)
-            if url not in downloads:
-                try:
-                    data = download(url)
-                except OSError as error:
-                    raise SyncError(f"could not download gitstatusd for {platform}: {error}") from error
-                if digest(data) != sha256:
-                    raise SyncError(f"gitstatusd checksum mismatch for {platform}: {url}")
-                try:
-                    with tarfile.open(fileobj=io.BytesIO(data), mode="r:gz") as archive:
-                        member = archive.getmember(name)
-                        if not member.isfile():
-                            raise SyncError(f"gitstatusd archive entry is not a file: {url}")
-                        # extractfile() only returns None for members that are not files.
-                        downloads[url] = cast(IO[bytes], archive.extractfile(member)).read()
-                except (tarfile.TarError, KeyError) as error:
-                    raise SyncError(f"invalid gitstatusd archive {url}: {error}") from error
-                print(f"EXPORT gitstatusd {platform} {version}")
-            usrbin = directory / "usrbin"
-            usrbin.mkdir(exist_ok=True)
-            (usrbin / name).write_bytes(downloads[url])
-            (usrbin / name).chmod(0o755)
+    for platform in platforms:
+        url = starship_url(STARSHIP_TARGETS[platform], version)
+        binary = fetch_starship(url, starship_checksum(url))
+        destination = root / "starship" / platform / "starship"
+        destination.parent.mkdir(parents=True)
+        destination.write_bytes(binary)
+        destination.chmod(0o755)
+        print(f"EXPORT starship {platform} {version}")
+
+
+def current_platform() -> str:
+    """Name this machine like --platform does (lowercase uname -s, uname -m)."""
+    uname = os.uname()
+    return f"{uname.sysname.lower()}-{uname.machine}"
+
+
+def update_starship(target: Path) -> int:
+    """Install the latest starship release unless it is already installed."""
+    platform = current_platform()
+    if platform not in STARSHIP_TARGETS:
+        print(f"NOTE no starship release for {platform}; skipping it", file=sys.stderr)
+        return 0
+    url = starship_url(STARSHIP_TARGETS[platform])
+    installed = target / STARSHIP_PATH
+    try:
+        checksum = starship_checksum(url)
+        with installation_lock(target):
+            kind = inspect(target, STARSHIP_PATH)[0]["kind"]
+            recorded = inspect(target, STARSHIP_CHECKSUM_PATH)[1]
+            if kind == "file" and recorded is not None and recorded.decode("ascii", "replace").strip() == checksum:
+                print("starship is up to date")
+                return 0
+            action = "INSTALL" if kind == "missing" else "UPDATE"
+            binary = fetch_starship(url, checksum)
+            atomic_write(target, STARSHIP_PATH, binary, 0o755)
+            atomic_write(target, STARSHIP_CHECKSUM_PATH, (checksum + "\n").encode(), 0o644)
+    except (SyncError, OSError) as error:
+        print(f"Updating starship failed: {error}. Rerun configs update.", file=sys.stderr)
+        return 1
+    print(f"{action} starship {platform} into {installed}")
+    return 0
 
 
 def without_credentials(url: str) -> str:
@@ -903,9 +951,9 @@ def export_archive(repository: Path, target: Path, archive: Path, platforms: Seq
         if zgenom.is_dir() and not zgenom.is_symlink():
             shutil.copytree(zgenom, root / "zgenom", symlinks=True, ignore=ignore)
             print("EXPORT zgenom")
-            add_gitstatus(root / "zgenom", platforms)
         else:
             print(f"NOTE {zgenom} not found; exporting without zsh plugins", file=sys.stderr)
+        add_starship(root, platforms)
         origin = git_output(repository, "config", "--get", "remote.origin.url", check=False)
         manifest = {
             "format": EXPORT_FORMAT,
@@ -1081,6 +1129,20 @@ def import_zgenom(source: Path, target: Path) -> None:
         )
 
 
+def import_starship(source: Path, target: Path) -> None:
+    platform = current_platform()
+    binary = source / platform / "starship"
+    if binary.is_symlink() or not binary.is_file():
+        print(f"NOTE the export has no starship for {platform}; skipping it", file=sys.stderr)
+        return
+    atomic_write(target, STARSHIP_PATH, binary.read_bytes(), 0o755)
+    # The recorded checksum described the replaced binary; update reinstalls without it.
+    check_parents(target, STARSHIP_CHECKSUM_PATH)
+    with contextlib.suppress(FileNotFoundError):
+        (target / STARSHIP_CHECKSUM_PATH).unlink()
+    print(f"IMPORT starship {platform} into {target / STARSHIP_PATH}")
+
+
 def import_archive(script: Path, target: Path, source: Path | None, repository: Path | None) -> int:
     with tempfile.TemporaryDirectory(prefix="configs-import-") as directory:
         if source is None:
@@ -1103,13 +1165,15 @@ def import_archive(script: Path, target: Path, source: Path | None, repository: 
         if result not in (0, CONFLICTS_EXIT):
             print(
                 "Repository imported, but configuration application failed. Resolve the error, "
-                "rerun configs apply, then import again to install zsh plugins.",
+                "rerun configs apply, then import again to install zsh plugins and starship.",
                 file=sys.stderr,
             )
             return result
-        if (export / "zgenom").is_dir():
-            with installation_lock(target):
+        with installation_lock(target):
+            if (export / "zgenom").is_dir():
                 import_zgenom(export / "zgenom", target)
+            if (export / "starship").is_dir():
+                import_starship(export / "starship", target)
     if result:
         print(
             "Configuration imported, but conflicts remain. Run configs resolve, then start a new shell.",
@@ -1122,7 +1186,9 @@ def import_archive(script: Path, target: Path, source: Path | None, repository: 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("diff", "apply", "update", "repo", "prune", "resolve", "export", "import"))
+    parser.add_argument(
+        "command", choices=("diff", "apply", "update", "repo", "prune", "resolve", "export", "import", "starship")
+    )
     parser.add_argument(
         "paths", nargs="*", help="repository-relative conflicts to resolve, or the archive to export or import"
     )
@@ -1136,7 +1202,7 @@ def main() -> int:
     parser.add_argument(
         "--platform",
         action="append",
-        help="OS-ARCH to bundle gitstatusd for, repeatable (export only; default: {})".format(
+        help="OS-ARCH to bundle starship for, repeatable (export only; default: {})".format(
             ", ".join(DEFAULT_PLATFORMS)
         ),
     )
@@ -1188,6 +1254,8 @@ def main() -> int:
                 args.platform or DEFAULT_PLATFORMS,
             )
             return 0
+        if args.command == "starship":
+            return update_starship(target)
         with installation_lock(target):
             state = load_state(target)
             if args.command == "repo":
@@ -1247,9 +1315,11 @@ def main() -> int:
                 )
                 return result
             zgenom = update_zgenom(target)
+            # Like apply, run the pulled installer so its starship changes take effect now.
+            starship = run_checkout(repository, "starship", "--target", str(target))
             if result:
                 print("Repository updated, but conflicts remain. Run configs resolve.", file=sys.stderr)
-            return result or zgenom
+            return result or zgenom or starship
         return 0
     except (SyncError, OSError, subprocess.CalledProcessError) as error:
         print(f"configs: {error}", file=sys.stderr)
