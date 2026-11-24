@@ -359,7 +359,9 @@ class AgentIntegrationTests(unittest.TestCase):
                     for _ in range(2):
                         self.assertEqual(signing.assuan(agent, [command], agent=True), b"test-pin%+value")
                     self.assertEqual(calls.read_text().splitlines(), ["dialog"])
-                    time.sleep(1.2)
+                    # gpg-agent tracks cache times in whole seconds and expires an entry only once
+                    # more than the TTL has passed, so a 1 s TTL can need almost 2 s to expire.
+                    time.sleep(2.2)
                     signing.assuan(agent, [command], agent=True)
                     self.assertEqual(len(calls.read_text().splitlines()), 2)
                     signing.assuan(agent, ["CLEAR_PASSPHRASE git-ssh-pin:test"], agent=True)
